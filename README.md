@@ -1,2 +1,1 @@
-# ejit
-A very 
+# ejit: A very stupid JIT.
