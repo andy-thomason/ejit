@@ -1,0 +1,61 @@
+AARCH64 GAS  asm/aarch64.s 			page 1
+
+
+   1              	    .text
+   2              	
+   3              	    # https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/ADD--shifted-regist
+   4              	    # sf=0 (bit 31)
+   5 0000 0000000B 	    add w0, w0, w0
+   6              	
+   7              	    # sf=1 (bit 31)
+   8              	    # Rm (bits 16-20)
+   9 0004 0000008B 	    add x0, x0, x0
+  10 0008 0000018B 	    add x0, x0, x1
+  11 000c 00001E8B 	    add x0, x0, x30
+  12              	
+  13              	    # Rm (bits 5-9)
+  14 0010 0000008B 	    add x0, x0, x0
+  15 0014 2000008B 	    add x0, x1, x0
+  16 0018 4000008B 	    add x0, x2, x0
+  17 001c 8000008B 	    add x0, x4, x0
+  18 0020 0001008B 	    add x0, x8, x0
+  19 0024 0002008B 	    add x0, x16, x0
+  20 0028 C003008B 	    add x0, x30, x0
+  21 002c E063208B 	    add x0, sp, x0
+  22              	
+  23              	    # Rd (bits 0-4)
+  24 0030 0000008B 	    add x0, x0, x0
+  25 0034 0100008B 	    add x1, x0, x0
+  26 0038 0200008B 	    add x2, x0, x0
+  27 003c 0400008B 	    add x4, x0, x0
+  28 0040 0800008B 	    add x8, x0, x0
+  29 0044 1000008B 	    add x16, x0, x0
+  30 0048 1E00008B 	    add x30, x0, x0
+  31 004c 1F60208B 	    add sp, x0, x0
+  32              	
+  33 0050 000000BA 	    adcs x0, x0, x0
+  34 0054 000000AB 	    adds x0, x0, x0
+  35 0058 000000EB 	    subs x0, x0, x0
+  36 005c 000000EA 	    ands x0, x0, x0
+  37              	
+  38              	    # https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/MOV--wide-immediate
+  39 0060 210080D2 	    movz x1, #1, lsl #0
+  40 0064 410080D2 	    movz x1, #2, lsl #0
+  41 0068 610080D2 	    movz x1, #3, lsl #0
+  42 006c 2100A0D2 	    movz x1, #1, lsl #16
+  43 0070 2100C0D2 	    movz x1, #1, lsl #32
+  44 0074 2100E0D2 	    movz x1, #1, lsl #48
+  45              	
+  46              	
+  47 0078 C0035FD6 	    ret
+  48 007c C0035FD6 	    ret x30
+  49              	
+  50              	    # See also: https://github.com/ARM-software/abi-aa/blob/main/sysvabi64/sysvabi64.rst
+  51              	
+AARCH64 GAS  asm/aarch64.s 			page 2
+
+
+DEFINED SYMBOLS
+       asm/aarch64.s:5      .text:0000000000000000 $x
+
+NO UNDEFINED SYMBOLS
