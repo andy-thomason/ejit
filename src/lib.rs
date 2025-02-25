@@ -16,46 +16,6 @@ pub enum EJitSrc {
     Imm(I64)
 }
 
-impl EJitReg {
-    // Return the REX bit and the MODRM bits.
-    pub fn to_x86_64(&self) -> (u8, u8) {
-        use EJitReg::*;
-        match self {
-            R0 => (0, 0),
-            R1 => (0, 1),
-            R2 => (0, 2),
-            R3 => (0, 3),
-            R4 => (0, 5),
-            R5 => (0, 6),
-            R6 => (0, 7),
-            R7 => (1, 0),
-            R8 => (1, 1),
-            R9 => (1, 2),
-            R10 => (1, 3),
-            R11 => (1, 4),
-        }
-    }
-
-    // Return the REX bit and the MODRM bits.
-    pub fn to_aarch64(&self) -> u32 {
-        use EJitReg::*;
-        match self {
-            R0 => 0,
-            R1 => 1,
-            R2 => 2,
-            R3 => 3,
-            R4 => 4,
-            R5 => 5,
-            R6 => 6,
-            R7 => 7,
-            R8 => 8,
-            R9 => 9,
-            R10 => 10,
-            R11 => 11,
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct I64([u8; 8]);
 
@@ -164,6 +124,6 @@ mod tests {
         ];
         let func = EJit::compile(prog.into_iter());
         let res = func.call0();
-        println!("{res}");
+        assert_eq!(res, 123);
     }
 }

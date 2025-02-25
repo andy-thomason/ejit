@@ -42,6 +42,27 @@ impl EJit {
 
 }
 
+impl EJitReg {
+    // Return the REX bit and the MODRM bits.
+    pub fn to_aarch64(&self) -> u32 {
+        use EJitReg::*;
+        match self {
+            R0 => 0,
+            R1 => 1,
+            R2 => 2,
+            R3 => 3,
+            R4 => 4,
+            R5 => 5,
+            R6 => 6,
+            R7 => 7,
+            R8 => 8,
+            R9 => 9,
+            R10 => 10,
+            R11 => 11,
+        }
+    }
+}
+
 fn arith(code: &mut Vec<u8>, opcode: u32, dest: EJitReg, src1: EJitReg, src2: EJitReg) {
     let coding = opcode
         | dest.to_aarch64()
