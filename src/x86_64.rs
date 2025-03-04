@@ -1,11 +1,11 @@
-use crate::{EJit, EJitFunc, EJitIns};
+use crate::{Ejit, EjitFunc, EjitIns};
 
-impl EJit {
-    pub fn compile(ins: impl Iterator<Item=EJitIns>) -> EJitFunc {
+impl Ejit {
+    pub fn compile(ins: impl Iterator<Item=EjitIns>) -> EjitFunc {
         let mut code = Vec::new();
         let mut labels = Vec::new();
         for i in ins {
-            use EJitIns::*;
+            use EjitIns::*;
             match i {
                 Label(label) => labels.push((label.as_u64(), code.len())),
                 Add(dest, src1, src2) => {
@@ -42,8 +42,8 @@ impl EJit {
                     // 48C7C07B
                     code.extend([rex, 0xc7, modrm, i64.0[0], i64.0[1], i64.0[2], i64.0[3]]);
                 }
-                Cmp(ejit_reg, ejit_reg1) => todo!(),
-                Call(ejit_reg) => todo!(),
+                Cmp(Ejit_reg, Ejit_reg1) => todo!(),
+                Call(Ejit_reg) => todo!(),
                 Jmp(label, cond) => todo!(),
                 Ret => {
                     code.push(0xc3);
@@ -54,10 +54,10 @@ impl EJit {
     }
 }
 
-impl EJitReg {
+impl EjitReg {
     // Return the REX bit and the MODRM bits.
     pub fn to_x86_64(&self) -> (u8, u8) {
-        use EJitReg::*;
+        use EjitReg::*;
         match self {
             R0 => (0, 0),
             R1 => (0, 1),
