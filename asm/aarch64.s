@@ -137,6 +137,85 @@
     ret x30
 
     cmp x1, x2
+    cmp x0, #0
+
+    sub sp, sp, #0
+    sub sp, sp, #0xfff
+
+    add sp, sp, #0
+    add sp, sp, #0xfff
+
+    ldrb w0, [x0, #0]
+    ldrh w0, [x0, #0]
+    ldr w0, [x0, #0]
+    ldr x0, [x0, #0]
+    ldrsb x0, [x0, #0]
+    ldrsh x0, [x0, #0]
+    ldrsw x0, [x0, #0]
+    ldr x0, [x0, #0]
+
+    strb w0, [x0, #0]
+    strh w0, [x0, #0]
+    str w0, [x0, #0] 
+    str x0, [x0, #0] 
+    strb w0, [x0, #0]  
+    strh w0, [x0, #0]  
+    str w0, [x0, #0]  
+    str x0, [x0, #0] 
+
+    mov x0, x0
+    mvn x0, x0
+    neg x0, x0
+    
+    b l5
+    l5:
+    b l5
+
+    br x0
+    br x1
+
+    blr x0
+    blr x1
+
+    lsl x0, x0, x0
+    lsl x0, x0, x1
+    lsl x0, x1, x0
+    lsl x1, x0, x0
+
+    lsr x0, x0, x0
+    lsr x0, x0, x1
+    lsr x0, x1, x0
+    lsr x1, x0, x0
+
+    asr x0, x0, x0
+    asr x0, x0, x1
+    asr x0, x1, x0
+    asr x1, x0, x0
+
+    # Eq,
+    csel x0, x0, x0, eq
+    # Ne,
+    csel x0, x0, x0, ne
+    # Sgt,
+    csel x0, x0, x0, gt
+    # Sge,
+    csel x0, x0, x0, ge
+    # Slt,
+    csel x0, x0, x0, lt
+    # Sle,
+    csel x0, x0, x0, le
+    # Ugt,
+    csel x0, x0, x0, hi
+    # Uge,
+    csel x0, x0, x0, hs
+    # Ult,
+    csel x0, x0, x0, lo
+    # Ule,
+    csel x0, x0, x0, ls
+
+    csel x0, x0, x1, eq
+    csel x0, x1, x0, eq
+    csel x1, x0, x0, eq
 
     # See also: https://github.com/ARM-software/abi-aa/blob/main/sysvabi64/sysvabi64.rst
 

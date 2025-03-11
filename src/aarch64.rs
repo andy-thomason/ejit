@@ -1,16 +1,18 @@
-use crate::{Cond, Error, Executable, Ins, R};
+use crate::{Cond, Error, Executable, Ins, Type, R};
 
 enum Fixup {
     Adr(R, u32),
     B(Cond, u32),
+    J(u32),
 }
 
 pub mod regs {
     use crate::R;
 
-    pub const ARG0 : R = R(0);
-    pub const ARG1 : R = R(1);
-    pub const RET0 : R = R(0);
+    // See https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst
+    pub const ARG: [R; 8] = [R(0), R(1), R(2), R(3), R(4), R(5), R(6), R(7)];
+    pub const RES: [R; 2] = [R(0), R(1)];
+    pub const SP: R = R(31);
 }
 
 impl Executable {
@@ -23,47 +25,36 @@ impl Executable {
             // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions
             match i {
                 Label(label) => labels.push((*label, code.len())),
-                // 33 0050 000000AB 	    adds x0, x0, x0
                 Add(dest, src1, src2) => {
                     arith(&mut code, 0x000000AB_u32.swap_bytes(), dest, src1, src2)
                 }
-                // 34 0054 000000EB 	    subs x0, x0, x0
                 Sub(dest, src1, src2) => {
                     arith(&mut code, 0x000000EB_u32.swap_bytes(), dest, src1, src2)
                 }
-                // 35 0058 0000008A 	    and x0, x0, x0
                 And(dest, src1, src2) => {
                     arith(&mut code, 0x0000008A_u32.swap_bytes(), dest, src1, src2)
                 }
-                // 36 005c 000000AA 	    orr x0, x0, x0
                 Or(dest, src1, src2) => {
                     arith(&mut code, 0x000000AA_u32.swap_bytes(), dest, src1, src2)
                 }
-                // 37 0060 000000CA 	    eor x0, x0, x0
                 Xor(dest, src1, src2) => {
                     arith(&mut code, 0x000000CA_u32.swap_bytes(), dest, src1, src2)
                 }
-                // 38 0064 000000BA 	    adcs x0, x0, x0
                 Adc(dest, src1, src2) => {
                     arith(&mut code, 0x000000BA_u32.swap_bytes(), dest, src1, src2)
                 }
-                // 39 0068 000000FA 	    sbcs x0, x0, x0
                 Sbc(dest, src1, src2) => {
                     arith(&mut code, 0x000000FA_u32.swap_bytes(), dest, src1, src2)
                 }
-                // 40 006c 007C009B 	    mul x0, x0, x0
                 Mul(dest, src1, src2) => {
                     arith(&mut code, 0x007C009B_u32.swap_bytes(), dest, src1, src2)
                 }
-                // 41 0070 0008C09A 	    udiv x0, x0, x0
                 UDiv(dest, src1, src2) => {
                     arith(&mut code, 0x0008C09A_u32.swap_bytes(), dest, src1, src2)
                 }
-                // 42 0074 000CC09A 	    sdiv x0, x0, x0
                 SDiv(dest, src1, src2) => {
                     arith(&mut code, 0x000CC09A_u32.swap_bytes(), dest, src1, src2)
                 }
-
                 Addr(dest, label) => {
                     fixups.push((code.len(), Fixup::Adr(*dest, *label)));
                     code.extend(0x10000000_u32.to_le_bytes());
@@ -75,14 +66,27 @@ impl Executable {
                         return Err(Error::InvalidImmediate(i.clone()));
                     }
                 }
-                Cmp(r1, r2) => {
+                Cmp(lhs, rhs) => {
                     // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--shifted-register---Compare--shifted-register---an-alias-of-SUBS--shifted-register--?lang=en
-                    let opcode = 0xeb00001f_u32
-                        | r1.to_aarch64() << 5
-                        | r2.to_aarch64() << 16;
+                    let opcode = 0xeb00001f_u32 | lhs.to_aarch64() << 5 | rhs.to_aarch64() << 16;
                     code.extend(opcode.to_le_bytes());
                 }
-                Call(Ejit_reg) => todo!(),
+                Cmpi(lhs, imm) => {
+                    // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--immediate---Compare--immediate---an-alias-of-SUBS--immediate--?lang=en
+                    if *imm >= 0x1000 {
+                        return Err(Error::InvalidImmediate(i.clone()));
+                    }
+                    let opcode = 0xf100001f_u32 | lhs.to_aarch64() << 5 | (*imm as u32) << 10;
+                    code.extend(opcode.to_le_bytes());
+                }
+                Call(target) => {
+                    let opcode = 0xd63f0000_u32 | target.to_aarch64() << 5;
+                    code.extend(opcode.to_le_bytes());
+                }
+                Branch(target) => {
+                    let opcode = 0xd61f0000_u32 | target.to_aarch64() << 5;
+                    code.extend(opcode.to_le_bytes());
+                }
                 B(cond, label) => {
                     fixups.push((code.len(), Fixup::B(*cond, *label)));
                     code.extend(0x10000000_u32.to_le_bytes());
@@ -90,27 +94,137 @@ impl Executable {
                 Ret => {
                     code.extend(0xd65f03c0_u32.to_le_bytes());
                 }
-                Not(_, _) => todo!(),
-                Neg(_, _) => todo!(),
-                Vfadd(_, _, v, v1, v2) => todo!(),
-                Vfsub(_, _, v, v1, v2) => todo!(),
-                Vfmul(_, _, v, v1, v2) => todo!(),
-                Vfdiv(_, _, v, v1, v2) => todo!(),
-                Vfrem(_, _, v, v1, v2) => todo!(),
-                Vuadd(_, _, v, v1, v2) => todo!(),
-                Vusub(_, _, v, v1, v2) => todo!(),
-                Vumul(_, _, v, v1, v2) => todo!(),
-                Vudiv(_, _, v, v1, v2) => todo!(),
-                Vsadd(_, _, v, v1, v2) => todo!(),
-                Vssub(_, _, v, v1, v2) => todo!(),
-                Vsmul(_, _, v, v1, v2) => todo!(),
-                Vsdiv(_, _, v, v1, v2) => todo!(),
-                Branch(r) => todo!(),
-                Mov(r, r1) => todo!(),
-                Shl(r, r1, r2) => todo!(),
-                Shr(r, r1, r2) => todo!(),
-                Sar(r, r1, r2) => todo!(),
-                Sel(_, _, _, _) => todo!(),
+                Not(d, src) => {
+                    let opcode = 0xaa2003e0_u32 | src.to_aarch64() << 5 | d.to_aarch64();
+                    code.extend(opcode.to_le_bytes());
+                }
+                Neg(d, src) => {
+                    let opcode = 0xcb0003e0_u32 | src.to_aarch64() << 5 | d.to_aarch64();
+                    code.extend(opcode.to_le_bytes());
+                }
+                Mov(d, src) => {
+                    if d != src {
+                        let opcode = 0xaa0003e0_u32 | src.to_aarch64() << 16 | d.to_aarch64();
+                        code.extend(opcode.to_le_bytes());
+                    }
+                }
+                Shl(d, src, shift) => {
+                    let opcode = 0x9ac02000_u32 | d.to_aarch64() | src.to_aarch64() << 5 | shift.to_aarch64() << 16;
+                    code.extend(opcode.to_le_bytes());
+                }
+                Shr(d, src, shift) => {
+                    let opcode = 0x9ac02000_u32 | d.to_aarch64() | src.to_aarch64() << 5 | shift.to_aarch64() << 16;
+                    code.extend(opcode.to_le_bytes());
+                }
+                Sar(d, src, shift) => {
+                    let opcode = 0x9ac02000_u32 | d.to_aarch64() | src.to_aarch64() << 5 | shift.to_aarch64() << 16;
+                    code.extend(opcode.to_le_bytes());
+                }
+                Sel(cond, d, t, f) => {
+                    let opcode : u32 = match cond {
+                        Cond::Eq => 0x9a800000,
+                        Cond::Ne => 0x9a801000,
+                        Cond::Sgt => 0x9a80C000,
+                        Cond::Sge => 0x9a80A000,
+                        Cond::Slt => 0x9a80B000,
+                        Cond::Sle => 0x9a80D000,
+                        Cond::Ugt => 0x9a808000,
+                        Cond::Uge => 0x9a802000,
+                        Cond::Ult => 0x9a803000,
+                        Cond::Ule => 0x9a809000,
+                    };
+                    let opcode = opcode | f.to_aarch64() << 16 | t.to_aarch64() << 5 | d.to_aarch64();
+                    code.extend(opcode.to_le_bytes());
+                }
+                Enter(imm) => {
+                    // FF0300D1 	    sub sp, sp, #0
+                    if *imm >= 0x1000 {
+                        return Err(Error::InvalidImmediate(i.clone()));
+                    }
+                    if *imm & 0x0f != 0 {
+                        return Err(Error::StackFrameMustBeModulo16(i.clone()));
+                    }
+                    let opcode = 0xd10003ff_u32 | (*imm as u32) << 10;
+                    code.extend(opcode.to_le_bytes());
+                }
+                Leave(imm) => {
+                    // FF030091 	    add sp, sp, #0
+                    if *imm >= 0x1000 {
+                        return Err(Error::InvalidImmediate(i.clone()));
+                    }
+                    if *imm & 0x0f != 0 {
+                        return Err(Error::StackFrameMustBeModulo16(i.clone()));
+                    }
+                    let opcode = 0x910003ff_u32 | (*imm as u32) << 10;
+                    code.extend(opcode.to_le_bytes());
+                }
+                Ld(ty, r, ra, imm) => {
+                    // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/LDR--register---Load-register--register--?lang=en
+                    use Type::*;
+                    let (shift, opcode) = match ty {
+                        U8 => (0, 0x39400000),  // 00004039 	    ldrb w0, [x0, #0]
+                        U16 => (1, 0x79400000), // 00004079 	    ldrh w0, [x0, #0]
+                        U32 => (2, 0xb9400000), // 000040B9 	    ldr w0, [x0, #0]
+                        U64 => (3, 0xf9400000), // 000040F9 	    ldr x0, [x0, #0]
+                        S8 => (0, 0x39c00000),  // 0000C039 	    ldrsb w0, [x0, #0]
+                        S16 => (1, 0x79c00000), // 0000C079 	    ldrsh w0, [x0, #0]
+                        S32 => (2, 0xb9800000), // 000080B9 	    ldrsw x0, [x0, #0]
+                        S64 => (3, 0xf9400000), // 000040F9 	    ldr x0, [x0, #0]
+                        _ => return Err(Error::InvalidType(i.clone())),
+                    };
+                    if *imm >> shift << shift != *imm {
+                        return Err(Error::InvalidImmediate(i.clone()));
+                    }
+                    if *imm >> shift >= 0x1000 {
+                        return Err(Error::InvalidImmediate(i.clone()));
+                    }
+
+                    let opcode = opcode
+                        | ((*imm >> shift) as u32) << 10
+                        | ra.to_aarch64() << 5
+                        | r.to_aarch64();
+                    code.extend(opcode.to_le_bytes());
+                }
+                St(ty, r, ra, imm) => {
+                    use Type::*;
+                    let (shift, opcode) = match ty {
+                        U8 => (0, 0x39000000),  // 00000039 	    strb w0, [x0, #0]
+                        U16 => (1, 0x79000000), // 00000079 	    strh w0, [x0, #0]
+                        U32 => (2, 0xB9000000), // 000000B9 	    str w0, [x0, #0]
+                        U64 => (3, 0xF9000000), // 000000F9 	    str x0, [x0, #0]
+                        S8 => (0, 0x39000000),  // 00000039 	    strb w0, [x0, #0]
+                        S16 => (1, 0x79000000), // 00000079 	    strh w0, [x0, #0]
+                        S32 => (2, 0xB9000000), // 000000B9 	    str w0, [x0, #0]
+                        S64 => (3, 0xF9000000), // 000000F9 	    str x0, [x0, #0]
+                        _ => return Err(Error::InvalidType(i.clone())),
+                    };
+                    if *imm >> shift << shift != *imm {
+                        return Err(Error::InvalidImmediate(i.clone()));
+                    }
+                    if *imm >> shift >= 0x1000 {
+                        return Err(Error::InvalidImmediate(i.clone()));
+                    }
+                    let opcode = opcode
+                        | ((*imm >> shift) as u32) << 10
+                        | ra.to_aarch64() << 5
+                        | r.to_aarch64();
+                    code.extend(opcode.to_le_bytes());
+                }
+                Vmov(_, _, v, v1) => todo!(),
+                Vcmp(_, _, v, v1) => todo!(),
+                Vnot(_, _, v, v1) => todo!(),
+                Vneg(_, _, v, v1) => todo!(),
+                Vadd(_, _, v, v1, v2) => todo!(),
+                Vsub(_, _, v, v1, v2) => todo!(),
+                Vmul(_, _, v, v1, v2) => todo!(),
+                Vdiv(_, _, v, v1, v2) => todo!(),
+                Vand(_, _, v, v1, v2) => todo!(),
+                Vor(_, _, v, v1, v2) => todo!(),
+                Vxor(_, _, v, v1, v2) => todo!(),
+                J(label) => {
+                    fixups.push((code.len(), Fixup::J(*label)));
+                    code.extend(0x14000000_u32.to_le_bytes());
+                }
             }
         }
         for (loc, f) in fixups {
@@ -135,11 +249,11 @@ impl Executable {
                         if (delta & 3) != 0 {
                             return Err(Error::BranchNotMod4(label));
                         }
-                        if delta < -(1<<18) || delta >= (1<<18) {
+                        if delta < -(1 << 19+2-1) || delta >= (1 << 19+2-1) {
                             return Err(Error::BranchOutOfRange(label));
                         }
                         let opcode = match cond {
-                            Cond::Always => 0x5400000e,
+                            // Cond::Always => 0x5400000e,
                             Cond::Eq => 0x54000000,
                             Cond::Ne => 0x54000001,
                             Cond::Sgt => 0x5400000c,
@@ -151,6 +265,23 @@ impl Executable {
                             Cond::Ult => 0x54000003,
                             Cond::Ule => 0x54000009,
                         } | ((delta >> 1) & 0xfffff) as u32 * 16;
+                        code[loc..loc + 4].copy_from_slice(&opcode.to_le_bytes());
+                    } else {
+                        return Err(Error::MissingLabel(label));
+                    }
+                }
+                Fixup::J(label) => {
+                    // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/B-cond--Branch-conditionally-?lang=en
+                    if let Some((_, offset)) = labels.iter().find(|(n, _)| *n == label) {
+                        let delta = *offset as isize - loc as isize;
+                        if (delta & 3) != 0 {
+                            return Err(Error::BranchNotMod4(label));
+                        }
+                        if delta < -(1 << 26+2-1) || delta >= (1 << 26+2-1) {
+                            return Err(Error::BranchOutOfRange(label));
+                        }
+                        let opcode = 0x14000000_u32
+                            | ((delta >> 1) & 0x3ffffff) as u32;
                         code[loc..loc + 4].copy_from_slice(&opcode.to_le_bytes());
                     } else {
                         return Err(Error::MissingLabel(label));
@@ -188,7 +319,6 @@ fn movzkn(code: &mut Vec<u8>, opcode: u32, dest: &R, imm: u32, shift: u32) {
     code.extend(coding.to_le_bytes());
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -218,8 +348,10 @@ mod tests {
             ])
             .unwrap();
             println!("{}", prog.fmt_32());
-            assert_eq!(prog.fmt_32(), "60000010 40000010 20000010 00000010 e0ffff13 c0ffff13 c0035fd6");
-
+            assert_eq!(
+                prog.fmt_32(),
+                "60000010 40000010 20000010 00000010 e0ffff13 c0ffff13 c0035fd6"
+            );
         }
         {
             // 103              	    # Always,
@@ -245,26 +377,77 @@ mod tests {
             // 123 0138 83FFFF54 	    b.lo l4
             // 124              	    # Ule,
             // 125 013c 69FFFF54 	    b.ls l4
+            use Cond::*;
             let prog = Executable::from_ir(&[
-                B(Cond::Always, 4),
-                B(Cond::Eq, 4),
-                B(Cond::Ne, 4),
-                B(Cond::Sgt, 4),
-                B(Cond::Sge, 4),
+                // Bcc(Always, 4),
+                B(Eq, 4),
+                B(Ne, 4),
+                B(Sgt, 4),
+                B(Sge, 4),
                 Label(4),
-                B(Cond::Slt, 4),
-                B(Cond::Sle, 4),
-                B(Cond::Ugt, 4),
-                B(Cond::Uge, 4),
-                B(Cond::Ult, 4),
-                B(Cond::Ule, 4),
+                B(Slt, 4),
+                B(Sle, 4),
+                B(Ugt, 4),
+                B(Uge, 4),
+                B(Ult, 4),
+                B(Ule, 4),
                 Ret,
             ])
             .unwrap();
             println!("{}", prog.fmt_32());
 
-            assert_eq!(prog.fmt_32(), "ae000054 80000054 61000054 4c000054 2a000054 0b000054 edffff54 c8ffff54 a2ffff54 83ffff54 69ffff54 c0035fd6");
-
+            assert_eq!(prog.fmt_32(), "80000054 61000054 4c000054 2a000054 0b000054 edffff54 c8ffff54 a2ffff54 83ffff54 69ffff54 c0035fd6");
+            // https://shell-storm.org/online/Online-Assembler-and-Disassembler/
         }
+    }
+
+    #[test]
+    fn load_store() {
+        use Ins::*;
+        use Type::*;
+        let prog = Executable::from_ir(&[
+            Ld(U64, R(1), R(2), 0xabc * 8),
+            Ld(U64, R(1), R(3), 0xabc * 8),
+            Ld(U64, R(1), R(4), 0xabc * 8),
+            Ld(U8, R(1), R(2), 0xabc * 1),
+            Ld(U16, R(1), R(2), 0xabc * 2),
+            Ld(U32, R(1), R(2), 0xabc * 4),
+            Ld(U64, R(1), R(2), 0xabc * 8),
+            Ld(S8, R(1), R(2), 0xabc * 1),
+            Ld(S16, R(1), R(2), 0xabc * 2),
+            Ld(S32, R(1), R(2), 0xabc * 4),
+            Ld(S64, R(1), R(2), 0xabc * 8),
+            St(U64, R(1), R(2), 0xabc * 8),
+            St(U64, R(1), R(3), 0xabc * 8),
+            St(U64, R(1), R(4), 0xabc * 8),
+            St(U8, R(1), R(2), 0xabc * 1),
+            St(U16, R(1), R(2), 0xabc * 2),
+            St(U32, R(1), R(2), 0xabc * 4),
+            St(U64, R(1), R(2), 0xabc * 8),
+            St(S8, R(1), R(2), 0xabc * 1),
+            St(S16, R(1), R(2), 0xabc * 2),
+            St(S32, R(1), R(2), 0xabc * 4),
+            St(S64, R(1), R(2), 0xabc * 8),
+            Ret,
+        ])
+        .unwrap();
+        println!("{}", prog.fmt_32());
+        // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=41f06af9+61f06af9+81f06af9+41f06a39+41f06a79+41f06ab9+41f06af9+41f0ea39+41f0ea79+41f0aab9+41f06af9+41f02af9+61f02af9+81f02af9+41f02a39+41f02a79+41f02ab9+41f02af9+41f02a39+41f02a79+41f02ab9+41f02af9+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
+        assert_eq!(prog.fmt_32(), "41f06af9 61f06af9 81f06af9 41f06a39 41f06a79 41f06ab9 41f06af9 41f0ea39 41f0ea79 41f0aab9 41f06af9 41f02af9 61f02af9 81f02af9 41f02a39 41f02a79 41f02ab9 41f02af9 41f02a39 41f02a79 41f02ab9 41f02af9 c0035fd6");
+    }
+
+    #[test]
+    fn enter_leave() {
+        use Ins::*;
+        use Type::*;
+        let prog = Executable::from_ir(&[
+            Enter(128),
+            Leave(128),
+            Ret,
+        ])
+        .unwrap();
+        println!("{}", prog.fmt_32());
+        // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=ff0302d1+ff030291+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
+        assert_eq!(prog.fmt_32(), "ff0302d1 ff030291 c0035fd6");
     }
 }

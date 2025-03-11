@@ -19,7 +19,7 @@ pub struct Imm(pub u64);
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Cond {
-    Always,
+    // Always,
     Eq,
     Ne,
     Sgt,
@@ -32,14 +32,45 @@ pub enum Cond {
     Ule,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(u8)]
+enum Type {
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    U256,
+    S8,
+    S16,
+    S32,
+    S64,
+    S128,
+    S256,
+    F8,
+    F16,
+    F32,
+    F64,
+    F128,
+    F256,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 enum Ins {
-    // Remeber a PC-rel location.
+    // Remember a PC-rel location.
     Label(u32),
+
+    // Function entry & exit: Adjust sp.
+    // Must be modulo 16 bytes
+    Enter(u32),
+    Leave(u32),
 
     // constants
     Addr(R, u32),
-    Movi(R, u64),
+
+    // Mem
+    Ld(Type, R, R, i32),
+    St(Type, R, R, i32),
 
     // Integer Arithmetic. Note flags will be set.
     Add(R, R, R),
@@ -56,26 +87,26 @@ enum Ins {
     UDiv(R, R, R),
     SDiv(R, R, R),
 
-    /// Vector instructions: eg. Vfadd(32, 256)
-    Vfadd(u32, u32, V, V, V),
-    Vfsub(u32, u32, V, V, V),
-    Vfmul(u32, u32, V, V, V),
-    Vfdiv(u32, u32, V, V, V),
-    Vfrem(u32, u32, V, V, V),
-    Vuadd(u32, u32, V, V, V),
-    Vusub(u32, u32, V, V, V),
-    Vumul(u32, u32, V, V, V),
-    Vudiv(u32, u32, V, V, V),
-    Vsadd(u32, u32, V, V, V),
-    Vssub(u32, u32, V, V, V),
-    Vsmul(u32, u32, V, V, V),
-    Vsdiv(u32, u32, V, V, V),
+    /// Vector instructions: eg. Vadd(F32, 256)
+    Vmov(Type, u32, V, V),
+    Vcmp(Type, u32, V, V),
+    Vnot(Type, u32, V, V),
+    Vneg(Type, u32, V, V),
+    Vadd(Type, u32, V, V, V),
+    Vsub(Type, u32, V, V, V),
+    Vmul(Type, u32, V, V, V),
+    Vdiv(Type, u32, V, V, V),
+    Vand(Type, u32, V, V, V),
+    Vor(Type, u32, V, V, V),
+    Vxor(Type, u32, V, V, V),
 
     // Two operand ops. Flags will be set.
     Cmp(R, R),
+    Cmpi(R, u64),
     Not(R, R),
     Neg(R, R),
     Mov(R, R),
+    Movi(R, u64),
 
     // Control flow
     /// Call indirect using stack or R(30)
@@ -85,7 +116,9 @@ enum Ins {
     Branch(R),
 
     /// Use the flags to branch conditionally
+    /// Only after a Cmp
     B(Cond, u32),
+    J(u32),
 
     Sel(Cond, R, R, R),
 
@@ -103,6 +136,8 @@ enum Error {
     MissingLabel(u32),
     BranchOutOfRange(u32),
     BranchNotMod4(u32),
+    InvalidType(Ins),
+    StackFrameMustBeModulo16(Ins),
 }
 
 struct Executable {
@@ -162,6 +197,11 @@ impl Executable {
     fn fmt_32(&self) -> String {
         self.to_bytes().chunks_exact(4).map(|c| format!("{:08x}", u32::from_be_bytes(c.try_into().unwrap()))).collect::<Vec<String>>().join(" ")
     }
+
+    fn fmt_url(&self) -> String {
+        let opcodes = self.to_bytes().chunks_exact(4).map(|c| format!("{:08x}", u32::from_be_bytes(c.try_into().unwrap()))).collect::<Vec<String>>().join("+");
+        format!("https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes={opcodes}&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly")
+    }
 }
 
 impl std::fmt::Debug for Executable {
@@ -191,11 +231,12 @@ mod aarch64;
 pub use aarch64::regs;
 
 #[cfg(test)]
-mod tests {
+mod generic_tests {
+    //! Machine independent tests
     use super::*;
 
     #[test]
-    fn basic() {
+    fn generic_basic() {
         use Ins::*;
 
         {
@@ -217,52 +258,116 @@ mod tests {
     }
 
     #[test]
-    fn test_branch() {
-        use Ins::*;
-        use regs::*;
-        const IS_FALSE : u32 = 0;
-        const IS_TRUE : u32 = 1;
-        let mut prog = Executable::from_ir(&[
-            Cmp(ARG0, ARG1),
-            B(Cond::Uge, IS_TRUE),
+    fn generic_branch() {
+        fn test_one_branch(c: Cond, expected: [bool; 5]) {
+            use Ins::*;
+            use regs::*;
+            const IS_FALSE : u32 = 0;
+            const IS_TRUE : u32 = 1;
+            let mut prog = Executable::from_ir(&[
+                Cmp(ARG[0], ARG[1]),
+                B(c, IS_TRUE),
+    
+                Label(IS_FALSE),
+                Movi(RES[0], 0),
+                Ret,
+    
+                Label(IS_TRUE),
+                Movi(RES[0], 1),
+                Ret,
+            ])
+            .unwrap();
+    
+            let tv = [[1, 1], [1, 2], [2, 1], [1, !0], [!0, 1]];
+            let res = tv.iter().map(|args| unsafe { prog.call(0, &args[..]).unwrap().0 != 0 }).collect::<Vec<_>>();
+            // println!("{res:?}");
+            assert_eq!(&expected[..], &res, "{:?}", c);
+        }
 
-            Label(IS_FALSE),
-            Movi(RET0, 0),
-            Ret,
-
-            Label(IS_TRUE),
-            Movi(RET0, 1),
-            Ret,
-        ])
-        .unwrap();
-
-        println!("{}", prog.fmt_32());
-        let tv = [[1, 1], [1, 2], [2, 1], [1, !0], [!0, 1]];
-        let res = tv.iter().map(|args| unsafe { prog.call(0, &args[..]).unwrap().0 != 0 }).collect::<Vec<_>>();
-        println!("{res:?}");
-        // let (res, _) = unsafe { prog.call(0, &[1, 1]).unwrap() };
-        // assert_eq!(res, 2);
-        // let (res, _) = unsafe { prog.call(0, &[1, 2]).unwrap() };
-        // assert_eq!(res, 2);
-        // let (res, _) = unsafe { prog.call(0, &[2, 1]).unwrap() };
-        // assert_eq!(res, 1);
+        use Cond::*;
+        // test_one_branch(Always, [true, true, true, true, true]);
+        test_one_branch(Eq, [true, false, false, false, false]);
+        test_one_branch(Ne, [false, true, true, true, true]);
+        test_one_branch(Sgt, [false, false, true, true, false]);
+        test_one_branch(Sge, [true, false, true, true, false]);
+        test_one_branch(Slt, [false, true, false, false, true]);
+        test_one_branch(Sle, [true, true, false, false, true]);
+        test_one_branch(Ugt, [false, false, true, false, true]);
+        test_one_branch(Uge, [true, false, true, false, true]);
+        test_one_branch(Ult, [false, true, false, true, false]);
+        test_one_branch(Ule, [true, true, false, true, false]);
     }
 
     #[test]
-    fn test_loop() {
+    fn generic_loop() {
+        for _ in 0..3 {
+            use Ins::*;
+            use regs::*;
+            let t0 = std::time::Instant::now();
+            const COUNT : R = R(0);
+            const TOT : R = R(1);
+            const INC : R = R(2);
+            const LOOP : u32 = 0;
+            let mut prog = Executable::from_ir(&[
+                Movi(COUNT, 10000),
+                Movi(TOT, 0),
+                Movi(INC, 1),
+                Label(LOOP),
+                Add(TOT, TOT, COUNT),
+                Sub(COUNT, COUNT, INC),
+                Cmpi(COUNT, 0),
+                B(Cond::Ne, LOOP),
+                Mov(RES[0], TOT),
+                Ret,
+            ])
+            .unwrap();
+            // Compile time varies from 9μs (hot) to 11.4μs (cold).
+            println!("compile time {}ns", std::time::Instant::elapsed(&t0).as_nanos());
+            println!("{}", prog.fmt_url());
+            let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
+            assert_eq!(res, 50005000);
+        }
+    }
+
+    #[test]
+    fn generic_load_store() {
         use Ins::*;
+        use Type::*;
+        use regs::*;
         let mut prog = Executable::from_ir(&[
-            Movi(R(0), 100),
-            Movi(R(1), 0),
-            Label(0),
-            Add(R(1), R(1), R(0)),
-            Movi(R(2), 1),
-            Sub(R(0), R(0), R(2)),
-            B(Cond::Ne, 0),
+            Enter(16),
+            St(U8, ARG[0], SP, 6),
+            St(U8, ARG[1], SP, 7),
+            Ld(U16, RES[0], SP, 6),
+            Leave(16),
             Ret,
         ])
         .unwrap();
-        let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
-        assert_eq!(res, 99);
+        let (res, _) = unsafe { prog.call(0, &[0x34, 0x12]).unwrap() };
+        #[cfg(target_endian="little")]
+        assert_eq!(res, 0x1234);
+        #[cfg(target_endian="big")]
+        assert_eq!(res, 0x3412);
     }
+
+    // #[test]
+    // fn generic_load_store() {
+    //     use Ins::*;
+    //     use Type::*;
+    //     use regs::*;
+    //     let mut prog = Executable::from_ir(&[
+    //         Enter(16),
+    //         St(U8, ARGS[0], SP, 6),
+    //         St(U8, ARGS[1], SP, 7),
+    //         Ld(U16, RES[0], SP, 6),
+    //         Leave(16),
+    //         Ret,
+    //     ])
+    //     .unwrap();
+    //     let (res, _) = unsafe { prog.call(0, &[0x34, 0x12]).unwrap() };
+    //     #[cfg(target_endian="little")]
+    //     assert_eq!(res, 0x1234);
+    //     #[cfg(target_endian="big")]
+    //     assert_eq!(res, 0x3412);
+    // }
 }
