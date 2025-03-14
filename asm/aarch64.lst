@@ -1,249 +1,173 @@
-AARCH64 GAS  asm/aarch64.s 			page 1
+
+target/a.out:     file format elf64-littleaarch64
 
 
-   1              	    .text
-   2              	
-   3              	    # https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/ADD--shifted-regist
-   4              	    # sf=0 (bit 31)
-   5 ???? 0000000B 	    add w0, w0, w0
-   6              	
-   7              	    # sf=1 (bit 31)
-   8              	    # Rm (bits 16-20)
-   9 ???? 0000008B 	    add x0, x0, x0
-  10 ???? 0000018B 	    add x0, x0, x1
-  11 ???? 00001E8B 	    add x0, x0, x30
-  12              	
-  13              	    # Rm (bits 5-9)
-  14 ???? 0000008B 	    add x0, x0, x0
-  15 ???? 2000008B 	    add x0, x1, x0
-  16 ???? 4000008B 	    add x0, x2, x0
-  17 ???? 8000008B 	    add x0, x4, x0
-  18 ???? 0001008B 	    add x0, x8, x0
-  19 ???? 0002008B 	    add x0, x16, x0
-  20 ???? C003008B 	    add x0, x30, x0
-  21 ???? E063208B 	    add x0, sp, x0
-  22              	
-  23              	    # Rd (bits 0-4)
-  24 ???? 0000008B 	    add x0, x0, x0
-  25 ???? 0100008B 	    add x1, x0, x0
-  26 ???? 0200008B 	    add x2, x0, x0
-  27 ???? 0400008B 	    add x4, x0, x0
-  28 ???? 0800008B 	    add x8, x0, x0
-  29 ???? 1000008B 	    add x16, x0, x0
-  30 ???? 1E00008B 	    add x30, x0, x0
-  31 ???? 1F60208B 	    add sp, x0, x0
-  32              	
-  33 ???? 000000AB 	    adds x0, x0, x0
-  34 ???? 000000EB 	    subs x0, x0, x0
-  35 ???? 0000008A 	    and x0, x0, x0
-  36 ???? 000000AA 	    orr x0, x0, x0
-  37 ???? 000000CA 	    eor x0, x0, x0
-  38 ???? 000000BA 	    adcs x0, x0, x0
-  39 ???? 000000FA 	    sbcs x0, x0, x0
-  40 ???? 007C009B 	    mul x0, x0, x0
-  41 ???? 0008C09A 	    udiv x0, x0, x0
-  42 ???? 000CC09A 	    sdiv x0, x0, x0
-  43              	
-  44 ???? 60000010 	    adr x0, l1
-  45 ???? 40000010 	    adr x0, l1
-  46 ???? 20000010 	    adr x0, l1
-  47              	    l1:
-  48 ???? 00000010 	    adr x0, l1
-  49 ???? E0FFFF10 	    adr x0, l1
-  50 ???? C0FFFF10 	    adr x0, l1
-  51              	
-  52 ???? 03000014 	    b l2
-  53 ???? 02000014 	    b l2
-  54 ???? 01000014 	    b l2
-  55              	    l2:
-  56 ???? 00000014 	    b l2
-  57 ???? FFFFFF17 	    b l2
-AARCH64 GAS  asm/aarch64.s 			page 2
+Disassembly of section .text:
 
+0000000000000000 <l1-0x84>:
+   0:	0b000000 	add	w0, w0, w0
+   4:	8b000000 	add	x0, x0, x0
+   8:	8b010000 	add	x0, x0, x1
+   c:	8b1e0000 	add	x0, x0, x30
+  10:	8b000000 	add	x0, x0, x0
+  14:	8b000020 	add	x0, x1, x0
+  18:	8b000040 	add	x0, x2, x0
+  1c:	8b000080 	add	x0, x4, x0
+  20:	8b000100 	add	x0, x8, x0
+  24:	8b000200 	add	x0, x16, x0
+  28:	8b0003c0 	add	x0, x30, x0
+  2c:	8b2063e0 	add	x0, sp, x0
+  30:	8b000000 	add	x0, x0, x0
+  34:	8b000001 	add	x1, x0, x0
+  38:	8b000002 	add	x2, x0, x0
+  3c:	8b000004 	add	x4, x0, x0
+  40:	8b000008 	add	x8, x0, x0
+  44:	8b000010 	add	x16, x0, x0
+  48:	8b00001e 	add	x30, x0, x0
+  4c:	8b20601f 	add	sp, x0, x0
+  50:	ab000000 	adds	x0, x0, x0
+  54:	eb000000 	subs	x0, x0, x0
+  58:	8a000000 	and	x0, x0, x0
+  5c:	aa000000 	orr	x0, x0, x0
+  60:	ca000000 	eor	x0, x0, x0
+  64:	ba000000 	adcs	x0, x0, x0
+  68:	fa000000 	sbcs	x0, x0, x0
+  6c:	9b007c00 	mul	x0, x0, x0
+  70:	9ac00800 	udiv	x0, x0, x0
+  74:	9ac00c00 	sdiv	x0, x0, x0
+  78:	10000060 	adr	x0, 84 <l1>
+  7c:	10000040 	adr	x0, 84 <l1>
+  80:	10000020 	adr	x0, 84 <l1>
 
-  58 ???? FEFFFF17 	    b l2
-  59              	
-  60 ???? 00010054 	    b.eq l3
-  61 ???? E1000054 	    b.ne l3
-  62 ???? C2000054 	    b.cs l3
-  63 ???? A3000054 	    b.cc l3
-  64 ???? 84000054 	    b.mi l3
-  65 ???? 65000054 	    b.pl l3
-  66 ???? 46000054 	    b.vs l3
-  67 ???? 27000054 	    b.vc l3
-  68              	    l3:
-  69 ???? 08000054 	    b.hi l3
-  70 ???? E9FFFF54 	    b.ls l3
-  71 ???? CAFFFF54 	    b.ge l3
-  72 ???? ABFFFF54 	    b.lt l3
-  73 ???? 8CFFFF54 	    b.gt l3
-  74 ???? 6DFFFF54 	    b.le l3
-  75 ???? 4EFFFF54 	    b.al l3
-  76 ???? 2FFFFF54 	    b.nv l3
-  77              	
-  78              	
-  79              	    # Always,
-  80 ???? 0E000054 	    b.al .
-  81              	    # Eq,
-  82 ???? 00000054 	    b.eq .
-  83              	    # Ne,
-  84 ???? 01000054 	    b.ne .
-  85              	    # Sgt,
-  86 ???? 0C000054 	    b.gt .
-  87              	    # Sge,
-  88 ???? 0A000054 	    b.ge .
-  89              	    # Slt,
-  90 ???? 0B000054 	    b.lt .
-  91              	    # Sle,
-  92 ???? 0D000054 	    b.le .
-  93              	    # Ugt,
-  94 ???? 08000054 	    b.hi .
-  95              	    # Uge,
-  96 ???? 02000054 	    b.hs .
-  97              	    # Ult,
-  98 ???? 03000054 	    b.lo .
-  99              	    # Ule,
- 100 ???? 09000054 	    b.ls .
- 101              	
- 102              	
- 103              	    # Always,
- 104 ???? AE000054 	    b.al l4
- 105              	    # Eq,
- 106 ???? 80000054 	    b.eq l4
- 107              	    # Ne,
- 108 ???? 61000054 	    b.ne l4
- 109              	    # Sgt,
- 110 ???? 4C000054 	    b.gt l4
- 111              	    # Sge,
- 112 ???? 2A000054 	    b.ge l4
- 113              	    # Slt,
- 114              	    l4:
-AARCH64 GAS  asm/aarch64.s 			page 3
+0000000000000084 <l1>:
+  84:	10000000 	adr	x0, 84 <l1>
+  88:	10ffffe0 	adr	x0, 84 <l1>
+  8c:	10ffffc0 	adr	x0, 84 <l1>
+  90:	14000003 	b	9c <l2>
+  94:	14000002 	b	9c <l2>
+  98:	14000001 	b	9c <l2>
 
+000000000000009c <l2>:
+  9c:	14000000 	b	9c <l2>
+  a0:	17ffffff 	b	9c <l2>
+  a4:	17fffffe 	b	9c <l2>
+  a8:	54000100 	b.eq	c8 <l3>  // b.none
+  ac:	540000e1 	b.ne	c8 <l3>  // b.any
+  b0:	540000c2 	b.cs	c8 <l3>  // b.hs, b.nlast
+  b4:	540000a3 	b.cc	c8 <l3>  // b.lo, b.ul, b.last
+  b8:	54000084 	b.mi	c8 <l3>  // b.first
+  bc:	54000065 	b.pl	c8 <l3>  // b.nfrst
+  c0:	54000046 	b.vs	c8 <l3>
+  c4:	54000027 	b.vc	c8 <l3>
 
- 115 ???? 0B000054 	    b.lt l4
- 116              	    # Sle,
- 117 ???? EDFFFF54 	    b.le l4
- 118              	    # Ugt,
- 119 ???? C8FFFF54 	    b.hi l4
- 120              	    # Uge,
- 121 ???? A2FFFF54 	    b.hs l4
- 122              	    # Ult,
- 123 ???? 83FFFF54 	    b.lo l4
- 124              	    # Ule,
- 125 ???? 69FFFF54 	    b.ls l4
- 126              	
- 127              	    # https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/MOV--wide-immediate
- 128 ???? 210080D2 	    movz x1, #1, lsl #0
- 129 ???? 410080D2 	    movz x1, #2, lsl #0
- 130 ???? 610080D2 	    movz x1, #3, lsl #0
- 131 ???? 2100A0D2 	    movz x1, #1, lsl #16
- 132 ???? 2100C0D2 	    movz x1, #1, lsl #32
- 133 ???? 2100E0D2 	    movz x1, #1, lsl #48
- 134              	
- 135              	
- 136 ???? C0035FD6 	    ret
- 137 ???? C0035FD6 	    ret x30
- 138              	
- 139 ???? 3F0002EB 	    cmp x1, x2
- 140 ???? 1F0000F1 	    cmp x0, #0
- 141              	
- 142 ???? FF0300D1 	    sub sp, sp, #0
- 143 ???? FFFF3FD1 	    sub sp, sp, #0xfff
- 144              	
- 145 ???? FF030091 	    add sp, sp, #0
- 146 ???? FFFF3F91 	    add sp, sp, #0xfff
- 147              	
- 148 ???? 00004039 	    ldrb w0, [x0, #0]
- 149 ???? 00004079 	    ldrh w0, [x0, #0]
- 150 ???? 000040B9 	    ldr w0, [x0, #0]
- 151 ???? 000040F9 	    ldr x0, [x0, #0]
- 152 ???? 00008039 	    ldrsb x0, [x0, #0]
- 153 ???? 00008079 	    ldrsh x0, [x0, #0]
- 154 ???? 000080B9 	    ldrsw x0, [x0, #0]
- 155 ???? 000040F9 	    ldr x0, [x0, #0]
- 156              	
- 157 ???? 00000039 	    strb w0, [x0, #0]
- 158 ???? 00000079 	    strh w0, [x0, #0]
- 159 ???? 000000B9 	    str w0, [x0, #0] 
- 160 ???? 000000F9 	    str x0, [x0, #0] 
- 161 ???? 00000039 	    strb w0, [x0, #0]  
- 162 ???? 00000079 	    strh w0, [x0, #0]  
- 163 ???? 000000B9 	    str w0, [x0, #0]  
- 164 ???? 000000F9 	    str x0, [x0, #0] 
- 165              	
- 166 ???? E00300AA 	    mov x0, x0
- 167 ???? E00320AA 	    mvn x0, x0
- 168 ???? E00300CB 	    neg x0, x0
- 169              	    
- 170 ???? 01000014 	    b l5
- 171              	    l5:
-AARCH64 GAS  asm/aarch64.s 			page 4
+00000000000000c8 <l3>:
+  c8:	54000008 	b.hi	c8 <l3>  // b.pmore
+  cc:	54ffffe9 	b.ls	c8 <l3>  // b.plast
+  d0:	54ffffca 	b.ge	c8 <l3>  // b.tcont
+  d4:	54ffffab 	b.lt	c8 <l3>  // b.tstop
+  d8:	54ffff8c 	b.gt	c8 <l3>
+  dc:	54ffff6d 	b.le	c8 <l3>
+  e0:	54ffff4e 	b.al	c8 <l3>
+  e4:	54ffff2f 	b.nv	c8 <l3>
+  e8:	5400000e 	b.al	e8 <l3+0x20>
+  ec:	54000000 	b.eq	ec <l3+0x24>  // b.none
+  f0:	54000001 	b.ne	f0 <l3+0x28>  // b.any
+  f4:	5400000c 	b.gt	f4 <l3+0x2c>
+  f8:	5400000a 	b.ge	f8 <l3+0x30>  // b.tcont
+  fc:	5400000b 	b.lt	fc <l3+0x34>  // b.tstop
+ 100:	5400000d 	b.le	100 <l3+0x38>
+ 104:	54000008 	b.hi	104 <l3+0x3c>  // b.pmore
+ 108:	54000002 	b.cs	108 <l3+0x40>  // b.hs, b.nlast
+ 10c:	54000003 	b.cc	10c <l3+0x44>  // b.lo, b.ul, b.last
+ 110:	54000009 	b.ls	110 <l3+0x48>  // b.plast
+ 114:	540000ae 	b.al	128 <l4>
+ 118:	54000080 	b.eq	128 <l4>  // b.none
+ 11c:	54000061 	b.ne	128 <l4>  // b.any
+ 120:	5400004c 	b.gt	128 <l4>
+ 124:	5400002a 	b.ge	128 <l4>  // b.tcont
 
+0000000000000128 <l4>:
+ 128:	5400000b 	b.lt	128 <l4>  // b.tstop
+ 12c:	54ffffed 	b.le	128 <l4>
+ 130:	54ffffc8 	b.hi	128 <l4>  // b.pmore
+ 134:	54ffffa2 	b.cs	128 <l4>  // b.hs, b.nlast
+ 138:	54ffff83 	b.cc	128 <l4>  // b.lo, b.ul, b.last
+ 13c:	54ffff69 	b.ls	128 <l4>  // b.plast
+ 140:	d2800021 	mov	x1, #0x1                   	// #1
+ 144:	d2800041 	mov	x1, #0x2                   	// #2
+ 148:	d2800061 	mov	x1, #0x3                   	// #3
+ 14c:	d2a00021 	mov	x1, #0x10000               	// #65536
+ 150:	d2c00021 	mov	x1, #0x100000000           	// #4294967296
+ 154:	d2e00021 	mov	x1, #0x1000000000000       	// #281474976710656
+ 158:	d65f03c0 	ret
+ 15c:	d65f03c0 	ret
+ 160:	eb02003f 	cmp	x1, x2
+ 164:	f100001f 	cmp	x0, #0x0
+ 168:	d10003ff 	sub	sp, sp, #0x0
+ 16c:	d13fffff 	sub	sp, sp, #0xfff
+ 170:	910003ff 	mov	sp, sp
+ 174:	913fffff 	add	sp, sp, #0xfff
+ 178:	39400000 	ldrb	w0, [x0]
+ 17c:	79400000 	ldrh	w0, [x0]
+ 180:	b9400000 	ldr	w0, [x0]
+ 184:	f9400000 	ldr	x0, [x0]
+ 188:	39800000 	ldrsb	x0, [x0]
+ 18c:	79800000 	ldrsh	x0, [x0]
+ 190:	b9800000 	ldrsw	x0, [x0]
+ 194:	f9400000 	ldr	x0, [x0]
+ 198:	39000000 	strb	w0, [x0]
+ 19c:	79000000 	strh	w0, [x0]
+ 1a0:	b9000000 	str	w0, [x0]
+ 1a4:	f9000000 	str	x0, [x0]
+ 1a8:	39000000 	strb	w0, [x0]
+ 1ac:	79000000 	strh	w0, [x0]
+ 1b0:	b9000000 	str	w0, [x0]
+ 1b4:	f9000000 	str	x0, [x0]
+ 1b8:	aa0003e0 	mov	x0, x0
+ 1bc:	aa2003e0 	mvn	x0, x0
+ 1c0:	cb0003e0 	neg	x0, x0
+ 1c4:	14000001 	b	1c8 <l5>
 
- 172 ???? 00000014 	    b l5
- 173              	
- 174 ???? 00001FD6 	    br x0
- 175 ???? 20001FD6 	    br x1
- 176              	
- 177 ???? 00003FD6 	    blr x0
- 178 ???? 20003FD6 	    blr x1
- 179              	
- 180 ???? 0020C09A 	    lsl x0, x0, x0
- 181 ???? 0020C19A 	    lsl x0, x0, x1
- 182 ???? 2020C09A 	    lsl x0, x1, x0
- 183 ???? 0120C09A 	    lsl x1, x0, x0
- 184              	
- 185 ???? 0024C09A 	    lsr x0, x0, x0
- 186 ???? 0024C19A 	    lsr x0, x0, x1
- 187 ???? 2024C09A 	    lsr x0, x1, x0
- 188 ???? 0124C09A 	    lsr x1, x0, x0
- 189              	
- 190 ???? 0028C09A 	    asr x0, x0, x0
- 191 ???? 0028C19A 	    asr x0, x0, x1
- 192 ???? 2028C09A 	    asr x0, x1, x0
- 193 ???? 0128C09A 	    asr x1, x0, x0
- 194              	
- 195              	    # Eq,
- 196 ???? 0000809A 	    csel x0, x0, x0, eq
- 197              	    # Ne,
- 198 ???? 0010809A 	    csel x0, x0, x0, ne
- 199              	    # Sgt,
- 200 ???? 00C0809A 	    csel x0, x0, x0, gt
- 201              	    # Sge,
- 202 ???? 00A0809A 	    csel x0, x0, x0, ge
- 203              	    # Slt,
- 204 ???? 00B0809A 	    csel x0, x0, x0, lt
- 205              	    # Sle,
- 206 ???? 00D0809A 	    csel x0, x0, x0, le
- 207              	    # Ugt,
- 208 ???? 0080809A 	    csel x0, x0, x0, hi
- 209              	    # Uge,
- 210 ???? 0020809A 	    csel x0, x0, x0, hs
- 211              	    # Ult,
- 212 ???? 0030809A 	    csel x0, x0, x0, lo
- 213              	    # Ule,
- 214 ???? 0090809A 	    csel x0, x0, x0, ls
- 215              	
- 216 ???? 0000819A 	    csel x0, x0, x1, eq
- 217 ???? 2000809A 	    csel x0, x1, x0, eq
- 218 ???? 0100809A 	    csel x1, x0, x0, eq
- 219              	
- 220 ???? FF038C95 	    add sp, sp, #0x12300
- 221              	
- 222              	    # See also: https://github.com/ARM-software/abi-aa/blob/main/sysvabi64/sysvabi64.rst
- 223              	
- 224              	
- 225              	
-AARCH64 GAS  asm/aarch64.s 			page 5
-
-
-DEFINED SYMBOLS
-       asm/aarch64.s:5      .text:0000000000000000 $x
-       asm/aarch64.s:47     .text:0000000000000084 l1
-       asm/aarch64.s:55     .text:000000000000009c l2
-       asm/aarch64.s:68     .text:00000000000000c8 l3
-       asm/aarch64.s:114    .text:0000000000000128 l4
-       asm/aarch64.s:171    .text:00000000000001c8 l5
-
-NO UNDEFINED SYMBOLS
+00000000000001c8 <l5>:
+ 1c8:	14000000 	b	1c8 <l5>
+ 1cc:	d61f0000 	br	x0
+ 1d0:	d61f0020 	br	x1
+ 1d4:	d63f0000 	blr	x0
+ 1d8:	d63f0020 	blr	x1
+ 1dc:	9ac02000 	lsl	x0, x0, x0
+ 1e0:	9ac12000 	lsl	x0, x0, x1
+ 1e4:	9ac02020 	lsl	x0, x1, x0
+ 1e8:	9ac02001 	lsl	x1, x0, x0
+ 1ec:	9ac02400 	lsr	x0, x0, x0
+ 1f0:	9ac12400 	lsr	x0, x0, x1
+ 1f4:	9ac02420 	lsr	x0, x1, x0
+ 1f8:	9ac02401 	lsr	x1, x0, x0
+ 1fc:	9ac02800 	asr	x0, x0, x0
+ 200:	9ac12800 	asr	x0, x0, x1
+ 204:	9ac02820 	asr	x0, x1, x0
+ 208:	9ac02801 	asr	x1, x0, x0
+ 20c:	9a800000 	csel	x0, x0, x0, eq	// eq = none
+ 210:	9a801000 	csel	x0, x0, x0, ne	// ne = any
+ 214:	9a80c000 	csel	x0, x0, x0, gt
+ 218:	9a80a000 	csel	x0, x0, x0, ge	// ge = tcont
+ 21c:	9a80b000 	csel	x0, x0, x0, lt	// lt = tstop
+ 220:	9a80d000 	csel	x0, x0, x0, le
+ 224:	9a808000 	csel	x0, x0, x0, hi	// hi = pmore
+ 228:	9a802000 	csel	x0, x0, x0, cs	// cs = hs, nlast
+ 22c:	9a803000 	csel	x0, x0, x0, cc	// cc = lo, ul, last
+ 230:	9a809000 	csel	x0, x0, x0, ls	// ls = plast
+ 234:	9a810000 	csel	x0, x0, x1, eq	// eq = none
+ 238:	9a800020 	csel	x0, x1, x0, eq	// eq = none
+ 23c:	9a800001 	csel	x1, x0, x0, eq	// eq = none
+ 240:	1e204000 	fmov	s0, s0
+ 244:	1e204020 	fmov	s0, s1
+ 248:	1e204001 	fmov	s1, s0
+ 24c:	1e604000 	fmov	d0, d0
+ 250:	1e604020 	fmov	d0, d1
+ 254:	1e604001 	fmov	d1, d0
+ 258:	0ea01c00 	mov	v0.8b, v0.8b
+ 25c:	4ea01c00 	mov	v0.16b, v0.16b
+ 260:	2e205800 	mvn	v0.8b, v0.8b
+ 264:	6e205800 	mvn	v0.16b, v0.16b
+ 268:	0ea0d400 	fsub	v0.2s, v0.2s, v0.2s
+ 26c:	0ea1d400 	fsub	v0.2s, v0.2s, v1.2s

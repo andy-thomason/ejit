@@ -1,0 +1,1464 @@
+
+target/a.out:     file format elf64-littleaarch64
+
+
+Disassembly of section .init:
+
+0000000000000580 <_init>:
+ 580:	d503201f 	nop
+ 584:	a9bf7bfd 	stp	x29, x30, [sp, #-16]!
+ 588:	910003fd 	mov	x29, sp
+ 58c:	9400002a 	bl	634 <call_weak_fn>
+ 590:	a8c17bfd 	ldp	x29, x30, [sp], #16
+ 594:	d65f03c0 	ret
+
+Disassembly of section .plt:
+
+00000000000005a0 <.plt>:
+ 5a0:	a9bf7bf0 	stp	x16, x30, [sp, #-16]!
+ 5a4:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5a8:	f947d611 	ldr	x17, [x16, #4008]
+ 5ac:	913ea210 	add	x16, x16, #0xfa8
+ 5b0:	d61f0220 	br	x17
+ 5b4:	d503201f 	nop
+ 5b8:	d503201f 	nop
+ 5bc:	d503201f 	nop
+
+00000000000005c0 <__libc_start_main@plt>:
+ 5c0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5c4:	f947da11 	ldr	x17, [x16, #4016]
+ 5c8:	913ec210 	add	x16, x16, #0xfb0
+ 5cc:	d61f0220 	br	x17
+
+00000000000005d0 <__cxa_finalize@plt>:
+ 5d0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5d4:	f947de11 	ldr	x17, [x16, #4024]
+ 5d8:	913ee210 	add	x16, x16, #0xfb8
+ 5dc:	d61f0220 	br	x17
+
+00000000000005e0 <__gmon_start__@plt>:
+ 5e0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5e4:	f947e211 	ldr	x17, [x16, #4032]
+ 5e8:	913f0210 	add	x16, x16, #0xfc0
+ 5ec:	d61f0220 	br	x17
+
+00000000000005f0 <abort@plt>:
+ 5f0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5f4:	f947e611 	ldr	x17, [x16, #4040]
+ 5f8:	913f2210 	add	x16, x16, #0xfc8
+ 5fc:	d61f0220 	br	x17
+
+Disassembly of section .text:
+
+0000000000000600 <_start>:
+     600:	d503201f 	nop
+     604:	d280001d 	mov	x29, #0x0                   	// #0
+     608:	d280001e 	mov	x30, #0x0                   	// #0
+     60c:	aa0003e5 	mov	x5, x0
+     610:	f94003e1 	ldr	x1, [sp]
+     614:	910023e2 	add	x2, sp, #0x8
+     618:	910003e6 	mov	x6, sp
+     61c:	f00000e0 	adrp	x0, 1f000 <__FRAME_END__+0x1c0c8>
+     620:	f947f800 	ldr	x0, [x0, #4080]
+     624:	d2800003 	mov	x3, #0x0                   	// #0
+     628:	d2800004 	mov	x4, #0x0                   	// #0
+     62c:	97ffffe5 	bl	5c0 <__libc_start_main@plt>
+     630:	97fffff0 	bl	5f0 <abort@plt>
+
+0000000000000634 <call_weak_fn>:
+     634:	f00000e0 	adrp	x0, 1f000 <__FRAME_END__+0x1c0c8>
+     638:	f947f400 	ldr	x0, [x0, #4072]
+     63c:	b4000040 	cbz	x0, 644 <call_weak_fn+0x10>
+     640:	17ffffe8 	b	5e0 <__gmon_start__@plt>
+     644:	d65f03c0 	ret
+     648:	d503201f 	nop
+     64c:	d503201f 	nop
+
+0000000000000650 <deregister_tm_clones>:
+     650:	90000100 	adrp	x0, 20000 <__data_start>
+     654:	91004000 	add	x0, x0, #0x10
+     658:	90000101 	adrp	x1, 20000 <__data_start>
+     65c:	91004021 	add	x1, x1, #0x10
+     660:	eb00003f 	cmp	x1, x0
+     664:	540000c0 	b.eq	67c <deregister_tm_clones+0x2c>  // b.none
+     668:	f00000e1 	adrp	x1, 1f000 <__FRAME_END__+0x1c0c8>
+     66c:	f947ec21 	ldr	x1, [x1, #4056]
+     670:	b4000061 	cbz	x1, 67c <deregister_tm_clones+0x2c>
+     674:	aa0103f0 	mov	x16, x1
+     678:	d61f0200 	br	x16
+     67c:	d65f03c0 	ret
+
+0000000000000680 <register_tm_clones>:
+     680:	90000100 	adrp	x0, 20000 <__data_start>
+     684:	91004000 	add	x0, x0, #0x10
+     688:	90000101 	adrp	x1, 20000 <__data_start>
+     68c:	91004021 	add	x1, x1, #0x10
+     690:	cb000021 	sub	x1, x1, x0
+     694:	d37ffc22 	lsr	x2, x1, #63
+     698:	8b810c41 	add	x1, x2, x1, asr #3
+     69c:	9341fc21 	asr	x1, x1, #1
+     6a0:	b40000c1 	cbz	x1, 6b8 <register_tm_clones+0x38>
+     6a4:	f00000e2 	adrp	x2, 1f000 <__FRAME_END__+0x1c0c8>
+     6a8:	f947fc42 	ldr	x2, [x2, #4088]
+     6ac:	b4000062 	cbz	x2, 6b8 <register_tm_clones+0x38>
+     6b0:	aa0203f0 	mov	x16, x2
+     6b4:	d61f0200 	br	x16
+     6b8:	d65f03c0 	ret
+     6bc:	d503201f 	nop
+
+00000000000006c0 <__do_global_dtors_aux>:
+     6c0:	d503233f 	paciasp
+     6c4:	a9be7bfd 	stp	x29, x30, [sp, #-32]!
+     6c8:	910003fd 	mov	x29, sp
+     6cc:	f9000bf3 	str	x19, [sp, #16]
+     6d0:	90000113 	adrp	x19, 20000 <__data_start>
+     6d4:	39404260 	ldrb	w0, [x19, #16]
+     6d8:	37000140 	tbnz	w0, #0, 700 <__do_global_dtors_aux+0x40>
+     6dc:	f00000e0 	adrp	x0, 1f000 <__FRAME_END__+0x1c0c8>
+     6e0:	f947f000 	ldr	x0, [x0, #4064]
+     6e4:	b4000080 	cbz	x0, 6f4 <__do_global_dtors_aux+0x34>
+     6e8:	90000100 	adrp	x0, 20000 <__data_start>
+     6ec:	f9400400 	ldr	x0, [x0, #8]
+     6f0:	97ffffb8 	bl	5d0 <__cxa_finalize@plt>
+     6f4:	97ffffd7 	bl	650 <deregister_tm_clones>
+     6f8:	52800020 	mov	w0, #0x1                   	// #1
+     6fc:	39004260 	strb	w0, [x19, #16]
+     700:	f9400bf3 	ldr	x19, [sp, #16]
+     704:	a8c27bfd 	ldp	x29, x30, [sp], #32
+     708:	d50323bf 	autiasp
+     70c:	d65f03c0 	ret
+
+0000000000000710 <frame_dummy>:
+     710:	d503245f 	bti	c
+     714:	17ffffdb 	b	680 <register_tm_clones>
+
+0000000000000718 <gen_Vnot_S8_V64_0_2>:
+     718:	2e205800 	mvn	v0.8b, v0.8b
+     71c:	d65f03c0 	ret
+
+0000000000000720 <gen_Vnot_U8_V64_0_2>:
+     720:	2e205800 	mvn	v0.8b, v0.8b
+     724:	d65f03c0 	ret
+
+0000000000000728 <gen_Vnot_S16_V64_0_2>:
+     728:	2e205800 	mvn	v0.8b, v0.8b
+     72c:	d65f03c0 	ret
+
+0000000000000730 <gen_Vnot_U16_V64_0_2>:
+     730:	2e205800 	mvn	v0.8b, v0.8b
+     734:	d65f03c0 	ret
+
+0000000000000738 <gen_Vnot_S32_V64_0_2>:
+     738:	2e205800 	mvn	v0.8b, v0.8b
+     73c:	d65f03c0 	ret
+
+0000000000000740 <gen_Vnot_U32_V64_0_2>:
+     740:	2e205800 	mvn	v0.8b, v0.8b
+     744:	d65f03c0 	ret
+
+0000000000000748 <gen_Vnot_S64_V64_0_2>:
+     748:	2e205800 	mvn	v0.8b, v0.8b
+     74c:	d65f03c0 	ret
+
+0000000000000750 <gen_Vnot_U64_V64_0_2>:
+     750:	2e205800 	mvn	v0.8b, v0.8b
+     754:	d65f03c0 	ret
+
+0000000000000758 <gen_Vnot_S8_V128_0_2>:
+     758:	6e205800 	mvn	v0.16b, v0.16b
+     75c:	d65f03c0 	ret
+
+0000000000000760 <gen_Vnot_U8_V128_0_2>:
+     760:	6e205800 	mvn	v0.16b, v0.16b
+     764:	d65f03c0 	ret
+
+0000000000000768 <gen_Vnot_S16_V128_0_2>:
+     768:	6e205800 	mvn	v0.16b, v0.16b
+     76c:	d65f03c0 	ret
+
+0000000000000770 <gen_Vnot_U16_V128_0_2>:
+     770:	6e205800 	mvn	v0.16b, v0.16b
+     774:	d65f03c0 	ret
+
+0000000000000778 <gen_Vnot_S32_V128_0_2>:
+     778:	6e205800 	mvn	v0.16b, v0.16b
+     77c:	d65f03c0 	ret
+
+0000000000000780 <gen_Vnot_U32_V128_0_2>:
+     780:	6e205800 	mvn	v0.16b, v0.16b
+     784:	d65f03c0 	ret
+
+0000000000000788 <gen_Vnot_S64_V128_0_2>:
+     788:	6e205800 	mvn	v0.16b, v0.16b
+     78c:	d65f03c0 	ret
+
+0000000000000790 <gen_Vnot_U64_V128_0_2>:
+     790:	6e205800 	mvn	v0.16b, v0.16b
+     794:	d65f03c0 	ret
+
+0000000000000798 <gen_Vneg_F32_V32_0_2>:
+     798:	1e214000 	fneg	s0, s0
+     79c:	d65f03c0 	ret
+
+00000000000007a0 <gen_Vneg_S8_V64_0_2>:
+     7a0:	2e20b800 	neg	v0.8b, v0.8b
+     7a4:	d65f03c0 	ret
+
+00000000000007a8 <gen_Vneg_U8_V64_0_2>:
+     7a8:	2e20b800 	neg	v0.8b, v0.8b
+     7ac:	d65f03c0 	ret
+
+00000000000007b0 <gen_Vneg_S16_V64_0_2>:
+     7b0:	2e60b800 	neg	v0.4h, v0.4h
+     7b4:	d65f03c0 	ret
+
+00000000000007b8 <gen_Vneg_U16_V64_0_2>:
+     7b8:	2e60b800 	neg	v0.4h, v0.4h
+     7bc:	d65f03c0 	ret
+
+00000000000007c0 <gen_Vneg_S32_V64_0_2>:
+     7c0:	2ea0b800 	neg	v0.2s, v0.2s
+     7c4:	d65f03c0 	ret
+
+00000000000007c8 <gen_Vneg_U32_V64_0_2>:
+     7c8:	2ea0b800 	neg	v0.2s, v0.2s
+     7cc:	d65f03c0 	ret
+
+00000000000007d0 <gen_Vneg_S64_V64_0_2>:
+     7d0:	7ee0b800 	neg	d0, d0
+     7d4:	d65f03c0 	ret
+
+00000000000007d8 <gen_Vneg_U64_V64_0_2>:
+     7d8:	7ee0b800 	neg	d0, d0
+     7dc:	d65f03c0 	ret
+
+00000000000007e0 <gen_Vneg_F32_V64_0_2>:
+     7e0:	2ea0f800 	fneg	v0.2s, v0.2s
+     7e4:	d65f03c0 	ret
+
+00000000000007e8 <gen_Vneg_F64_V64_0_2>:
+     7e8:	1e614000 	fneg	d0, d0
+     7ec:	d65f03c0 	ret
+
+00000000000007f0 <gen_Vneg_S8_V128_0_2>:
+     7f0:	6e20b800 	neg	v0.16b, v0.16b
+     7f4:	d65f03c0 	ret
+
+00000000000007f8 <gen_Vneg_U8_V128_0_2>:
+     7f8:	6e20b800 	neg	v0.16b, v0.16b
+     7fc:	d65f03c0 	ret
+
+0000000000000800 <gen_Vneg_S16_V128_0_2>:
+     800:	6e60b800 	neg	v0.8h, v0.8h
+     804:	d65f03c0 	ret
+
+0000000000000808 <gen_Vneg_U16_V128_0_2>:
+     808:	6e60b800 	neg	v0.8h, v0.8h
+     80c:	d65f03c0 	ret
+
+0000000000000810 <gen_Vneg_S32_V128_0_2>:
+     810:	6ea0b800 	neg	v0.4s, v0.4s
+     814:	d65f03c0 	ret
+
+0000000000000818 <gen_Vneg_U32_V128_0_2>:
+     818:	6ea0b800 	neg	v0.4s, v0.4s
+     81c:	d65f03c0 	ret
+
+0000000000000820 <gen_Vneg_S64_V128_0_2>:
+     820:	6ee0b800 	neg	v0.2d, v0.2d
+     824:	d65f03c0 	ret
+
+0000000000000828 <gen_Vneg_U64_V128_0_2>:
+     828:	6ee0b800 	neg	v0.2d, v0.2d
+     82c:	d65f03c0 	ret
+
+0000000000000830 <gen_Vneg_F32_V128_0_2>:
+     830:	6ea0f800 	fneg	v0.4s, v0.4s
+     834:	d65f03c0 	ret
+
+0000000000000838 <gen_Vneg_F64_V128_0_2>:
+     838:	6ee0f800 	fneg	v0.2d, v0.2d
+     83c:	d65f03c0 	ret
+
+0000000000000840 <gen_Vmov_F32_V32_0x10000_2>:
+     840:	1e204020 	fmov	s0, s1
+     844:	d65f03c0 	ret
+
+0000000000000848 <gen_Vmov_S8_V64_0x10000_2>:
+     848:	0ea11c20 	mov	v0.8b, v1.8b
+     84c:	d65f03c0 	ret
+
+0000000000000850 <gen_Vmov_U8_V64_0x10000_2>:
+     850:	0ea11c20 	mov	v0.8b, v1.8b
+     854:	d65f03c0 	ret
+
+0000000000000858 <gen_Vmov_S16_V64_0x10000_2>:
+     858:	0ea11c20 	mov	v0.8b, v1.8b
+     85c:	d65f03c0 	ret
+
+0000000000000860 <gen_Vmov_U16_V64_0x10000_2>:
+     860:	0ea11c20 	mov	v0.8b, v1.8b
+     864:	d65f03c0 	ret
+
+0000000000000868 <gen_Vmov_S32_V64_0x10000_2>:
+     868:	0ea11c20 	mov	v0.8b, v1.8b
+     86c:	d65f03c0 	ret
+
+0000000000000870 <gen_Vmov_U32_V64_0x10000_2>:
+     870:	0ea11c20 	mov	v0.8b, v1.8b
+     874:	d65f03c0 	ret
+
+0000000000000878 <gen_Vmov_S64_V64_0x10000_2>:
+     878:	1e604020 	fmov	d0, d1
+     87c:	d65f03c0 	ret
+
+0000000000000880 <gen_Vmov_U64_V64_0x10000_2>:
+     880:	1e604020 	fmov	d0, d1
+     884:	d65f03c0 	ret
+
+0000000000000888 <gen_Vmov_F32_V64_0x10000_2>:
+     888:	0ea11c20 	mov	v0.8b, v1.8b
+     88c:	d65f03c0 	ret
+
+0000000000000890 <gen_Vmov_F64_V64_0x10000_2>:
+     890:	1e604020 	fmov	d0, d1
+     894:	d65f03c0 	ret
+
+0000000000000898 <gen_Vmov_S8_V128_0x10000_2>:
+     898:	4ea11c20 	mov	v0.16b, v1.16b
+     89c:	d65f03c0 	ret
+
+00000000000008a0 <gen_Vmov_U8_V128_0x10000_2>:
+     8a0:	4ea11c20 	mov	v0.16b, v1.16b
+     8a4:	d65f03c0 	ret
+
+00000000000008a8 <gen_Vmov_S16_V128_0x10000_2>:
+     8a8:	4ea11c20 	mov	v0.16b, v1.16b
+     8ac:	d65f03c0 	ret
+
+00000000000008b0 <gen_Vmov_U16_V128_0x10000_2>:
+     8b0:	4ea11c20 	mov	v0.16b, v1.16b
+     8b4:	d65f03c0 	ret
+
+00000000000008b8 <gen_Vmov_S32_V128_0x10000_2>:
+     8b8:	4ea11c20 	mov	v0.16b, v1.16b
+     8bc:	d65f03c0 	ret
+
+00000000000008c0 <gen_Vmov_U32_V128_0x10000_2>:
+     8c0:	4ea11c20 	mov	v0.16b, v1.16b
+     8c4:	d65f03c0 	ret
+
+00000000000008c8 <gen_Vmov_S64_V128_0x10000_2>:
+     8c8:	4ea11c20 	mov	v0.16b, v1.16b
+     8cc:	d65f03c0 	ret
+
+00000000000008d0 <gen_Vmov_U64_V128_0x10000_2>:
+     8d0:	4ea11c20 	mov	v0.16b, v1.16b
+     8d4:	d65f03c0 	ret
+
+00000000000008d8 <gen_Vmov_F32_V128_0x10000_2>:
+     8d8:	4ea11c20 	mov	v0.16b, v1.16b
+     8dc:	d65f03c0 	ret
+
+00000000000008e0 <gen_Vmov_F64_V128_0x10000_2>:
+     8e0:	4ea11c20 	mov	v0.16b, v1.16b
+     8e4:	d65f03c0 	ret
+
+00000000000008e8 <gen_Vadd_F32_V32_0x10000_3>:
+     8e8:	1e212800 	fadd	s0, s0, s1
+     8ec:	d65f03c0 	ret
+
+00000000000008f0 <gen_Vadd_S8_V64_0x10000_3>:
+     8f0:	0e218400 	add	v0.8b, v0.8b, v1.8b
+     8f4:	d65f03c0 	ret
+
+00000000000008f8 <gen_Vadd_U8_V64_0x10000_3>:
+     8f8:	0e218400 	add	v0.8b, v0.8b, v1.8b
+     8fc:	d65f03c0 	ret
+
+0000000000000900 <gen_Vadd_S16_V64_0x10000_3>:
+     900:	0e618400 	add	v0.4h, v0.4h, v1.4h
+     904:	d65f03c0 	ret
+
+0000000000000908 <gen_Vadd_U16_V64_0x10000_3>:
+     908:	0e618400 	add	v0.4h, v0.4h, v1.4h
+     90c:	d65f03c0 	ret
+
+0000000000000910 <gen_Vadd_S32_V64_0x10000_3>:
+     910:	0ea18400 	add	v0.2s, v0.2s, v1.2s
+     914:	d65f03c0 	ret
+
+0000000000000918 <gen_Vadd_U32_V64_0x10000_3>:
+     918:	0ea18400 	add	v0.2s, v0.2s, v1.2s
+     91c:	d65f03c0 	ret
+
+0000000000000920 <gen_Vadd_S64_V64_0x10000_3>:
+     920:	5ee18400 	add	d0, d0, d1
+     924:	d65f03c0 	ret
+
+0000000000000928 <gen_Vadd_U64_V64_0x10000_3>:
+     928:	5ee18400 	add	d0, d0, d1
+     92c:	d65f03c0 	ret
+
+0000000000000930 <gen_Vadd_F32_V64_0x10000_3>:
+     930:	0e21d400 	fadd	v0.2s, v0.2s, v1.2s
+     934:	d65f03c0 	ret
+
+0000000000000938 <gen_Vadd_F64_V64_0x10000_3>:
+     938:	1e612800 	fadd	d0, d0, d1
+     93c:	d65f03c0 	ret
+
+0000000000000940 <gen_Vadd_S8_V128_0x10000_3>:
+     940:	4e218400 	add	v0.16b, v0.16b, v1.16b
+     944:	d65f03c0 	ret
+
+0000000000000948 <gen_Vadd_U8_V128_0x10000_3>:
+     948:	4e218400 	add	v0.16b, v0.16b, v1.16b
+     94c:	d65f03c0 	ret
+
+0000000000000950 <gen_Vadd_S16_V128_0x10000_3>:
+     950:	4e618400 	add	v0.8h, v0.8h, v1.8h
+     954:	d65f03c0 	ret
+
+0000000000000958 <gen_Vadd_U16_V128_0x10000_3>:
+     958:	4e618400 	add	v0.8h, v0.8h, v1.8h
+     95c:	d65f03c0 	ret
+
+0000000000000960 <gen_Vadd_S32_V128_0x10000_3>:
+     960:	4ea18400 	add	v0.4s, v0.4s, v1.4s
+     964:	d65f03c0 	ret
+
+0000000000000968 <gen_Vadd_U32_V128_0x10000_3>:
+     968:	4ea18400 	add	v0.4s, v0.4s, v1.4s
+     96c:	d65f03c0 	ret
+
+0000000000000970 <gen_Vadd_S64_V128_0x10000_3>:
+     970:	4ee18400 	add	v0.2d, v0.2d, v1.2d
+     974:	d65f03c0 	ret
+
+0000000000000978 <gen_Vadd_U64_V128_0x10000_3>:
+     978:	4ee18400 	add	v0.2d, v0.2d, v1.2d
+     97c:	d65f03c0 	ret
+
+0000000000000980 <gen_Vadd_F32_V128_0x10000_3>:
+     980:	4e21d400 	fadd	v0.4s, v0.4s, v1.4s
+     984:	d65f03c0 	ret
+
+0000000000000988 <gen_Vadd_F64_V128_0x10000_3>:
+     988:	4e61d400 	fadd	v0.2d, v0.2d, v1.2d
+     98c:	d65f03c0 	ret
+
+0000000000000990 <gen_Vsub_F32_V32_0x10000_3>:
+     990:	1e213800 	fsub	s0, s0, s1
+     994:	d65f03c0 	ret
+
+0000000000000998 <gen_Vsub_S8_V64_0x10000_3>:
+     998:	2e218400 	sub	v0.8b, v0.8b, v1.8b
+     99c:	d65f03c0 	ret
+
+00000000000009a0 <gen_Vsub_U8_V64_0x10000_3>:
+     9a0:	2e218400 	sub	v0.8b, v0.8b, v1.8b
+     9a4:	d65f03c0 	ret
+
+00000000000009a8 <gen_Vsub_S16_V64_0x10000_3>:
+     9a8:	2e618400 	sub	v0.4h, v0.4h, v1.4h
+     9ac:	d65f03c0 	ret
+
+00000000000009b0 <gen_Vsub_U16_V64_0x10000_3>:
+     9b0:	2e618400 	sub	v0.4h, v0.4h, v1.4h
+     9b4:	d65f03c0 	ret
+
+00000000000009b8 <gen_Vsub_S32_V64_0x10000_3>:
+     9b8:	2ea18400 	sub	v0.2s, v0.2s, v1.2s
+     9bc:	d65f03c0 	ret
+
+00000000000009c0 <gen_Vsub_U32_V64_0x10000_3>:
+     9c0:	2ea18400 	sub	v0.2s, v0.2s, v1.2s
+     9c4:	d65f03c0 	ret
+
+00000000000009c8 <gen_Vsub_S64_V64_0x10000_3>:
+     9c8:	7ee18400 	sub	d0, d0, d1
+     9cc:	d65f03c0 	ret
+
+00000000000009d0 <gen_Vsub_U64_V64_0x10000_3>:
+     9d0:	7ee18400 	sub	d0, d0, d1
+     9d4:	d65f03c0 	ret
+
+00000000000009d8 <gen_Vsub_F32_V64_0x10000_3>:
+     9d8:	0ea1d400 	fsub	v0.2s, v0.2s, v1.2s
+     9dc:	d65f03c0 	ret
+
+00000000000009e0 <gen_Vsub_F64_V64_0x10000_3>:
+     9e0:	1e613800 	fsub	d0, d0, d1
+     9e4:	d65f03c0 	ret
+
+00000000000009e8 <gen_Vsub_S8_V128_0x10000_3>:
+     9e8:	6e218400 	sub	v0.16b, v0.16b, v1.16b
+     9ec:	d65f03c0 	ret
+
+00000000000009f0 <gen_Vsub_U8_V128_0x10000_3>:
+     9f0:	6e218400 	sub	v0.16b, v0.16b, v1.16b
+     9f4:	d65f03c0 	ret
+
+00000000000009f8 <gen_Vsub_S16_V128_0x10000_3>:
+     9f8:	6e618400 	sub	v0.8h, v0.8h, v1.8h
+     9fc:	d65f03c0 	ret
+
+0000000000000a00 <gen_Vsub_U16_V128_0x10000_3>:
+     a00:	6e618400 	sub	v0.8h, v0.8h, v1.8h
+     a04:	d65f03c0 	ret
+
+0000000000000a08 <gen_Vsub_S32_V128_0x10000_3>:
+     a08:	6ea18400 	sub	v0.4s, v0.4s, v1.4s
+     a0c:	d65f03c0 	ret
+
+0000000000000a10 <gen_Vsub_U32_V128_0x10000_3>:
+     a10:	6ea18400 	sub	v0.4s, v0.4s, v1.4s
+     a14:	d65f03c0 	ret
+
+0000000000000a18 <gen_Vsub_S64_V128_0x10000_3>:
+     a18:	6ee18400 	sub	v0.2d, v0.2d, v1.2d
+     a1c:	d65f03c0 	ret
+
+0000000000000a20 <gen_Vsub_U64_V128_0x10000_3>:
+     a20:	6ee18400 	sub	v0.2d, v0.2d, v1.2d
+     a24:	d65f03c0 	ret
+
+0000000000000a28 <gen_Vsub_F32_V128_0x10000_3>:
+     a28:	4ea1d400 	fsub	v0.4s, v0.4s, v1.4s
+     a2c:	d65f03c0 	ret
+
+0000000000000a30 <gen_Vsub_F64_V128_0x10000_3>:
+     a30:	4ee1d400 	fsub	v0.2d, v0.2d, v1.2d
+     a34:	d65f03c0 	ret
+
+0000000000000a38 <gen_Vmul_F32_V32_0x10000_3>:
+     a38:	1e210800 	fmul	s0, s0, s1
+     a3c:	d65f03c0 	ret
+
+0000000000000a40 <gen_Vmul_S8_V64_0x10000_3>:
+     a40:	0e219c00 	mul	v0.8b, v0.8b, v1.8b
+     a44:	d65f03c0 	ret
+
+0000000000000a48 <gen_Vmul_U8_V64_0x10000_3>:
+     a48:	0e219c00 	mul	v0.8b, v0.8b, v1.8b
+     a4c:	d65f03c0 	ret
+
+0000000000000a50 <gen_Vmul_S16_V64_0x10000_3>:
+     a50:	0e619c00 	mul	v0.4h, v0.4h, v1.4h
+     a54:	d65f03c0 	ret
+
+0000000000000a58 <gen_Vmul_U16_V64_0x10000_3>:
+     a58:	0e619c00 	mul	v0.4h, v0.4h, v1.4h
+     a5c:	d65f03c0 	ret
+
+0000000000000a60 <gen_Vmul_S32_V64_0x10000_3>:
+     a60:	0ea19c00 	mul	v0.2s, v0.2s, v1.2s
+     a64:	d65f03c0 	ret
+
+0000000000000a68 <gen_Vmul_U32_V64_0x10000_3>:
+     a68:	0ea19c00 	mul	v0.2s, v0.2s, v1.2s
+     a6c:	d65f03c0 	ret
+
+0000000000000a70 <gen_Vmul_S64_V64_0x10000_3>:
+     a70:	9e660000 	fmov	x0, d0
+     a74:	9e660021 	fmov	x1, d1
+     a78:	9b017c00 	mul	x0, x0, x1
+     a7c:	9e670000 	fmov	d0, x0
+     a80:	d65f03c0 	ret
+
+0000000000000a84 <gen_Vmul_U64_V64_0x10000_3>:
+     a84:	9e660000 	fmov	x0, d0
+     a88:	9e660021 	fmov	x1, d1
+     a8c:	9b017c00 	mul	x0, x0, x1
+     a90:	9e670000 	fmov	d0, x0
+     a94:	d65f03c0 	ret
+
+0000000000000a98 <gen_Vmul_F32_V64_0x10000_3>:
+     a98:	2e21dc00 	fmul	v0.2s, v0.2s, v1.2s
+     a9c:	d65f03c0 	ret
+
+0000000000000aa0 <gen_Vmul_F64_V64_0x10000_3>:
+     aa0:	1e610800 	fmul	d0, d0, d1
+     aa4:	d65f03c0 	ret
+
+0000000000000aa8 <gen_Vmul_S8_V128_0x10000_3>:
+     aa8:	4e219c00 	mul	v0.16b, v0.16b, v1.16b
+     aac:	d65f03c0 	ret
+
+0000000000000ab0 <gen_Vmul_U8_V128_0x10000_3>:
+     ab0:	4e219c00 	mul	v0.16b, v0.16b, v1.16b
+     ab4:	d65f03c0 	ret
+
+0000000000000ab8 <gen_Vmul_S16_V128_0x10000_3>:
+     ab8:	4e619c00 	mul	v0.8h, v0.8h, v1.8h
+     abc:	d65f03c0 	ret
+
+0000000000000ac0 <gen_Vmul_U16_V128_0x10000_3>:
+     ac0:	4e619c00 	mul	v0.8h, v0.8h, v1.8h
+     ac4:	d65f03c0 	ret
+
+0000000000000ac8 <gen_Vmul_S32_V128_0x10000_3>:
+     ac8:	4ea19c00 	mul	v0.4s, v0.4s, v1.4s
+     acc:	d65f03c0 	ret
+
+0000000000000ad0 <gen_Vmul_U32_V128_0x10000_3>:
+     ad0:	4ea19c00 	mul	v0.4s, v0.4s, v1.4s
+     ad4:	d65f03c0 	ret
+
+0000000000000ad8 <gen_Vmul_S64_V128_0x10000_3>:
+     ad8:	9e660020 	fmov	x0, d1
+     adc:	9e660001 	fmov	x1, d0
+     ae0:	9b017c02 	mul	x2, x0, x1
+     ae4:	4e183c00 	mov	x0, v0.d[1]
+     ae8:	4e183c21 	mov	x1, v1.d[1]
+     aec:	9b017c00 	mul	x0, x0, x1
+     af0:	9e670040 	fmov	d0, x2
+     af4:	4e181c00 	mov	v0.d[1], x0
+     af8:	d65f03c0 	ret
+
+0000000000000afc <gen_Vmul_U64_V128_0x10000_3>:
+     afc:	9e660020 	fmov	x0, d1
+     b00:	9e660001 	fmov	x1, d0
+     b04:	9b017c02 	mul	x2, x0, x1
+     b08:	4e183c00 	mov	x0, v0.d[1]
+     b0c:	4e183c21 	mov	x1, v1.d[1]
+     b10:	9b017c00 	mul	x0, x0, x1
+     b14:	9e670040 	fmov	d0, x2
+     b18:	4e181c00 	mov	v0.d[1], x0
+     b1c:	d65f03c0 	ret
+
+0000000000000b20 <gen_Vmul_F32_V128_0x10000_3>:
+     b20:	6e21dc00 	fmul	v0.4s, v0.4s, v1.4s
+     b24:	d65f03c0 	ret
+
+0000000000000b28 <gen_Vmul_F64_V128_0x10000_3>:
+     b28:	6e61dc00 	fmul	v0.2d, v0.2d, v1.2d
+     b2c:	d65f03c0 	ret
+
+0000000000000b30 <gen_Vdiv_F32_V32_0x10000_3>:
+     b30:	1e211800 	fdiv	s0, s0, s1
+     b34:	d65f03c0 	ret
+
+0000000000000b38 <gen_Vdiv_S8_V64_0x10000_3>:
+     b38:	0e013c07 	umov	w7, v0.b[0]
+     b3c:	0e013c20 	umov	w0, v1.b[0]
+     b40:	1ac008e7 	udiv	w7, w7, w0
+     b44:	0e033c00 	umov	w0, v0.b[1]
+     b48:	0e033c21 	umov	w1, v1.b[1]
+     b4c:	1ac10800 	udiv	w0, w0, w1
+     b50:	0e053c06 	umov	w6, v0.b[2]
+     b54:	0e053c21 	umov	w1, v1.b[2]
+     b58:	1ac108c6 	udiv	w6, w6, w1
+     b5c:	0e073c05 	umov	w5, v0.b[3]
+     b60:	0e073c21 	umov	w1, v1.b[3]
+     b64:	1ac108a5 	udiv	w5, w5, w1
+     b68:	0e093c04 	umov	w4, v0.b[4]
+     b6c:	0e093c21 	umov	w1, v1.b[4]
+     b70:	1ac10884 	udiv	w4, w4, w1
+     b74:	0e0b3c03 	umov	w3, v0.b[5]
+     b78:	0e0b3c21 	umov	w1, v1.b[5]
+     b7c:	1ac10863 	udiv	w3, w3, w1
+     b80:	0e0d3c02 	umov	w2, v0.b[6]
+     b84:	0e0d3c21 	umov	w1, v1.b[6]
+     b88:	1ac10842 	udiv	w2, w2, w1
+     b8c:	0e0f3c01 	umov	w1, v0.b[7]
+     b90:	0e0f3c28 	umov	w8, v1.b[7]
+     b94:	1ac80821 	udiv	w1, w1, w8
+     b98:	9e6700e0 	fmov	d0, x7
+     b9c:	4e031c00 	mov	v0.b[1], w0
+     ba0:	4e051cc0 	mov	v0.b[2], w6
+     ba4:	4e071ca0 	mov	v0.b[3], w5
+     ba8:	4e091c80 	mov	v0.b[4], w4
+     bac:	4e0b1c60 	mov	v0.b[5], w3
+     bb0:	4e0d1c40 	mov	v0.b[6], w2
+     bb4:	4e0f1c20 	mov	v0.b[7], w1
+     bb8:	d65f03c0 	ret
+
+0000000000000bbc <gen_Vdiv_U8_V64_0x10000_3>:
+     bbc:	0e013c07 	umov	w7, v0.b[0]
+     bc0:	0e013c20 	umov	w0, v1.b[0]
+     bc4:	1ac008e7 	udiv	w7, w7, w0
+     bc8:	0e033c00 	umov	w0, v0.b[1]
+     bcc:	0e033c21 	umov	w1, v1.b[1]
+     bd0:	1ac10800 	udiv	w0, w0, w1
+     bd4:	0e053c06 	umov	w6, v0.b[2]
+     bd8:	0e053c21 	umov	w1, v1.b[2]
+     bdc:	1ac108c6 	udiv	w6, w6, w1
+     be0:	0e073c05 	umov	w5, v0.b[3]
+     be4:	0e073c21 	umov	w1, v1.b[3]
+     be8:	1ac108a5 	udiv	w5, w5, w1
+     bec:	0e093c04 	umov	w4, v0.b[4]
+     bf0:	0e093c21 	umov	w1, v1.b[4]
+     bf4:	1ac10884 	udiv	w4, w4, w1
+     bf8:	0e0b3c03 	umov	w3, v0.b[5]
+     bfc:	0e0b3c21 	umov	w1, v1.b[5]
+     c00:	1ac10863 	udiv	w3, w3, w1
+     c04:	0e0d3c02 	umov	w2, v0.b[6]
+     c08:	0e0d3c21 	umov	w1, v1.b[6]
+     c0c:	1ac10842 	udiv	w2, w2, w1
+     c10:	0e0f3c01 	umov	w1, v0.b[7]
+     c14:	0e0f3c28 	umov	w8, v1.b[7]
+     c18:	1ac80821 	udiv	w1, w1, w8
+     c1c:	9e6700e0 	fmov	d0, x7
+     c20:	4e031c00 	mov	v0.b[1], w0
+     c24:	4e051cc0 	mov	v0.b[2], w6
+     c28:	4e071ca0 	mov	v0.b[3], w5
+     c2c:	4e091c80 	mov	v0.b[4], w4
+     c30:	4e0b1c60 	mov	v0.b[5], w3
+     c34:	4e0d1c40 	mov	v0.b[6], w2
+     c38:	4e0f1c20 	mov	v0.b[7], w1
+     c3c:	d65f03c0 	ret
+
+0000000000000c40 <gen_Vdiv_S16_V64_0x10000_3>:
+     c40:	0e022c03 	smov	w3, v0.h[0]
+     c44:	0e022c20 	smov	w0, v1.h[0]
+     c48:	1ac00c63 	sdiv	w3, w3, w0
+     c4c:	0e062c00 	smov	w0, v0.h[1]
+     c50:	0e062c21 	smov	w1, v1.h[1]
+     c54:	1ac10c00 	sdiv	w0, w0, w1
+     c58:	0e0a2c02 	smov	w2, v0.h[2]
+     c5c:	0e0a2c21 	smov	w1, v1.h[2]
+     c60:	1ac10c42 	sdiv	w2, w2, w1
+     c64:	0e0e2c01 	smov	w1, v0.h[3]
+     c68:	0e0e2c24 	smov	w4, v1.h[3]
+     c6c:	1ac40c21 	sdiv	w1, w1, w4
+     c70:	9e670060 	fmov	d0, x3
+     c74:	4e061c00 	mov	v0.h[1], w0
+     c78:	4e0a1c40 	mov	v0.h[2], w2
+     c7c:	4e0e1c20 	mov	v0.h[3], w1
+     c80:	d65f03c0 	ret
+
+0000000000000c84 <gen_Vdiv_U16_V64_0x10000_3>:
+     c84:	0e023c03 	umov	w3, v0.h[0]
+     c88:	0e023c20 	umov	w0, v1.h[0]
+     c8c:	1ac00863 	udiv	w3, w3, w0
+     c90:	0e063c00 	umov	w0, v0.h[1]
+     c94:	0e063c21 	umov	w1, v1.h[1]
+     c98:	1ac10800 	udiv	w0, w0, w1
+     c9c:	0e0a3c02 	umov	w2, v0.h[2]
+     ca0:	0e0a3c21 	umov	w1, v1.h[2]
+     ca4:	1ac10842 	udiv	w2, w2, w1
+     ca8:	0e0e3c01 	umov	w1, v0.h[3]
+     cac:	0e0e3c24 	umov	w4, v1.h[3]
+     cb0:	1ac40821 	udiv	w1, w1, w4
+     cb4:	9e670060 	fmov	d0, x3
+     cb8:	4e061c00 	mov	v0.h[1], w0
+     cbc:	4e0a1c40 	mov	v0.h[2], w2
+     cc0:	4e0e1c20 	mov	v0.h[3], w1
+     cc4:	d65f03c0 	ret
+
+0000000000000cc8 <gen_Vdiv_S32_V64_0x10000_3>:
+     cc8:	1e260000 	fmov	w0, s0
+     ccc:	1e260021 	fmov	w1, s1
+     cd0:	1ac10c02 	sdiv	w2, w0, w1
+     cd4:	0e0c3c00 	mov	w0, v0.s[1]
+     cd8:	0e0c3c21 	mov	w1, v1.s[1]
+     cdc:	1ac10c00 	sdiv	w0, w0, w1
+     ce0:	1e270040 	fmov	s0, w2
+     ce4:	4e0c1c00 	mov	v0.s[1], w0
+     ce8:	d65f03c0 	ret
+
+0000000000000cec <gen_Vdiv_U32_V64_0x10000_3>:
+     cec:	1e260000 	fmov	w0, s0
+     cf0:	1e260021 	fmov	w1, s1
+     cf4:	1ac10802 	udiv	w2, w0, w1
+     cf8:	0e0c3c00 	mov	w0, v0.s[1]
+     cfc:	0e0c3c21 	mov	w1, v1.s[1]
+     d00:	1ac10800 	udiv	w0, w0, w1
+     d04:	1e270040 	fmov	s0, w2
+     d08:	4e0c1c00 	mov	v0.s[1], w0
+     d0c:	d65f03c0 	ret
+
+0000000000000d10 <gen_Vdiv_S64_V64_0x10000_3>:
+     d10:	9e660000 	fmov	x0, d0
+     d14:	9e660021 	fmov	x1, d1
+     d18:	9ac10c00 	sdiv	x0, x0, x1
+     d1c:	9e670000 	fmov	d0, x0
+     d20:	d65f03c0 	ret
+
+0000000000000d24 <gen_Vdiv_U64_V64_0x10000_3>:
+     d24:	9e660000 	fmov	x0, d0
+     d28:	9e660021 	fmov	x1, d1
+     d2c:	9ac10800 	udiv	x0, x0, x1
+     d30:	9e670000 	fmov	d0, x0
+     d34:	d65f03c0 	ret
+
+0000000000000d38 <gen_Vdiv_F32_V64_0x10000_3>:
+     d38:	2e21fc00 	fdiv	v0.2s, v0.2s, v1.2s
+     d3c:	d65f03c0 	ret
+
+0000000000000d40 <gen_Vdiv_F64_V64_0x10000_3>:
+     d40:	1e611800 	fdiv	d0, d0, d1
+     d44:	d65f03c0 	ret
+
+0000000000000d48 <gen_Vdiv_S8_V128_0x10000_3>:
+     d48:	4ea01c02 	mov	v2.16b, v0.16b
+     d4c:	0e013c00 	umov	w0, v0.b[0]
+     d50:	0e013c21 	umov	w1, v1.b[0]
+     d54:	1ac10800 	udiv	w0, w0, w1
+     d58:	1e270000 	fmov	s0, w0
+     d5c:	0e033c4e 	umov	w14, v2.b[1]
+     d60:	0e033c20 	umov	w0, v1.b[1]
+     d64:	1ac009ce 	udiv	w14, w14, w0
+     d68:	0e053c4d 	umov	w13, v2.b[2]
+     d6c:	0e053c20 	umov	w0, v1.b[2]
+     d70:	1ac009ad 	udiv	w13, w13, w0
+     d74:	0e073c4c 	umov	w12, v2.b[3]
+     d78:	0e073c20 	umov	w0, v1.b[3]
+     d7c:	1ac0098c 	udiv	w12, w12, w0
+     d80:	0e093c4b 	umov	w11, v2.b[4]
+     d84:	0e093c20 	umov	w0, v1.b[4]
+     d88:	1ac0096b 	udiv	w11, w11, w0
+     d8c:	0e0b3c4a 	umov	w10, v2.b[5]
+     d90:	0e0b3c20 	umov	w0, v1.b[5]
+     d94:	1ac0094a 	udiv	w10, w10, w0
+     d98:	0e0d3c49 	umov	w9, v2.b[6]
+     d9c:	0e0d3c20 	umov	w0, v1.b[6]
+     da0:	1ac00929 	udiv	w9, w9, w0
+     da4:	0e0f3c48 	umov	w8, v2.b[7]
+     da8:	0e0f3c20 	umov	w0, v1.b[7]
+     dac:	1ac00908 	udiv	w8, w8, w0
+     db0:	0e113c47 	umov	w7, v2.b[8]
+     db4:	0e113c20 	umov	w0, v1.b[8]
+     db8:	1ac008e7 	udiv	w7, w7, w0
+     dbc:	0e133c46 	umov	w6, v2.b[9]
+     dc0:	0e133c20 	umov	w0, v1.b[9]
+     dc4:	1ac008c6 	udiv	w6, w6, w0
+     dc8:	0e153c45 	umov	w5, v2.b[10]
+     dcc:	0e153c20 	umov	w0, v1.b[10]
+     dd0:	1ac008a5 	udiv	w5, w5, w0
+     dd4:	0e173c44 	umov	w4, v2.b[11]
+     dd8:	0e173c20 	umov	w0, v1.b[11]
+     ddc:	1ac00884 	udiv	w4, w4, w0
+     de0:	0e193c43 	umov	w3, v2.b[12]
+     de4:	0e193c20 	umov	w0, v1.b[12]
+     de8:	1ac00863 	udiv	w3, w3, w0
+     dec:	0e1b3c42 	umov	w2, v2.b[13]
+     df0:	0e1b3c20 	umov	w0, v1.b[13]
+     df4:	1ac00842 	udiv	w2, w2, w0
+     df8:	0e1d3c41 	umov	w1, v2.b[14]
+     dfc:	0e1d3c20 	umov	w0, v1.b[14]
+     e00:	1ac00821 	udiv	w1, w1, w0
+     e04:	0e1f3c40 	umov	w0, v2.b[15]
+     e08:	0e1f3c2f 	umov	w15, v1.b[15]
+     e0c:	1acf0800 	udiv	w0, w0, w15
+     e10:	4e031dc0 	mov	v0.b[1], w14
+     e14:	4e051da0 	mov	v0.b[2], w13
+     e18:	4e071d80 	mov	v0.b[3], w12
+     e1c:	4e091d60 	mov	v0.b[4], w11
+     e20:	4e0b1d40 	mov	v0.b[5], w10
+     e24:	4e0d1d20 	mov	v0.b[6], w9
+     e28:	4e0f1d00 	mov	v0.b[7], w8
+     e2c:	4e111ce0 	mov	v0.b[8], w7
+     e30:	4e131cc0 	mov	v0.b[9], w6
+     e34:	4e151ca0 	mov	v0.b[10], w5
+     e38:	4e171c80 	mov	v0.b[11], w4
+     e3c:	4e191c60 	mov	v0.b[12], w3
+     e40:	4e1b1c40 	mov	v0.b[13], w2
+     e44:	4e1d1c20 	mov	v0.b[14], w1
+     e48:	4e1f1c00 	mov	v0.b[15], w0
+     e4c:	d65f03c0 	ret
+
+0000000000000e50 <gen_Vdiv_U8_V128_0x10000_3>:
+     e50:	4ea01c02 	mov	v2.16b, v0.16b
+     e54:	0e013c00 	umov	w0, v0.b[0]
+     e58:	0e013c21 	umov	w1, v1.b[0]
+     e5c:	1ac10800 	udiv	w0, w0, w1
+     e60:	1e270000 	fmov	s0, w0
+     e64:	0e033c4e 	umov	w14, v2.b[1]
+     e68:	0e033c20 	umov	w0, v1.b[1]
+     e6c:	1ac009ce 	udiv	w14, w14, w0
+     e70:	0e053c4d 	umov	w13, v2.b[2]
+     e74:	0e053c20 	umov	w0, v1.b[2]
+     e78:	1ac009ad 	udiv	w13, w13, w0
+     e7c:	0e073c4c 	umov	w12, v2.b[3]
+     e80:	0e073c20 	umov	w0, v1.b[3]
+     e84:	1ac0098c 	udiv	w12, w12, w0
+     e88:	0e093c4b 	umov	w11, v2.b[4]
+     e8c:	0e093c20 	umov	w0, v1.b[4]
+     e90:	1ac0096b 	udiv	w11, w11, w0
+     e94:	0e0b3c4a 	umov	w10, v2.b[5]
+     e98:	0e0b3c20 	umov	w0, v1.b[5]
+     e9c:	1ac0094a 	udiv	w10, w10, w0
+     ea0:	0e0d3c49 	umov	w9, v2.b[6]
+     ea4:	0e0d3c20 	umov	w0, v1.b[6]
+     ea8:	1ac00929 	udiv	w9, w9, w0
+     eac:	0e0f3c48 	umov	w8, v2.b[7]
+     eb0:	0e0f3c20 	umov	w0, v1.b[7]
+     eb4:	1ac00908 	udiv	w8, w8, w0
+     eb8:	0e113c47 	umov	w7, v2.b[8]
+     ebc:	0e113c20 	umov	w0, v1.b[8]
+     ec0:	1ac008e7 	udiv	w7, w7, w0
+     ec4:	0e133c46 	umov	w6, v2.b[9]
+     ec8:	0e133c20 	umov	w0, v1.b[9]
+     ecc:	1ac008c6 	udiv	w6, w6, w0
+     ed0:	0e153c45 	umov	w5, v2.b[10]
+     ed4:	0e153c20 	umov	w0, v1.b[10]
+     ed8:	1ac008a5 	udiv	w5, w5, w0
+     edc:	0e173c44 	umov	w4, v2.b[11]
+     ee0:	0e173c20 	umov	w0, v1.b[11]
+     ee4:	1ac00884 	udiv	w4, w4, w0
+     ee8:	0e193c43 	umov	w3, v2.b[12]
+     eec:	0e193c20 	umov	w0, v1.b[12]
+     ef0:	1ac00863 	udiv	w3, w3, w0
+     ef4:	0e1b3c42 	umov	w2, v2.b[13]
+     ef8:	0e1b3c20 	umov	w0, v1.b[13]
+     efc:	1ac00842 	udiv	w2, w2, w0
+     f00:	0e1d3c41 	umov	w1, v2.b[14]
+     f04:	0e1d3c20 	umov	w0, v1.b[14]
+     f08:	1ac00821 	udiv	w1, w1, w0
+     f0c:	0e1f3c40 	umov	w0, v2.b[15]
+     f10:	0e1f3c2f 	umov	w15, v1.b[15]
+     f14:	1acf0800 	udiv	w0, w0, w15
+     f18:	4e031dc0 	mov	v0.b[1], w14
+     f1c:	4e051da0 	mov	v0.b[2], w13
+     f20:	4e071d80 	mov	v0.b[3], w12
+     f24:	4e091d60 	mov	v0.b[4], w11
+     f28:	4e0b1d40 	mov	v0.b[5], w10
+     f2c:	4e0d1d20 	mov	v0.b[6], w9
+     f30:	4e0f1d00 	mov	v0.b[7], w8
+     f34:	4e111ce0 	mov	v0.b[8], w7
+     f38:	4e131cc0 	mov	v0.b[9], w6
+     f3c:	4e151ca0 	mov	v0.b[10], w5
+     f40:	4e171c80 	mov	v0.b[11], w4
+     f44:	4e191c60 	mov	v0.b[12], w3
+     f48:	4e1b1c40 	mov	v0.b[13], w2
+     f4c:	4e1d1c20 	mov	v0.b[14], w1
+     f50:	4e1f1c00 	mov	v0.b[15], w0
+     f54:	d65f03c0 	ret
+
+0000000000000f58 <gen_Vdiv_S16_V128_0x10000_3>:
+     f58:	4ea01c02 	mov	v2.16b, v0.16b
+     f5c:	0e022c00 	smov	w0, v0.h[0]
+     f60:	0e022c21 	smov	w1, v1.h[0]
+     f64:	1ac10c00 	sdiv	w0, w0, w1
+     f68:	1e270000 	fmov	s0, w0
+     f6c:	0e062c46 	smov	w6, v2.h[1]
+     f70:	0e062c20 	smov	w0, v1.h[1]
+     f74:	1ac00cc6 	sdiv	w6, w6, w0
+     f78:	0e0a2c45 	smov	w5, v2.h[2]
+     f7c:	0e0a2c20 	smov	w0, v1.h[2]
+     f80:	1ac00ca5 	sdiv	w5, w5, w0
+     f84:	0e0e2c44 	smov	w4, v2.h[3]
+     f88:	0e0e2c20 	smov	w0, v1.h[3]
+     f8c:	1ac00c84 	sdiv	w4, w4, w0
+     f90:	0e122c43 	smov	w3, v2.h[4]
+     f94:	0e122c20 	smov	w0, v1.h[4]
+     f98:	1ac00c63 	sdiv	w3, w3, w0
+     f9c:	0e162c42 	smov	w2, v2.h[5]
+     fa0:	0e162c20 	smov	w0, v1.h[5]
+     fa4:	1ac00c42 	sdiv	w2, w2, w0
+     fa8:	0e1a2c41 	smov	w1, v2.h[6]
+     fac:	0e1a2c20 	smov	w0, v1.h[6]
+     fb0:	1ac00c21 	sdiv	w1, w1, w0
+     fb4:	0e1e2c40 	smov	w0, v2.h[7]
+     fb8:	0e1e2c27 	smov	w7, v1.h[7]
+     fbc:	1ac70c00 	sdiv	w0, w0, w7
+     fc0:	4e061cc0 	mov	v0.h[1], w6
+     fc4:	4e0a1ca0 	mov	v0.h[2], w5
+     fc8:	4e0e1c80 	mov	v0.h[3], w4
+     fcc:	4e121c60 	mov	v0.h[4], w3
+     fd0:	4e161c40 	mov	v0.h[5], w2
+     fd4:	4e1a1c20 	mov	v0.h[6], w1
+     fd8:	4e1e1c00 	mov	v0.h[7], w0
+     fdc:	d65f03c0 	ret
+
+0000000000000fe0 <gen_Vdiv_U16_V128_0x10000_3>:
+     fe0:	4ea01c02 	mov	v2.16b, v0.16b
+     fe4:	0e023c00 	umov	w0, v0.h[0]
+     fe8:	0e023c21 	umov	w1, v1.h[0]
+     fec:	1ac10800 	udiv	w0, w0, w1
+     ff0:	1e270000 	fmov	s0, w0
+     ff4:	0e063c46 	umov	w6, v2.h[1]
+     ff8:	0e063c20 	umov	w0, v1.h[1]
+     ffc:	1ac008c6 	udiv	w6, w6, w0
+    1000:	0e0a3c45 	umov	w5, v2.h[2]
+    1004:	0e0a3c20 	umov	w0, v1.h[2]
+    1008:	1ac008a5 	udiv	w5, w5, w0
+    100c:	0e0e3c44 	umov	w4, v2.h[3]
+    1010:	0e0e3c20 	umov	w0, v1.h[3]
+    1014:	1ac00884 	udiv	w4, w4, w0
+    1018:	0e123c43 	umov	w3, v2.h[4]
+    101c:	0e123c20 	umov	w0, v1.h[4]
+    1020:	1ac00863 	udiv	w3, w3, w0
+    1024:	0e163c42 	umov	w2, v2.h[5]
+    1028:	0e163c20 	umov	w0, v1.h[5]
+    102c:	1ac00842 	udiv	w2, w2, w0
+    1030:	0e1a3c41 	umov	w1, v2.h[6]
+    1034:	0e1a3c20 	umov	w0, v1.h[6]
+    1038:	1ac00821 	udiv	w1, w1, w0
+    103c:	0e1e3c40 	umov	w0, v2.h[7]
+    1040:	0e1e3c27 	umov	w7, v1.h[7]
+    1044:	1ac70800 	udiv	w0, w0, w7
+    1048:	4e061cc0 	mov	v0.h[1], w6
+    104c:	4e0a1ca0 	mov	v0.h[2], w5
+    1050:	4e0e1c80 	mov	v0.h[3], w4
+    1054:	4e121c60 	mov	v0.h[4], w3
+    1058:	4e161c40 	mov	v0.h[5], w2
+    105c:	4e1a1c20 	mov	v0.h[6], w1
+    1060:	4e1e1c00 	mov	v0.h[7], w0
+    1064:	d65f03c0 	ret
+
+0000000000001068 <gen_Vdiv_S32_V128_0x10000_3>:
+    1068:	1e260000 	fmov	w0, s0
+    106c:	1e260021 	fmov	w1, s1
+    1070:	1ac10c00 	sdiv	w0, w0, w1
+    1074:	1e270002 	fmov	s2, w0
+    1078:	0e0c3c03 	mov	w3, v0.s[1]
+    107c:	0e0c3c20 	mov	w0, v1.s[1]
+    1080:	1ac00c63 	sdiv	w3, w3, w0
+    1084:	0e143c02 	mov	w2, v0.s[2]
+    1088:	0e143c20 	mov	w0, v1.s[2]
+    108c:	1ac00c42 	sdiv	w2, w2, w0
+    1090:	0e1c3c00 	mov	w0, v0.s[3]
+    1094:	0e1c3c21 	mov	w1, v1.s[3]
+    1098:	1ac10c00 	sdiv	w0, w0, w1
+    109c:	4ea21c40 	mov	v0.16b, v2.16b
+    10a0:	4e0c1c60 	mov	v0.s[1], w3
+    10a4:	4e141c40 	mov	v0.s[2], w2
+    10a8:	4e1c1c00 	mov	v0.s[3], w0
+    10ac:	d65f03c0 	ret
+
+00000000000010b0 <gen_Vdiv_U32_V128_0x10000_3>:
+    10b0:	1e260000 	fmov	w0, s0
+    10b4:	1e260021 	fmov	w1, s1
+    10b8:	1ac10800 	udiv	w0, w0, w1
+    10bc:	1e270002 	fmov	s2, w0
+    10c0:	0e0c3c03 	mov	w3, v0.s[1]
+    10c4:	0e0c3c20 	mov	w0, v1.s[1]
+    10c8:	1ac00863 	udiv	w3, w3, w0
+    10cc:	0e143c02 	mov	w2, v0.s[2]
+    10d0:	0e143c20 	mov	w0, v1.s[2]
+    10d4:	1ac00842 	udiv	w2, w2, w0
+    10d8:	0e1c3c00 	mov	w0, v0.s[3]
+    10dc:	0e1c3c21 	mov	w1, v1.s[3]
+    10e0:	1ac10800 	udiv	w0, w0, w1
+    10e4:	4ea21c40 	mov	v0.16b, v2.16b
+    10e8:	4e0c1c60 	mov	v0.s[1], w3
+    10ec:	4e141c40 	mov	v0.s[2], w2
+    10f0:	4e1c1c00 	mov	v0.s[3], w0
+    10f4:	d65f03c0 	ret
+
+00000000000010f8 <gen_Vdiv_S64_V128_0x10000_3>:
+    10f8:	9e660000 	fmov	x0, d0
+    10fc:	9e660021 	fmov	x1, d1
+    1100:	9ac10c02 	sdiv	x2, x0, x1
+    1104:	4e183c00 	mov	x0, v0.d[1]
+    1108:	4e183c21 	mov	x1, v1.d[1]
+    110c:	9ac10c00 	sdiv	x0, x0, x1
+    1110:	9e670040 	fmov	d0, x2
+    1114:	4e181c00 	mov	v0.d[1], x0
+    1118:	d65f03c0 	ret
+
+000000000000111c <gen_Vdiv_U64_V128_0x10000_3>:
+    111c:	9e660000 	fmov	x0, d0
+    1120:	9e660021 	fmov	x1, d1
+    1124:	9ac10802 	udiv	x2, x0, x1
+    1128:	4e183c00 	mov	x0, v0.d[1]
+    112c:	4e183c21 	mov	x1, v1.d[1]
+    1130:	9ac10800 	udiv	x0, x0, x1
+    1134:	9e670040 	fmov	d0, x2
+    1138:	4e181c00 	mov	v0.d[1], x0
+    113c:	d65f03c0 	ret
+
+0000000000001140 <gen_Vdiv_F32_V128_0x10000_3>:
+    1140:	6e21fc00 	fdiv	v0.4s, v0.4s, v1.4s
+    1144:	d65f03c0 	ret
+
+0000000000001148 <gen_Vdiv_F64_V128_0x10000_3>:
+    1148:	6e61fc00 	fdiv	v0.2d, v0.2d, v1.2d
+    114c:	d65f03c0 	ret
+
+0000000000001150 <gen_Vand_S8_V64_0x10000_3>:
+    1150:	0e211c00 	and	v0.8b, v0.8b, v1.8b
+    1154:	d65f03c0 	ret
+
+0000000000001158 <gen_Vand_U8_V64_0x10000_3>:
+    1158:	0e211c00 	and	v0.8b, v0.8b, v1.8b
+    115c:	d65f03c0 	ret
+
+0000000000001160 <gen_Vand_S16_V64_0x10000_3>:
+    1160:	0e211c00 	and	v0.8b, v0.8b, v1.8b
+    1164:	d65f03c0 	ret
+
+0000000000001168 <gen_Vand_U16_V64_0x10000_3>:
+    1168:	0e211c00 	and	v0.8b, v0.8b, v1.8b
+    116c:	d65f03c0 	ret
+
+0000000000001170 <gen_Vand_S32_V64_0x10000_3>:
+    1170:	0e211c00 	and	v0.8b, v0.8b, v1.8b
+    1174:	d65f03c0 	ret
+
+0000000000001178 <gen_Vand_U32_V64_0x10000_3>:
+    1178:	0e211c00 	and	v0.8b, v0.8b, v1.8b
+    117c:	d65f03c0 	ret
+
+0000000000001180 <gen_Vand_S64_V64_0x10000_3>:
+    1180:	0e211c00 	and	v0.8b, v0.8b, v1.8b
+    1184:	d65f03c0 	ret
+
+0000000000001188 <gen_Vand_U64_V64_0x10000_3>:
+    1188:	0e211c00 	and	v0.8b, v0.8b, v1.8b
+    118c:	d65f03c0 	ret
+
+0000000000001190 <gen_Vand_S8_V128_0x10000_3>:
+    1190:	4e211c00 	and	v0.16b, v0.16b, v1.16b
+    1194:	d65f03c0 	ret
+
+0000000000001198 <gen_Vand_U8_V128_0x10000_3>:
+    1198:	4e211c00 	and	v0.16b, v0.16b, v1.16b
+    119c:	d65f03c0 	ret
+
+00000000000011a0 <gen_Vand_S16_V128_0x10000_3>:
+    11a0:	4e211c00 	and	v0.16b, v0.16b, v1.16b
+    11a4:	d65f03c0 	ret
+
+00000000000011a8 <gen_Vand_U16_V128_0x10000_3>:
+    11a8:	4e211c00 	and	v0.16b, v0.16b, v1.16b
+    11ac:	d65f03c0 	ret
+
+00000000000011b0 <gen_Vand_S32_V128_0x10000_3>:
+    11b0:	4e211c00 	and	v0.16b, v0.16b, v1.16b
+    11b4:	d65f03c0 	ret
+
+00000000000011b8 <gen_Vand_U32_V128_0x10000_3>:
+    11b8:	4e211c00 	and	v0.16b, v0.16b, v1.16b
+    11bc:	d65f03c0 	ret
+
+00000000000011c0 <gen_Vand_S64_V128_0x10000_3>:
+    11c0:	4e211c00 	and	v0.16b, v0.16b, v1.16b
+    11c4:	d65f03c0 	ret
+
+00000000000011c8 <gen_Vand_U64_V128_0x10000_3>:
+    11c8:	4e211c00 	and	v0.16b, v0.16b, v1.16b
+    11cc:	d65f03c0 	ret
+
+00000000000011d0 <gen_Vor_S8_V64_0x10000_3>:
+    11d0:	0ea11c00 	orr	v0.8b, v0.8b, v1.8b
+    11d4:	d65f03c0 	ret
+
+00000000000011d8 <gen_Vor_U8_V64_0x10000_3>:
+    11d8:	0ea11c00 	orr	v0.8b, v0.8b, v1.8b
+    11dc:	d65f03c0 	ret
+
+00000000000011e0 <gen_Vor_S16_V64_0x10000_3>:
+    11e0:	0ea11c00 	orr	v0.8b, v0.8b, v1.8b
+    11e4:	d65f03c0 	ret
+
+00000000000011e8 <gen_Vor_U16_V64_0x10000_3>:
+    11e8:	0ea11c00 	orr	v0.8b, v0.8b, v1.8b
+    11ec:	d65f03c0 	ret
+
+00000000000011f0 <gen_Vor_S32_V64_0x10000_3>:
+    11f0:	0ea11c00 	orr	v0.8b, v0.8b, v1.8b
+    11f4:	d65f03c0 	ret
+
+00000000000011f8 <gen_Vor_U32_V64_0x10000_3>:
+    11f8:	0ea11c00 	orr	v0.8b, v0.8b, v1.8b
+    11fc:	d65f03c0 	ret
+
+0000000000001200 <gen_Vor_S64_V64_0x10000_3>:
+    1200:	0ea11c00 	orr	v0.8b, v0.8b, v1.8b
+    1204:	d65f03c0 	ret
+
+0000000000001208 <gen_Vor_U64_V64_0x10000_3>:
+    1208:	0ea11c00 	orr	v0.8b, v0.8b, v1.8b
+    120c:	d65f03c0 	ret
+
+0000000000001210 <gen_Vor_S8_V128_0x10000_3>:
+    1210:	4ea11c00 	orr	v0.16b, v0.16b, v1.16b
+    1214:	d65f03c0 	ret
+
+0000000000001218 <gen_Vor_U8_V128_0x10000_3>:
+    1218:	4ea11c00 	orr	v0.16b, v0.16b, v1.16b
+    121c:	d65f03c0 	ret
+
+0000000000001220 <gen_Vor_S16_V128_0x10000_3>:
+    1220:	4ea11c00 	orr	v0.16b, v0.16b, v1.16b
+    1224:	d65f03c0 	ret
+
+0000000000001228 <gen_Vor_U16_V128_0x10000_3>:
+    1228:	4ea11c00 	orr	v0.16b, v0.16b, v1.16b
+    122c:	d65f03c0 	ret
+
+0000000000001230 <gen_Vor_S32_V128_0x10000_3>:
+    1230:	4ea11c00 	orr	v0.16b, v0.16b, v1.16b
+    1234:	d65f03c0 	ret
+
+0000000000001238 <gen_Vor_U32_V128_0x10000_3>:
+    1238:	4ea11c00 	orr	v0.16b, v0.16b, v1.16b
+    123c:	d65f03c0 	ret
+
+0000000000001240 <gen_Vor_S64_V128_0x10000_3>:
+    1240:	4ea11c00 	orr	v0.16b, v0.16b, v1.16b
+    1244:	d65f03c0 	ret
+
+0000000000001248 <gen_Vor_U64_V128_0x10000_3>:
+    1248:	4ea11c00 	orr	v0.16b, v0.16b, v1.16b
+    124c:	d65f03c0 	ret
+
+0000000000001250 <gen_Vxor_S8_V64_0x10000_3>:
+    1250:	2e211c00 	eor	v0.8b, v0.8b, v1.8b
+    1254:	d65f03c0 	ret
+
+0000000000001258 <gen_Vxor_U8_V64_0x10000_3>:
+    1258:	2e211c00 	eor	v0.8b, v0.8b, v1.8b
+    125c:	d65f03c0 	ret
+
+0000000000001260 <gen_Vxor_S16_V64_0x10000_3>:
+    1260:	2e211c00 	eor	v0.8b, v0.8b, v1.8b
+    1264:	d65f03c0 	ret
+
+0000000000001268 <gen_Vxor_U16_V64_0x10000_3>:
+    1268:	2e211c00 	eor	v0.8b, v0.8b, v1.8b
+    126c:	d65f03c0 	ret
+
+0000000000001270 <gen_Vxor_S32_V64_0x10000_3>:
+    1270:	2e211c00 	eor	v0.8b, v0.8b, v1.8b
+    1274:	d65f03c0 	ret
+
+0000000000001278 <gen_Vxor_U32_V64_0x10000_3>:
+    1278:	2e211c00 	eor	v0.8b, v0.8b, v1.8b
+    127c:	d65f03c0 	ret
+
+0000000000001280 <gen_Vxor_S64_V64_0x10000_3>:
+    1280:	2e211c00 	eor	v0.8b, v0.8b, v1.8b
+    1284:	d65f03c0 	ret
+
+0000000000001288 <gen_Vxor_U64_V64_0x10000_3>:
+    1288:	2e211c00 	eor	v0.8b, v0.8b, v1.8b
+    128c:	d65f03c0 	ret
+
+0000000000001290 <gen_Vxor_S8_V128_0x10000_3>:
+    1290:	6e211c00 	eor	v0.16b, v0.16b, v1.16b
+    1294:	d65f03c0 	ret
+
+0000000000001298 <gen_Vxor_U8_V128_0x10000_3>:
+    1298:	6e211c00 	eor	v0.16b, v0.16b, v1.16b
+    129c:	d65f03c0 	ret
+
+00000000000012a0 <gen_Vxor_S16_V128_0x10000_3>:
+    12a0:	6e211c00 	eor	v0.16b, v0.16b, v1.16b
+    12a4:	d65f03c0 	ret
+
+00000000000012a8 <gen_Vxor_U16_V128_0x10000_3>:
+    12a8:	6e211c00 	eor	v0.16b, v0.16b, v1.16b
+    12ac:	d65f03c0 	ret
+
+00000000000012b0 <gen_Vxor_S32_V128_0x10000_3>:
+    12b0:	6e211c00 	eor	v0.16b, v0.16b, v1.16b
+    12b4:	d65f03c0 	ret
+
+00000000000012b8 <gen_Vxor_U32_V128_0x10000_3>:
+    12b8:	6e211c00 	eor	v0.16b, v0.16b, v1.16b
+    12bc:	d65f03c0 	ret
+
+00000000000012c0 <gen_Vxor_S64_V128_0x10000_3>:
+    12c0:	6e211c00 	eor	v0.16b, v0.16b, v1.16b
+    12c4:	d65f03c0 	ret
+
+00000000000012c8 <gen_Vxor_U64_V128_0x10000_3>:
+    12c8:	6e211c00 	eor	v0.16b, v0.16b, v1.16b
+    12cc:	d65f03c0 	ret
+
+00000000000012d0 <gen_Vshl_S8_V64_0x10000_3>:
+    12d0:	0e214400 	sshl	v0.8b, v0.8b, v1.8b
+    12d4:	d65f03c0 	ret
+
+00000000000012d8 <gen_Vshl_U8_V64_0x10000_3>:
+    12d8:	0e214400 	sshl	v0.8b, v0.8b, v1.8b
+    12dc:	d65f03c0 	ret
+
+00000000000012e0 <gen_Vshl_S16_V64_0x10000_3>:
+    12e0:	0e614400 	sshl	v0.4h, v0.4h, v1.4h
+    12e4:	d65f03c0 	ret
+
+00000000000012e8 <gen_Vshl_U16_V64_0x10000_3>:
+    12e8:	0e614400 	sshl	v0.4h, v0.4h, v1.4h
+    12ec:	d65f03c0 	ret
+
+00000000000012f0 <gen_Vshl_S32_V64_0x10000_3>:
+    12f0:	0ea14400 	sshl	v0.2s, v0.2s, v1.2s
+    12f4:	d65f03c0 	ret
+
+00000000000012f8 <gen_Vshl_U32_V64_0x10000_3>:
+    12f8:	0ea14400 	sshl	v0.2s, v0.2s, v1.2s
+    12fc:	d65f03c0 	ret
+
+0000000000001300 <gen_Vshl_S64_V64_0x10000_3>:
+    1300:	7ee14400 	ushl	d0, d0, d1
+    1304:	d65f03c0 	ret
+
+0000000000001308 <gen_Vshl_U64_V64_0x10000_3>:
+    1308:	7ee14400 	ushl	d0, d0, d1
+    130c:	d65f03c0 	ret
+
+0000000000001310 <gen_Vshl_S8_V128_0x10000_3>:
+    1310:	4e214400 	sshl	v0.16b, v0.16b, v1.16b
+    1314:	d65f03c0 	ret
+
+0000000000001318 <gen_Vshl_U8_V128_0x10000_3>:
+    1318:	4e214400 	sshl	v0.16b, v0.16b, v1.16b
+    131c:	d65f03c0 	ret
+
+0000000000001320 <gen_Vshl_S16_V128_0x10000_3>:
+    1320:	4e614400 	sshl	v0.8h, v0.8h, v1.8h
+    1324:	d65f03c0 	ret
+
+0000000000001328 <gen_Vshl_U16_V128_0x10000_3>:
+    1328:	4e614400 	sshl	v0.8h, v0.8h, v1.8h
+    132c:	d65f03c0 	ret
+
+0000000000001330 <gen_Vshl_S32_V128_0x10000_3>:
+    1330:	4ea14400 	sshl	v0.4s, v0.4s, v1.4s
+    1334:	d65f03c0 	ret
+
+0000000000001338 <gen_Vshl_U32_V128_0x10000_3>:
+    1338:	4ea14400 	sshl	v0.4s, v0.4s, v1.4s
+    133c:	d65f03c0 	ret
+
+0000000000001340 <gen_Vshl_S64_V128_0x10000_3>:
+    1340:	4ee14400 	sshl	v0.2d, v0.2d, v1.2d
+    1344:	d65f03c0 	ret
+
+0000000000001348 <gen_Vshl_U64_V128_0x10000_3>:
+    1348:	4ee14400 	sshl	v0.2d, v0.2d, v1.2d
+    134c:	d65f03c0 	ret
+
+0000000000001350 <gen_Vst_F32_V32_0_mem>:
+    1350:	bc001000 	stur	s0, [x0, #1]
+    1354:	d65f03c0 	ret
+
+0000000000001358 <gen_Vst_S8_V64_0_mem>:
+    1358:	fc001000 	stur	d0, [x0, #1]
+    135c:	d65f03c0 	ret
+
+0000000000001360 <gen_Vst_U8_V64_0_mem>:
+    1360:	fc001000 	stur	d0, [x0, #1]
+    1364:	d65f03c0 	ret
+
+0000000000001368 <gen_Vst_S16_V64_0_mem>:
+    1368:	fc001000 	stur	d0, [x0, #1]
+    136c:	d65f03c0 	ret
+
+0000000000001370 <gen_Vst_U16_V64_0_mem>:
+    1370:	fc001000 	stur	d0, [x0, #1]
+    1374:	d65f03c0 	ret
+
+0000000000001378 <gen_Vst_S32_V64_0_mem>:
+    1378:	fc001000 	stur	d0, [x0, #1]
+    137c:	d65f03c0 	ret
+
+0000000000001380 <gen_Vst_U32_V64_0_mem>:
+    1380:	fc001000 	stur	d0, [x0, #1]
+    1384:	d65f03c0 	ret
+
+0000000000001388 <gen_Vst_S64_V64_0_mem>:
+    1388:	fc001000 	stur	d0, [x0, #1]
+    138c:	d65f03c0 	ret
+
+0000000000001390 <gen_Vst_U64_V64_0_mem>:
+    1390:	fc001000 	stur	d0, [x0, #1]
+    1394:	d65f03c0 	ret
+
+0000000000001398 <gen_Vst_F32_V64_0_mem>:
+    1398:	fc001000 	stur	d0, [x0, #1]
+    139c:	d65f03c0 	ret
+
+00000000000013a0 <gen_Vst_F64_V64_0_mem>:
+    13a0:	fc001000 	stur	d0, [x0, #1]
+    13a4:	d65f03c0 	ret
+
+00000000000013a8 <gen_Vst_S8_V128_0_mem>:
+    13a8:	3c801000 	stur	q0, [x0, #1]
+    13ac:	d65f03c0 	ret
+
+00000000000013b0 <gen_Vst_U8_V128_0_mem>:
+    13b0:	3c801000 	stur	q0, [x0, #1]
+    13b4:	d65f03c0 	ret
+
+00000000000013b8 <gen_Vst_S16_V128_0_mem>:
+    13b8:	3c801000 	stur	q0, [x0, #1]
+    13bc:	d65f03c0 	ret
+
+00000000000013c0 <gen_Vst_U16_V128_0_mem>:
+    13c0:	3c801000 	stur	q0, [x0, #1]
+    13c4:	d65f03c0 	ret
+
+00000000000013c8 <gen_Vst_S32_V128_0_mem>:
+    13c8:	3c801000 	stur	q0, [x0, #1]
+    13cc:	d65f03c0 	ret
+
+00000000000013d0 <gen_Vst_U32_V128_0_mem>:
+    13d0:	3c801000 	stur	q0, [x0, #1]
+    13d4:	d65f03c0 	ret
+
+00000000000013d8 <gen_Vst_S64_V128_0_mem>:
+    13d8:	3c801000 	stur	q0, [x0, #1]
+    13dc:	d65f03c0 	ret
+
+00000000000013e0 <gen_Vst_U64_V128_0_mem>:
+    13e0:	3c801000 	stur	q0, [x0, #1]
+    13e4:	d65f03c0 	ret
+
+00000000000013e8 <gen_Vst_F32_V128_0_mem>:
+    13e8:	3c801000 	stur	q0, [x0, #1]
+    13ec:	d65f03c0 	ret
+
+00000000000013f0 <gen_Vst_F64_V128_0_mem>:
+    13f0:	3c801000 	stur	q0, [x0, #1]
+    13f4:	d65f03c0 	ret
+
+00000000000013f8 <gen_Vrecpe_F32_V32_0_2>:
+    13f8:	5ea1d800 	frecpe	s0, s0
+    13fc:	d65f03c0 	ret
+
+0000000000001400 <gen_Vrecpe_F64_V64_0_2>:
+    1400:	5ee1d800 	frecpe	d0, d0
+    1404:	d65f03c0 	ret
+
+0000000000001408 <gen_Vrecpe_F32_V64_0_2>:
+    1408:	0ea1d800 	frecpe	v0.2s, v0.2s
+    140c:	d65f03c0 	ret
+
+0000000000001410 <gen_Vrecpe_F32_V128_0_2>:
+    1410:	4ea1d800 	frecpe	v0.4s, v0.4s
+    1414:	d65f03c0 	ret
+
+0000000000001418 <gen_Vrecpe_F64_V128_0_2>:
+    1418:	4ee1d800 	frecpe	v0.2d, v0.2d
+    141c:	d65f03c0 	ret
+
+0000000000001420 <gen_Vrsqrte_F32_V32_0_2>:
+    1420:	7ea1d800 	frsqrte	s0, s0
+    1424:	d65f03c0 	ret
+
+0000000000001428 <gen_Vrsqrte_F64_V64_0_2>:
+    1428:	7ee1d800 	frsqrte	d0, d0
+    142c:	d65f03c0 	ret
+
+0000000000001430 <gen_Vrsqrte_F32_V64_0_2>:
+    1430:	2ea1d800 	frsqrte	v0.2s, v0.2s
+    1434:	d65f03c0 	ret
+
+0000000000001438 <gen_Vrsqrte_F32_V128_0_2>:
+    1438:	6ea1d800 	frsqrte	v0.4s, v0.4s
+    143c:	d65f03c0 	ret
+
+0000000000001440 <gen_Vrsqrte_F64_V128_0_2>:
+    1440:	6ee1d800 	frsqrte	v0.2d, v0.2d
+    1444:	d65f03c0 	ret
+
+0000000000001448 <main>:
+    1448:	52800000 	mov	w0, #0x0                   	// #0
+    144c:	d65f03c0 	ret
+
+Disassembly of section .fini:
+
+0000000000001450 <_fini>:
+    1450:	d503201f 	nop
+    1454:	a9bf7bfd 	stp	x29, x30, [sp, #-16]!
+    1458:	910003fd 	mov	x29, sp
+    145c:	a8c17bfd 	ldp	x29, x30, [sp], #16
+    1460:	d65f03c0 	ret

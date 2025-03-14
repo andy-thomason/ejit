@@ -220,4 +220,20 @@
     # See also: https://github.com/ARM-software/abi-aa/blob/main/sysvabi64/sysvabi64.rst
 
 
+    fmov s0, s0
+    fmov s0, s1
+    fmov s1, s0
+    
+    fmov d0, d0
+    fmov d0, d1
+    fmov d1, d0
 
+    mov v0.8b, v0.8b
+    mov v0.16b, v0.16b
+    # mov z0.d, z0.d
+
+    not v0.8b, v0.8b
+    not v0.16b, v0.16b
+
+    fsub	v0.2s, v0.2s, v0.2s
+    fsub	v0.2s, v0.2s, v1.2s

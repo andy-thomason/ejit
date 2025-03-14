@@ -1,4 +1,6 @@
-use crate::{Cond, Error, Executable, Ins, Type, R};
+use crate::{Cond, Error, Executable, Ins, Type, Vsize, R, V};
+
+mod vector;
 
 enum Fixup {
     Adr(R, u32),
@@ -39,12 +41,6 @@ impl Executable {
                 }
                 Xor(dest, src1, src2) => {
                     arith(&mut code, 0x000000CA_u32.swap_bytes(), dest, src1, src2)
-                }
-                Adc(dest, src1, src2) => {
-                    arith(&mut code, 0x000000BA_u32.swap_bytes(), dest, src1, src2)
-                }
-                Sbc(dest, src1, src2) => {
-                    arith(&mut code, 0x000000FA_u32.swap_bytes(), dest, src1, src2)
                 }
                 Mul(dest, src1, src2) => {
                     arith(&mut code, 0x007C009B_u32.swap_bytes(), dest, src1, src2)
@@ -91,6 +87,10 @@ impl Executable {
                     fixups.push((code.len(), Fixup::B(*cond, *label)));
                     code.extend(0x10000000_u32.to_le_bytes());
                 }
+                J(label) => {
+                    fixups.push((code.len(), Fixup::J(*label)));
+                    code.extend(0x14000000_u32.to_le_bytes());
+                }
                 Ret => {
                     code.extend(0xd65f03c0_u32.to_le_bytes());
                 }
@@ -109,19 +109,28 @@ impl Executable {
                     }
                 }
                 Shl(d, src, shift) => {
-                    let opcode = 0x9ac02000_u32 | d.to_aarch64() | src.to_aarch64() << 5 | shift.to_aarch64() << 16;
+                    let opcode = 0x9ac02000_u32
+                        | d.to_aarch64()
+                        | src.to_aarch64() << 5
+                        | shift.to_aarch64() << 16;
                     code.extend(opcode.to_le_bytes());
                 }
                 Shr(d, src, shift) => {
-                    let opcode = 0x9ac02000_u32 | d.to_aarch64() | src.to_aarch64() << 5 | shift.to_aarch64() << 16;
+                    let opcode = 0x9ac02000_u32
+                        | d.to_aarch64()
+                        | src.to_aarch64() << 5
+                        | shift.to_aarch64() << 16;
                     code.extend(opcode.to_le_bytes());
                 }
                 Sar(d, src, shift) => {
-                    let opcode = 0x9ac02000_u32 | d.to_aarch64() | src.to_aarch64() << 5 | shift.to_aarch64() << 16;
+                    let opcode = 0x9ac02000_u32
+                        | d.to_aarch64()
+                        | src.to_aarch64() << 5
+                        | shift.to_aarch64() << 16;
                     code.extend(opcode.to_le_bytes());
                 }
                 Sel(cond, d, t, f) => {
-                    let opcode : u32 = match cond {
+                    let opcode: u32 = match cond {
                         Cond::Eq => 0x9a800000,
                         Cond::Ne => 0x9a801000,
                         Cond::Sgt => 0x9a80C000,
@@ -133,7 +142,8 @@ impl Executable {
                         Cond::Ult => 0x9a803000,
                         Cond::Ule => 0x9a809000,
                     };
-                    let opcode = opcode | f.to_aarch64() << 16 | t.to_aarch64() << 5 | d.to_aarch64();
+                    let opcode =
+                        opcode | f.to_aarch64() << 16 | t.to_aarch64() << 5 | d.to_aarch64();
                     code.extend(opcode.to_le_bytes());
                 }
                 Enter(imm) => {
@@ -210,21 +220,13 @@ impl Executable {
                         | r.to_aarch64();
                     code.extend(opcode.to_le_bytes());
                 }
-                Vmov(_, _, v, v1) => todo!(),
-                Vcmp(_, _, v, v1) => todo!(),
-                Vnot(_, _, v, v1) => todo!(),
-                Vneg(_, _, v, v1) => todo!(),
-                Vadd(_, _, v, v1, v2) => todo!(),
-                Vsub(_, _, v, v1, v2) => todo!(),
-                Vmul(_, _, v, v1, v2) => todo!(),
-                Vdiv(_, _, v, v1, v2) => todo!(),
-                Vand(_, _, v, v1, v2) => todo!(),
-                Vor(_, _, v, v1, v2) => todo!(),
-                Vxor(_, _, v, v1, v2) => todo!(),
-                J(label) => {
-                    fixups.push((code.len(), Fixup::J(*label)));
-                    code.extend(0x14000000_u32.to_le_bytes());
-                }
+
+                Vmov(..) | Vnot(..) | Vneg(..) | Vadd(..) | Vsub(..) | Vdiv(..)
+                | Vand(..) | Vor(..) | Vxor(..) | Vld(..) | Vst(..) | Vshl(..)
+                | Vshr(..) | Vmovi(..) | Vrecpe(..) | Vrsqrte(..) => vector::gen_vector_aarch64(&mut code, i.clone())?,
+
+                _ => todo!(),
+
             }
         }
         for (loc, f) in fixups {
@@ -249,7 +251,7 @@ impl Executable {
                         if (delta & 3) != 0 {
                             return Err(Error::BranchNotMod4(label));
                         }
-                        if delta < -(1 << 19+2-1) || delta >= (1 << 19+2-1) {
+                        if delta < -(1 << 19 + 2 - 1) || delta >= (1 << 19 + 2 - 1) {
                             return Err(Error::BranchOutOfRange(label));
                         }
                         let opcode = match cond {
@@ -277,11 +279,10 @@ impl Executable {
                         if (delta & 3) != 0 {
                             return Err(Error::BranchNotMod4(label));
                         }
-                        if delta < -(1 << 26+2-1) || delta >= (1 << 26+2-1) {
+                        if delta < -(1 << 26 + 2 - 1) || delta >= (1 << 26 + 2 - 1) {
                             return Err(Error::BranchOutOfRange(label));
                         }
-                        let opcode = 0x14000000_u32
-                            | ((delta >> 1) & 0x3ffffff) as u32;
+                        let opcode = 0x14000000_u32 | ((delta >> 1) & 0x3ffffff) as u32;
                         code[loc..loc + 4].copy_from_slice(&opcode.to_le_bytes());
                     } else {
                         return Err(Error::MissingLabel(label));
@@ -303,6 +304,13 @@ fn adr_opcode(loc: usize, dest: R, offset: usize) -> u32 {
 }
 
 impl R {
+    // Return the REX bit and the MODRM bits.
+    pub fn to_aarch64(&self) -> u32 {
+        self.0 as u32
+    }
+}
+
+impl V {
     // Return the REX bit and the MODRM bits.
     pub fn to_aarch64(&self) -> u32 {
         self.0 as u32
@@ -440,14 +448,81 @@ mod tests {
     fn enter_leave() {
         use Ins::*;
         use Type::*;
-        let prog = Executable::from_ir(&[
-            Enter(128),
-            Leave(128),
-            Ret,
-        ])
-        .unwrap();
+        let prog = Executable::from_ir(&[Enter(128), Leave(128), Ret]).unwrap();
         println!("{}", prog.fmt_32());
         // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=ff0302d1+ff030291+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
         assert_eq!(prog.fmt_32(), "ff0302d1 ff030291 c0035fd6");
     }
+
+    #[test]
+    fn vmov() {
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let prog = Executable::from_ir(&[Vmov(F32, V32, V(1), V(2)), Ret]).unwrap();
+        println!("{}", prog.fmt_url());
+        // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=ff0302d1+ff030291+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
+        assert_eq!(prog.fmt_32(), "411ca24e c0035fd6");
+    }
+
+    #[test]
+    fn vnot() {
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let prog = Executable::from_ir(&[Vnot(U8, V64, V(1), V(2)), Vnot(U8, V128, V(1), V(2)), Ret]).unwrap();
+        println!("{}", prog.fmt_url());
+        // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=ff0302d1+ff030291+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
+        assert_eq!(prog.fmt_32(), "4158202e 4158206e c0035fd6");
+    }
+    #[test]
+    fn vneg() {
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let prog = Executable::from_ir(&[
+            Vneg(U8, V64, V(1), V(2)),
+            Vneg(U16, V64, V(1), V(2)),
+            Vneg(U32, V64, V(1), V(2)),
+            Vneg(U64, V64, V(1), V(2)),
+            Vneg(U8, V128, V(1), V(2)),
+            Vneg(U16, V128, V(1), V(2)),
+            Vneg(U32, V128, V(1), V(2)),
+            Vneg(U64, V128, V(1), V(2)),
+            Ret
+        ]).unwrap();
+        println!("{}", prog.fmt_url());
+        // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=ff0302d1+ff030291+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
+        assert_eq!(prog.fmt_32(), "4158202e 4158206e c0035fd6");
+    }
+
+}
+
+fn vgen2(code: &mut Vec<u8>, opcode: u32, dest: V, src: V, i: &Ins) -> Result<(), Error> {
+    let opcode = opcode
+        | src.to_aarch64() << 5
+        | dest.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
+}
+
+fn vgen3(code: &mut Vec<u8>, opcode: u32, dest: V, src1: V, src2: V, i: &Ins) -> Result<(), Error> {
+    let opcode = opcode
+        | src2.to_aarch64() << 16
+        | src1.to_aarch64() << 5
+        | dest.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
+}
+
+fn vgenmem(code: &mut Vec<u8>, opcode: u32, v: V, r: R, imm: i32, i: &Ins) -> Result<(), Error> {
+    if imm >= (1<<12-1) || imm < -(1<<12-1) {
+        return Err(Error::InvalidImmediate(i.clone()));        
+    }
+    let opcode = opcode
+        | ((imm & 0xfff) as u32) << 10
+        | r.to_aarch64() << 5
+        | v.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
 }

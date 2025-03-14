@@ -55,6 +55,22 @@ enum Type {
     F256,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(u8)]
+/// Vector size
+enum Vsize {
+    V8,
+    V16,
+    V32,
+    V64,
+    V128,
+    V256,
+    V512,
+    V1024,
+    V2048,
+}
+
+
 #[derive(Clone, Debug, PartialEq)]
 enum Ins {
     // Remember a PC-rel location.
@@ -71,6 +87,8 @@ enum Ins {
     // Mem
     Ld(Type, R, R, i32),
     St(Type, R, R, i32),
+    Vld(Type, Vsize, V, R, i32),
+    Vst(Type, Vsize, V, R, i32),
 
     // Integer Arithmetic. Note flags will be set.
     Add(R, R, R),
@@ -81,32 +99,32 @@ enum Ins {
     Shl(R, R, R),
     Shr(R, R, R),
     Sar(R, R, R),
-    Adc(R, R, R),
-    Sbc(R, R, R),
     Mul(R, R, R),
     UDiv(R, R, R),
     SDiv(R, R, R),
-
-    /// Vector instructions: eg. Vadd(F32, 256)
-    Vmov(Type, u32, V, V),
-    Vcmp(Type, u32, V, V),
-    Vnot(Type, u32, V, V),
-    Vneg(Type, u32, V, V),
-    Vadd(Type, u32, V, V, V),
-    Vsub(Type, u32, V, V, V),
-    Vmul(Type, u32, V, V, V),
-    Vdiv(Type, u32, V, V, V),
-    Vand(Type, u32, V, V, V),
-    Vor(Type, u32, V, V, V),
-    Vxor(Type, u32, V, V, V),
-
-    // Two operand ops. Flags will be set.
+    Mov(R, R),
+    Movi(R, u64),
     Cmp(R, R),
     Cmpi(R, u64),
     Not(R, R),
     Neg(R, R),
-    Mov(R, R),
-    Movi(R, u64),
+
+    /// Vector arithmetic
+    Vadd(Type, Vsize, V, V, V),
+    Vsub(Type, Vsize, V, V, V),
+    Vand(Type, Vsize, V, V, V),
+    Vor(Type, Vsize, V, V, V),
+    Vxor(Type, Vsize, V, V, V),
+    Vshl(Type, Vsize, V, V, V),
+    Vshr(Type, Vsize, V, V, V),
+    Vmul(Type, Vsize, V, V, V),
+    Vdiv(Type, Vsize, V, V, V),
+    Vmov(Type, Vsize, V, V),
+    Vmovi(Type, Vsize, V, u64),
+    Vnot(Type, Vsize, V, V),
+    Vneg(Type, Vsize, V, V),
+    Vrecpe(Type, Vsize, V, V),
+    Vrsqrte(Type, Vsize, V, V),
 
     // Control flow
     /// Call indirect using stack or R(30)
@@ -138,6 +156,11 @@ enum Error {
     BranchNotMod4(u32),
     InvalidType(Ins),
     StackFrameMustBeModulo16(Ins),
+    InvalidVectorSize(Ins),
+    VectorOperationNotSupported(Ins),
+    VectorSizeNotSupported(Ins),
+    VectorTypeNotSupported(Ins),
+    UnsupportedVectorOperation(Ins),
 }
 
 struct Executable {
@@ -324,7 +347,7 @@ mod generic_tests {
             // Compile time varies from 9μs (hot) to 11.4μs (cold).
             println!("compile time {}ns", std::time::Instant::elapsed(&t0).as_nanos());
             println!("{}", prog.fmt_url());
-            let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
+            let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
             assert_eq!(res, 50005000);
         }
     }
