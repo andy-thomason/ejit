@@ -90,7 +90,7 @@ enum Ins {
     Vld(Type, Vsize, V, R, i32),
     Vst(Type, Vsize, V, R, i32),
 
-    // Integer Arithmetic. Note flags will be set.
+    // Integer Arithmetic.
     Add(R, R, R),
     Sub(R, R, R),
     And(R, R, R),

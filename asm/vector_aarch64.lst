@@ -16,7 +16,7 @@ Disassembly of section .plt:
 
 00000000000005a0 <.plt>:
  5a0:	a9bf7bf0 	stp	x16, x30, [sp, #-16]!
- 5a4:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5a4:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1bdd4>
  5a8:	f947d611 	ldr	x17, [x16, #4008]
  5ac:	913ea210 	add	x16, x16, #0xfa8
  5b0:	d61f0220 	br	x17
@@ -25,25 +25,25 @@ Disassembly of section .plt:
  5bc:	d503201f 	nop
 
 00000000000005c0 <__libc_start_main@plt>:
- 5c0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5c0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1bdd4>
  5c4:	f947da11 	ldr	x17, [x16, #4016]
  5c8:	913ec210 	add	x16, x16, #0xfb0
  5cc:	d61f0220 	br	x17
 
 00000000000005d0 <__cxa_finalize@plt>:
- 5d0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5d0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1bdd4>
  5d4:	f947de11 	ldr	x17, [x16, #4024]
  5d8:	913ee210 	add	x16, x16, #0xfb8
  5dc:	d61f0220 	br	x17
 
 00000000000005e0 <__gmon_start__@plt>:
- 5e0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5e0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1bdd4>
  5e4:	f947e211 	ldr	x17, [x16, #4032]
  5e8:	913f0210 	add	x16, x16, #0xfc0
  5ec:	d61f0220 	br	x17
 
 00000000000005f0 <abort@plt>:
- 5f0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1c0c8>
+ 5f0:	f00000f0 	adrp	x16, 1f000 <__FRAME_END__+0x1bdd4>
  5f4:	f947e611 	ldr	x17, [x16, #4040]
  5f8:	913f2210 	add	x16, x16, #0xfc8
  5fc:	d61f0220 	br	x17
@@ -58,7 +58,7 @@ Disassembly of section .text:
      610:	f94003e1 	ldr	x1, [sp]
      614:	910023e2 	add	x2, sp, #0x8
      618:	910003e6 	mov	x6, sp
-     61c:	f00000e0 	adrp	x0, 1f000 <__FRAME_END__+0x1c0c8>
+     61c:	f00000e0 	adrp	x0, 1f000 <__FRAME_END__+0x1bdd4>
      620:	f947f800 	ldr	x0, [x0, #4080]
      624:	d2800003 	mov	x3, #0x0                   	// #0
      628:	d2800004 	mov	x4, #0x0                   	// #0
@@ -66,7 +66,7 @@ Disassembly of section .text:
      630:	97fffff0 	bl	5f0 <abort@plt>
 
 0000000000000634 <call_weak_fn>:
-     634:	f00000e0 	adrp	x0, 1f000 <__FRAME_END__+0x1c0c8>
+     634:	f00000e0 	adrp	x0, 1f000 <__FRAME_END__+0x1bdd4>
      638:	f947f400 	ldr	x0, [x0, #4072]
      63c:	b4000040 	cbz	x0, 644 <call_weak_fn+0x10>
      640:	17ffffe8 	b	5e0 <__gmon_start__@plt>
@@ -81,7 +81,7 @@ Disassembly of section .text:
      65c:	91004021 	add	x1, x1, #0x10
      660:	eb00003f 	cmp	x1, x0
      664:	540000c0 	b.eq	67c <deregister_tm_clones+0x2c>  // b.none
-     668:	f00000e1 	adrp	x1, 1f000 <__FRAME_END__+0x1c0c8>
+     668:	f00000e1 	adrp	x1, 1f000 <__FRAME_END__+0x1bdd4>
      66c:	f947ec21 	ldr	x1, [x1, #4056]
      670:	b4000061 	cbz	x1, 67c <deregister_tm_clones+0x2c>
      674:	aa0103f0 	mov	x16, x1
@@ -98,7 +98,7 @@ Disassembly of section .text:
      698:	8b810c41 	add	x1, x2, x1, asr #3
      69c:	9341fc21 	asr	x1, x1, #1
      6a0:	b40000c1 	cbz	x1, 6b8 <register_tm_clones+0x38>
-     6a4:	f00000e2 	adrp	x2, 1f000 <__FRAME_END__+0x1c0c8>
+     6a4:	f00000e2 	adrp	x2, 1f000 <__FRAME_END__+0x1bdd4>
      6a8:	f947fc42 	ldr	x2, [x2, #4088]
      6ac:	b4000062 	cbz	x2, 6b8 <register_tm_clones+0x38>
      6b0:	aa0203f0 	mov	x16, x2
@@ -114,7 +114,7 @@ Disassembly of section .text:
      6d0:	90000113 	adrp	x19, 20000 <__data_start>
      6d4:	39404260 	ldrb	w0, [x19, #16]
      6d8:	37000140 	tbnz	w0, #0, 700 <__do_global_dtors_aux+0x40>
-     6dc:	f00000e0 	adrp	x0, 1f000 <__FRAME_END__+0x1c0c8>
+     6dc:	f00000e0 	adrp	x0, 1f000 <__FRAME_END__+0x1bdd4>
      6e0:	f947f000 	ldr	x0, [x0, #4064]
      6e4:	b4000080 	cbz	x0, 6f4 <__do_global_dtors_aux+0x34>
      6e8:	90000100 	adrp	x0, 20000 <__data_start>
@@ -1326,139 +1326,223 @@ Disassembly of section .text:
     1348:	4ee14400 	sshl	v0.2d, v0.2d, v1.2d
     134c:	d65f03c0 	ret
 
-0000000000001350 <gen_Vst_F32_V32_0_mem>:
+0000000000001350 <gen_Vst_F32_V32_0x1000_mem>:
     1350:	bc001000 	stur	s0, [x0, #1]
     1354:	d65f03c0 	ret
 
-0000000000001358 <gen_Vst_S8_V64_0_mem>:
+0000000000001358 <gen_Vst_S8_V64_0x1000_mem>:
     1358:	fc001000 	stur	d0, [x0, #1]
     135c:	d65f03c0 	ret
 
-0000000000001360 <gen_Vst_U8_V64_0_mem>:
+0000000000001360 <gen_Vst_U8_V64_0x1000_mem>:
     1360:	fc001000 	stur	d0, [x0, #1]
     1364:	d65f03c0 	ret
 
-0000000000001368 <gen_Vst_S16_V64_0_mem>:
+0000000000001368 <gen_Vst_S16_V64_0x1000_mem>:
     1368:	fc001000 	stur	d0, [x0, #1]
     136c:	d65f03c0 	ret
 
-0000000000001370 <gen_Vst_U16_V64_0_mem>:
+0000000000001370 <gen_Vst_U16_V64_0x1000_mem>:
     1370:	fc001000 	stur	d0, [x0, #1]
     1374:	d65f03c0 	ret
 
-0000000000001378 <gen_Vst_S32_V64_0_mem>:
+0000000000001378 <gen_Vst_S32_V64_0x1000_mem>:
     1378:	fc001000 	stur	d0, [x0, #1]
     137c:	d65f03c0 	ret
 
-0000000000001380 <gen_Vst_U32_V64_0_mem>:
+0000000000001380 <gen_Vst_U32_V64_0x1000_mem>:
     1380:	fc001000 	stur	d0, [x0, #1]
     1384:	d65f03c0 	ret
 
-0000000000001388 <gen_Vst_S64_V64_0_mem>:
+0000000000001388 <gen_Vst_S64_V64_0x1000_mem>:
     1388:	fc001000 	stur	d0, [x0, #1]
     138c:	d65f03c0 	ret
 
-0000000000001390 <gen_Vst_U64_V64_0_mem>:
+0000000000001390 <gen_Vst_U64_V64_0x1000_mem>:
     1390:	fc001000 	stur	d0, [x0, #1]
     1394:	d65f03c0 	ret
 
-0000000000001398 <gen_Vst_F32_V64_0_mem>:
+0000000000001398 <gen_Vst_F32_V64_0x1000_mem>:
     1398:	fc001000 	stur	d0, [x0, #1]
     139c:	d65f03c0 	ret
 
-00000000000013a0 <gen_Vst_F64_V64_0_mem>:
+00000000000013a0 <gen_Vst_F64_V64_0x1000_mem>:
     13a0:	fc001000 	stur	d0, [x0, #1]
     13a4:	d65f03c0 	ret
 
-00000000000013a8 <gen_Vst_S8_V128_0_mem>:
+00000000000013a8 <gen_Vst_S8_V128_0x1000_mem>:
     13a8:	3c801000 	stur	q0, [x0, #1]
     13ac:	d65f03c0 	ret
 
-00000000000013b0 <gen_Vst_U8_V128_0_mem>:
+00000000000013b0 <gen_Vst_U8_V128_0x1000_mem>:
     13b0:	3c801000 	stur	q0, [x0, #1]
     13b4:	d65f03c0 	ret
 
-00000000000013b8 <gen_Vst_S16_V128_0_mem>:
+00000000000013b8 <gen_Vst_S16_V128_0x1000_mem>:
     13b8:	3c801000 	stur	q0, [x0, #1]
     13bc:	d65f03c0 	ret
 
-00000000000013c0 <gen_Vst_U16_V128_0_mem>:
+00000000000013c0 <gen_Vst_U16_V128_0x1000_mem>:
     13c0:	3c801000 	stur	q0, [x0, #1]
     13c4:	d65f03c0 	ret
 
-00000000000013c8 <gen_Vst_S32_V128_0_mem>:
+00000000000013c8 <gen_Vst_S32_V128_0x1000_mem>:
     13c8:	3c801000 	stur	q0, [x0, #1]
     13cc:	d65f03c0 	ret
 
-00000000000013d0 <gen_Vst_U32_V128_0_mem>:
+00000000000013d0 <gen_Vst_U32_V128_0x1000_mem>:
     13d0:	3c801000 	stur	q0, [x0, #1]
     13d4:	d65f03c0 	ret
 
-00000000000013d8 <gen_Vst_S64_V128_0_mem>:
+00000000000013d8 <gen_Vst_S64_V128_0x1000_mem>:
     13d8:	3c801000 	stur	q0, [x0, #1]
     13dc:	d65f03c0 	ret
 
-00000000000013e0 <gen_Vst_U64_V128_0_mem>:
+00000000000013e0 <gen_Vst_U64_V128_0x1000_mem>:
     13e0:	3c801000 	stur	q0, [x0, #1]
     13e4:	d65f03c0 	ret
 
-00000000000013e8 <gen_Vst_F32_V128_0_mem>:
+00000000000013e8 <gen_Vst_F32_V128_0x1000_mem>:
     13e8:	3c801000 	stur	q0, [x0, #1]
     13ec:	d65f03c0 	ret
 
-00000000000013f0 <gen_Vst_F64_V128_0_mem>:
+00000000000013f0 <gen_Vst_F64_V128_0x1000_mem>:
     13f0:	3c801000 	stur	q0, [x0, #1]
     13f4:	d65f03c0 	ret
 
-00000000000013f8 <gen_Vrecpe_F32_V32_0_2>:
-    13f8:	5ea1d800 	frecpe	s0, s0
+00000000000013f8 <gen_Vld_F32_V32_0x1000_mem>:
+    13f8:	bc402000 	ldur	s0, [x0, #2]
     13fc:	d65f03c0 	ret
 
-0000000000001400 <gen_Vrecpe_F64_V64_0_2>:
-    1400:	5ee1d800 	frecpe	d0, d0
+0000000000001400 <gen_Vld_S8_V64_0x1000_mem>:
+    1400:	fc401000 	ldur	d0, [x0, #1]
     1404:	d65f03c0 	ret
 
-0000000000001408 <gen_Vrecpe_F32_V64_0_2>:
-    1408:	0ea1d800 	frecpe	v0.2s, v0.2s
+0000000000001408 <gen_Vld_U8_V64_0x1000_mem>:
+    1408:	fc401000 	ldur	d0, [x0, #1]
     140c:	d65f03c0 	ret
 
-0000000000001410 <gen_Vrecpe_F32_V128_0_2>:
-    1410:	4ea1d800 	frecpe	v0.4s, v0.4s
+0000000000001410 <gen_Vld_S16_V64_0x1000_mem>:
+    1410:	fc401000 	ldur	d0, [x0, #1]
     1414:	d65f03c0 	ret
 
-0000000000001418 <gen_Vrecpe_F64_V128_0_2>:
-    1418:	4ee1d800 	frecpe	v0.2d, v0.2d
+0000000000001418 <gen_Vld_U16_V64_0x1000_mem>:
+    1418:	fc401000 	ldur	d0, [x0, #1]
     141c:	d65f03c0 	ret
 
-0000000000001420 <gen_Vrsqrte_F32_V32_0_2>:
-    1420:	7ea1d800 	frsqrte	s0, s0
+0000000000001420 <gen_Vld_S32_V64_0x1000_mem>:
+    1420:	fc401000 	ldur	d0, [x0, #1]
     1424:	d65f03c0 	ret
 
-0000000000001428 <gen_Vrsqrte_F64_V64_0_2>:
-    1428:	7ee1d800 	frsqrte	d0, d0
+0000000000001428 <gen_Vld_U32_V64_0x1000_mem>:
+    1428:	fc401000 	ldur	d0, [x0, #1]
     142c:	d65f03c0 	ret
 
-0000000000001430 <gen_Vrsqrte_F32_V64_0_2>:
-    1430:	2ea1d800 	frsqrte	v0.2s, v0.2s
+0000000000001430 <gen_Vld_S64_V64_0x1000_mem>:
+    1430:	fc401000 	ldur	d0, [x0, #1]
     1434:	d65f03c0 	ret
 
-0000000000001438 <gen_Vrsqrte_F32_V128_0_2>:
-    1438:	6ea1d800 	frsqrte	v0.4s, v0.4s
+0000000000001438 <gen_Vld_U64_V64_0x1000_mem>:
+    1438:	fc401000 	ldur	d0, [x0, #1]
     143c:	d65f03c0 	ret
 
-0000000000001440 <gen_Vrsqrte_F64_V128_0_2>:
-    1440:	6ee1d800 	frsqrte	v0.2d, v0.2d
+0000000000001440 <gen_Vld_F32_V64_0x1000_mem>:
+    1440:	fc401000 	ldur	d0, [x0, #1]
     1444:	d65f03c0 	ret
 
-0000000000001448 <main>:
-    1448:	52800000 	mov	w0, #0x0                   	// #0
+0000000000001448 <gen_Vld_F64_V64_0x1000_mem>:
+    1448:	fc401000 	ldur	d0, [x0, #1]
     144c:	d65f03c0 	ret
+
+0000000000001450 <gen_Vld_S8_V128_0x1000_mem>:
+    1450:	3cc01000 	ldur	q0, [x0, #1]
+    1454:	d65f03c0 	ret
+
+0000000000001458 <gen_Vld_U8_V128_0x1000_mem>:
+    1458:	3cc01000 	ldur	q0, [x0, #1]
+    145c:	d65f03c0 	ret
+
+0000000000001460 <gen_Vld_S16_V128_0x1000_mem>:
+    1460:	3cc01000 	ldur	q0, [x0, #1]
+    1464:	d65f03c0 	ret
+
+0000000000001468 <gen_Vld_U16_V128_0x1000_mem>:
+    1468:	3cc01000 	ldur	q0, [x0, #1]
+    146c:	d65f03c0 	ret
+
+0000000000001470 <gen_Vld_S32_V128_0x1000_mem>:
+    1470:	3cc01000 	ldur	q0, [x0, #1]
+    1474:	d65f03c0 	ret
+
+0000000000001478 <gen_Vld_U32_V128_0x1000_mem>:
+    1478:	3cc01000 	ldur	q0, [x0, #1]
+    147c:	d65f03c0 	ret
+
+0000000000001480 <gen_Vld_S64_V128_0x1000_mem>:
+    1480:	3cc01000 	ldur	q0, [x0, #1]
+    1484:	d65f03c0 	ret
+
+0000000000001488 <gen_Vld_U64_V128_0x1000_mem>:
+    1488:	3cc01000 	ldur	q0, [x0, #1]
+    148c:	d65f03c0 	ret
+
+0000000000001490 <gen_Vld_F32_V128_0x1000_mem>:
+    1490:	3cc01000 	ldur	q0, [x0, #1]
+    1494:	d65f03c0 	ret
+
+0000000000001498 <gen_Vld_F64_V128_0x1000_mem>:
+    1498:	3cc01000 	ldur	q0, [x0, #1]
+    149c:	d65f03c0 	ret
+
+00000000000014a0 <gen_Vrecpe_F32_V32_0_2>:
+    14a0:	5ea1d800 	frecpe	s0, s0
+    14a4:	d65f03c0 	ret
+
+00000000000014a8 <gen_Vrecpe_F64_V64_0_2>:
+    14a8:	5ee1d800 	frecpe	d0, d0
+    14ac:	d65f03c0 	ret
+
+00000000000014b0 <gen_Vrecpe_F32_V64_0_2>:
+    14b0:	0ea1d800 	frecpe	v0.2s, v0.2s
+    14b4:	d65f03c0 	ret
+
+00000000000014b8 <gen_Vrecpe_F32_V128_0_2>:
+    14b8:	4ea1d800 	frecpe	v0.4s, v0.4s
+    14bc:	d65f03c0 	ret
+
+00000000000014c0 <gen_Vrecpe_F64_V128_0_2>:
+    14c0:	4ee1d800 	frecpe	v0.2d, v0.2d
+    14c4:	d65f03c0 	ret
+
+00000000000014c8 <gen_Vrsqrte_F32_V32_0_2>:
+    14c8:	7ea1d800 	frsqrte	s0, s0
+    14cc:	d65f03c0 	ret
+
+00000000000014d0 <gen_Vrsqrte_F64_V64_0_2>:
+    14d0:	7ee1d800 	frsqrte	d0, d0
+    14d4:	d65f03c0 	ret
+
+00000000000014d8 <gen_Vrsqrte_F32_V64_0_2>:
+    14d8:	2ea1d800 	frsqrte	v0.2s, v0.2s
+    14dc:	d65f03c0 	ret
+
+00000000000014e0 <gen_Vrsqrte_F32_V128_0_2>:
+    14e0:	6ea1d800 	frsqrte	v0.4s, v0.4s
+    14e4:	d65f03c0 	ret
+
+00000000000014e8 <gen_Vrsqrte_F64_V128_0_2>:
+    14e8:	6ee1d800 	frsqrte	v0.2d, v0.2d
+    14ec:	d65f03c0 	ret
+
+00000000000014f0 <main>:
+    14f0:	52800000 	mov	w0, #0x0                   	// #0
+    14f4:	d65f03c0 	ret
 
 Disassembly of section .fini:
 
-0000000000001450 <_fini>:
-    1450:	d503201f 	nop
-    1454:	a9bf7bfd 	stp	x29, x30, [sp, #-16]!
-    1458:	910003fd 	mov	x29, sp
-    145c:	a8c17bfd 	ldp	x29, x30, [sp], #16
-    1460:	d65f03c0 	ret
+00000000000014f8 <_fini>:
+    14f8:	d503201f 	nop
+    14fc:	a9bf7bfd 	stp	x29, x30, [sp, #-16]!
+    1500:	910003fd 	mov	x29, sp
+    1504:	a8c17bfd 	ldp	x29, x30, [sp], #16
+    1508:	d65f03c0 	ret

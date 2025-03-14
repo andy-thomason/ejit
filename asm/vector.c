@@ -267,28 +267,51 @@ u64x2 gen_Vshl_U64_V128_0x10000_3(u64x2 a, u64x2 b) { return a << b; }
 // i64x2 gen_Vshr_S64_V128_0x10000_3(i64x2 a, i64x2 b) { return a >> b; }
 // u64x2 gen_Vshr_U64_V128_0x10000_3(u64x2 a, u64x2 b) { return a >> b; }
 
-float gen_Vst_F32_V32_0_mem(char *a, float b) { return *(float*)(a+1) = b; }
-i8x8 gen_Vst_S8_V64_0_mem(char *a, i8x8 b) { return *(i8x8*)(a+1) = b; }
-u8x8 gen_Vst_U8_V64_0_mem(char *a, u8x8 b) { return *(u8x8*)(a+1) = b; }
-i16x4 gen_Vst_S16_V64_0_mem(char *a, i16x4 b) { return *(i16x4*)(a+1) = b; }
-u16x4 gen_Vst_U16_V64_0_mem(char *a, u16x4 b) { return *(u16x4*)(a+1) = b; }
-i32x2 gen_Vst_S32_V64_0_mem(char *a, i32x2 b) { return *(i32x2*)(a+1) = b; }
-u32x2 gen_Vst_U32_V64_0_mem(char *a, u32x2 b) { return *(u32x2*)(a+1) = b; }
-i64x1 gen_Vst_S64_V64_0_mem(char *a, i64x1 b) { return *(i64x1*)(a+1) = b; }
-u64x1 gen_Vst_U64_V64_0_mem(char *a, u64x1 b) { return *(u64x1*)(a+1) = b; }
-f32x2 gen_Vst_F32_V64_0_mem(char *a, f32x2 b) { return *(f32x2*)(a+1) = b; }
-f64x1 gen_Vst_F64_V64_0_mem(char *a, f64x1 b) { return *(f64x1*)(a+1) = b; }
+float gen_Vst_F32_V32_0x1000_mem(char *a, float b) { return *(float*)(a+1) = b; }
+i8x8 gen_Vst_S8_V64_0x1000_mem(char *a, i8x8 b) { return *(i8x8*)(a+1) = b; }
+u8x8 gen_Vst_U8_V64_0x1000_mem(char *a, u8x8 b) { return *(u8x8*)(a+1) = b; }
+i16x4 gen_Vst_S16_V64_0x1000_mem(char *a, i16x4 b) { return *(i16x4*)(a+1) = b; }
+u16x4 gen_Vst_U16_V64_0x1000_mem(char *a, u16x4 b) { return *(u16x4*)(a+1) = b; }
+i32x2 gen_Vst_S32_V64_0x1000_mem(char *a, i32x2 b) { return *(i32x2*)(a+1) = b; }
+u32x2 gen_Vst_U32_V64_0x1000_mem(char *a, u32x2 b) { return *(u32x2*)(a+1) = b; }
+i64x1 gen_Vst_S64_V64_0x1000_mem(char *a, i64x1 b) { return *(i64x1*)(a+1) = b; }
+u64x1 gen_Vst_U64_V64_0x1000_mem(char *a, u64x1 b) { return *(u64x1*)(a+1) = b; }
+f32x2 gen_Vst_F32_V64_0x1000_mem(char *a, f32x2 b) { return *(f32x2*)(a+1) = b; }
+f64x1 gen_Vst_F64_V64_0x1000_mem(char *a, f64x1 b) { return *(f64x1*)(a+1) = b; }
 
-i8x16 gen_Vst_S8_V128_0_mem(char *a, i8x16 b) { return *(i8x16*)(a+1) = b; }
-u8x16 gen_Vst_U8_V128_0_mem(char *a, u8x16 b) { return *(u8x16*)(a+1) = b; }
-i16x8 gen_Vst_S16_V128_0_mem(char *a, i16x8 b) { return *(i16x8*)(a+1) = b; }
-u16x8 gen_Vst_U16_V128_0_mem(char *a, u16x8 b) { return *(u16x8*)(a+1) = b; }
-i32x4 gen_Vst_S32_V128_0_mem(char *a, i32x4 b) { return *(i32x4*)(a+1) = b; }
-u32x4 gen_Vst_U32_V128_0_mem(char *a, u32x4 b) { return *(u32x4*)(a+1) = b; }
-i64x2 gen_Vst_S64_V128_0_mem(char *a, i64x2 b) { return *(i64x2*)(a+1) = b; }
-u64x2 gen_Vst_U64_V128_0_mem(char *a, u64x2 b) { return *(u64x2*)(a+1) = b; }
-f32x4 gen_Vst_F32_V128_0_mem(char *a, f32x4 b) { return *(f32x4*)(a+1) = b; }
-f64x2 gen_Vst_F64_V128_0_mem(char *a, f64x2 b) { return *(f64x2*)(a+1) = b; }
+i8x16 gen_Vst_S8_V128_0x1000_mem(char *a, i8x16 b) { return *(i8x16*)(a+1) = b; }
+u8x16 gen_Vst_U8_V128_0x1000_mem(char *a, u8x16 b) { return *(u8x16*)(a+1) = b; }
+i16x8 gen_Vst_S16_V128_0x1000_mem(char *a, i16x8 b) { return *(i16x8*)(a+1) = b; }
+u16x8 gen_Vst_U16_V128_0x1000_mem(char *a, u16x8 b) { return *(u16x8*)(a+1) = b; }
+i32x4 gen_Vst_S32_V128_0x1000_mem(char *a, i32x4 b) { return *(i32x4*)(a+1) = b; }
+u32x4 gen_Vst_U32_V128_0x1000_mem(char *a, u32x4 b) { return *(u32x4*)(a+1) = b; }
+i64x2 gen_Vst_S64_V128_0x1000_mem(char *a, i64x2 b) { return *(i64x2*)(a+1) = b; }
+u64x2 gen_Vst_U64_V128_0x1000_mem(char *a, u64x2 b) { return *(u64x2*)(a+1) = b; }
+f32x4 gen_Vst_F32_V128_0x1000_mem(char *a, f32x4 b) { return *(f32x4*)(a+1) = b; }
+f64x2 gen_Vst_F64_V128_0x1000_mem(char *a, f64x2 b) { return *(f64x2*)(a+1) = b; }
+
+float gen_Vld_F32_V32_0x1000_mem(char *a, float b) { return *(float*)(a+1); }
+i8x8 gen_Vld_S8_V64_0x1000_mem(char *a, i8x8 b) { return *(i8x8*)(a+1); }
+u8x8 gen_Vld_U8_V64_0x1000_mem(char *a, u8x8 b) { return *(u8x8*)(a+1); }
+i16x4 gen_Vld_S16_V64_0x1000_mem(char *a, i16x4 b) { return *(i16x4*)(a+1); }
+u16x4 gen_Vld_U16_V64_0x1000_mem(char *a, u16x4 b) { return *(u16x4*)(a+1); }
+i32x2 gen_Vld_S32_V64_0x1000_mem(char *a, i32x2 b) { return *(i32x2*)(a+1); }
+u32x2 gen_Vld_U32_V64_0x1000_mem(char *a, u32x2 b) { return *(u32x2*)(a+1); }
+i64x1 gen_Vld_S64_V64_0x1000_mem(char *a, i64x1 b) { return *(i64x1*)(a+1); }
+u64x1 gen_Vld_U64_V64_0x1000_mem(char *a, u64x1 b) { return *(u64x1*)(a+1); }
+f32x2 gen_Vld_F32_V64_0x1000_mem(char *a, f32x2 b) { return *(f32x2*)(a+1); }
+f64x1 gen_Vld_F64_V64_0x1000_mem(char *a, f64x1 b) { return *(f64x1*)(a+1); }
+
+i8x16 gen_Vld_S8_V128_0x1000_mem(char *a, i8x16 b) { return *(i8x16*)(a+1); }
+u8x16 gen_Vld_U8_V128_0x1000_mem(char *a, u8x16 b) { return *(u8x16*)(a+1); }
+i16x8 gen_Vld_S16_V128_0x1000_mem(char *a, i16x8 b) { return *(i16x8*)(a+1); }
+u16x8 gen_Vld_U16_V128_0x1000_mem(char *a, u16x8 b) { return *(u16x8*)(a+1); }
+i32x4 gen_Vld_S32_V128_0x1000_mem(char *a, i32x4 b) { return *(i32x4*)(a+1); }
+u32x4 gen_Vld_U32_V128_0x1000_mem(char *a, u32x4 b) { return *(u32x4*)(a+1); }
+i64x2 gen_Vld_S64_V128_0x1000_mem(char *a, i64x2 b) { return *(i64x2*)(a+1); }
+u64x2 gen_Vld_U64_V128_0x1000_mem(char *a, u64x2 b) { return *(u64x2*)(a+1); }
+f32x4 gen_Vld_F32_V128_0x1000_mem(char *a, f32x4 b) { return *(f32x4*)(a+1); }
+f64x2 gen_Vld_F64_V128_0x1000_mem(char *a, f64x2 b) { return *(f64x2*)(a+1); }
 
 float gen_Vrecpe_F32_V32_0_2(float a, float b) { return __builtin_aarch64_frecpesf(a); }
 double gen_Vrecpe_F64_V64_0_2(double a, double b) { return __builtin_aarch64_frecpedf(a); }
