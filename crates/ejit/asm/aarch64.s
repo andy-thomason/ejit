@@ -235,5 +235,8 @@
     not v0.8b, v0.8b
     not v0.16b, v0.16b
 
-    fsub	v0.2s, v0.2s, v0.2s
-    fsub	v0.2s, v0.2s, v1.2s
+    fsub v0.2s, v0.2s, v0.2s
+    fsub v0.2s, v0.2s, v1.2s
+
+
+    cpyfp 

@@ -1,8 +1,7 @@
-[package]
-name = "Ejit"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-[dependencies]
-clear-cache = "0.1.1"
-libc = "0.2.169"
+resolver = "3"
+
+members = [
+    "crates/ejit", "crates/ejit-build",
+]

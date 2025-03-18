@@ -1,5 +1,6 @@
 use crate::{Cond, Error, Executable, Ins, Type, Vsize, R, V};
 
+mod base;
 mod vector;
 
 enum Fixup {
@@ -26,55 +27,60 @@ impl Executable {
             use Ins::*;
             // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions
             match i {
+                Add(..) | Sub(..) | And(..) | Or(..) | Xor(..) | Shl(..) | Shr(..) | Sar(..) | Mul(..) | UDiv(..) | SDiv(..) | Mov(..) | Movi(..) | Not(..) | Neg(..) => {
+                    base::gen_base_aarch64(&mut code, &i)?;
+                }
+                
                 Label(label) => labels.push((*label, code.len())),
-                Add(dest, src1, src2) => {
-                    arith(&mut code, 0x000000AB_u32.swap_bytes(), dest, src1, src2)
-                }
-                Sub(dest, src1, src2) => {
-                    arith(&mut code, 0x000000EB_u32.swap_bytes(), dest, src1, src2)
-                }
-                And(dest, src1, src2) => {
-                    arith(&mut code, 0x0000008A_u32.swap_bytes(), dest, src1, src2)
-                }
-                Or(dest, src1, src2) => {
-                    arith(&mut code, 0x000000AA_u32.swap_bytes(), dest, src1, src2)
-                }
-                Xor(dest, src1, src2) => {
-                    arith(&mut code, 0x000000CA_u32.swap_bytes(), dest, src1, src2)
-                }
-                Mul(dest, src1, src2) => {
-                    arith(&mut code, 0x007C009B_u32.swap_bytes(), dest, src1, src2)
-                }
-                UDiv(dest, src1, src2) => {
-                    arith(&mut code, 0x0008C09A_u32.swap_bytes(), dest, src1, src2)
-                }
-                SDiv(dest, src1, src2) => {
-                    arith(&mut code, 0x000CC09A_u32.swap_bytes(), dest, src1, src2)
-                }
+
+                // Add(dest, src1, src2) => {
+                //     arith(&mut code, 0x000000AB_u32.swap_bytes(), dest, src1, src2)
+                // }
+                // Sub(dest, src1, src2) => {
+                //     arith(&mut code, 0x000000EB_u32.swap_bytes(), dest, src1, src2)
+                // }
+                // And(dest, src1, src2) => {
+                //     arith(&mut code, 0x0000008A_u32.swap_bytes(), dest, src1, src2)
+                // }
+                // Or(dest, src1, src2) => {
+                //     arith(&mut code, 0x000000AA_u32.swap_bytes(), dest, src1, src2)
+                // }
+                // Xor(dest, src1, src2) => {
+                //     arith(&mut code, 0x000000CA_u32.swap_bytes(), dest, src1, src2)
+                // }
+                // Mul(dest, src1, src2) => {
+                //     arith(&mut code, 0x007C009B_u32.swap_bytes(), dest, src1, src2)
+                // }
+                // UDiv(dest, src1, src2) => {
+                //     arith(&mut code, 0x0008C09A_u32.swap_bytes(), dest, src1, src2)
+                // }
+                // SDiv(dest, src1, src2) => {
+                //     arith(&mut code, 0x000CC09A_u32.swap_bytes(), dest, src1, src2)
+                // }
                 Addr(dest, label) => {
                     fixups.push((code.len(), Fixup::Adr(*dest, *label)));
                     code.extend(0x10000000_u32.to_le_bytes());
                 }
-                Movi(dest, value) => {
-                    if *value < 0x10000 {
-                        movzkn(&mut code, 0xd2800000, dest, *value as u32, 0);
-                    } else {
-                        return Err(Error::InvalidImmediate(i.clone()));
-                    }
-                }
-                Cmp(lhs, rhs) => {
-                    // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--shifted-register---Compare--shifted-register---an-alias-of-SUBS--shifted-register--?lang=en
-                    let opcode = 0xeb00001f_u32 | lhs.to_aarch64() << 5 | rhs.to_aarch64() << 16;
-                    code.extend(opcode.to_le_bytes());
-                }
-                Cmpi(lhs, imm) => {
-                    // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--immediate---Compare--immediate---an-alias-of-SUBS--immediate--?lang=en
-                    if *imm >= 0x1000 {
-                        return Err(Error::InvalidImmediate(i.clone()));
-                    }
-                    let opcode = 0xf100001f_u32 | lhs.to_aarch64() << 5 | (*imm as u32) << 10;
-                    code.extend(opcode.to_le_bytes());
-                }
+                // Movi(dest, value) => {
+                //     if *value < 0x10000 {
+                //         movzkn(&mut code, 0xd2800000, dest, *value as u32, 0);
+                //     } else {
+                //         return Err(Error::InvalidImmediate(i.clone()));
+                //     }
+                // }
+                // Cmp(lhs, rhs) => {
+                //     // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--shifted-register---Compare--shifted-register---an-alias-of-SUBS--shifted-register--?lang=en
+                //     let opcode = 0xeb00001f_u32 | lhs.to_aarch64() << 5 | rhs.to_aarch64() << 16;
+                //     code.extend(opcode.to_le_bytes());
+                // }
+                // Cmpi(lhs, imm) => {
+                //     // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--immediate---Compare--immediate---an-alias-of-SUBS--immediate--?lang=en
+                //     if *imm >= 0x1000 {
+                //         return Err(Error::InvalidImmediate(i.clone()));
+                //     }
+                //     let opcode = 0xf100001f_u32 | lhs.to_aarch64() << 5 | (*imm as u32) << 10;
+                //     code.extend(opcode.to_le_bytes());
+                // }
                 Call(target) => {
                     let opcode = 0xd63f0000_u32 | target.to_aarch64() << 5;
                     code.extend(opcode.to_le_bytes());
@@ -94,41 +100,41 @@ impl Executable {
                 Ret => {
                     code.extend(0xd65f03c0_u32.to_le_bytes());
                 }
-                Not(d, src) => {
-                    let opcode = 0xaa2003e0_u32 | src.to_aarch64() << 5 | d.to_aarch64();
-                    code.extend(opcode.to_le_bytes());
-                }
-                Neg(d, src) => {
-                    let opcode = 0xcb0003e0_u32 | src.to_aarch64() << 5 | d.to_aarch64();
-                    code.extend(opcode.to_le_bytes());
-                }
-                Mov(d, src) => {
-                    if d != src {
-                        let opcode = 0xaa0003e0_u32 | src.to_aarch64() << 16 | d.to_aarch64();
-                        code.extend(opcode.to_le_bytes());
-                    }
-                }
-                Shl(d, src, shift) => {
-                    let opcode = 0x9ac02000_u32
-                        | d.to_aarch64()
-                        | src.to_aarch64() << 5
-                        | shift.to_aarch64() << 16;
-                    code.extend(opcode.to_le_bytes());
-                }
-                Shr(d, src, shift) => {
-                    let opcode = 0x9ac02000_u32
-                        | d.to_aarch64()
-                        | src.to_aarch64() << 5
-                        | shift.to_aarch64() << 16;
-                    code.extend(opcode.to_le_bytes());
-                }
-                Sar(d, src, shift) => {
-                    let opcode = 0x9ac02000_u32
-                        | d.to_aarch64()
-                        | src.to_aarch64() << 5
-                        | shift.to_aarch64() << 16;
-                    code.extend(opcode.to_le_bytes());
-                }
+                // Not(d, src) => {
+                //     let opcode = 0xaa2003e0_u32 | src.to_aarch64() << 5 | d.to_aarch64();
+                //     code.extend(opcode.to_le_bytes());
+                // }
+                // Neg(d, src) => {
+                //     let opcode = 0xcb0003e0_u32 | src.to_aarch64() << 5 | d.to_aarch64();
+                //     code.extend(opcode.to_le_bytes());
+                // }
+                // Mov(d, src) => {
+                //     if d != src {
+                //         let opcode = 0xaa0003e0_u32 | src.to_aarch64() << 16 | d.to_aarch64();
+                //         code.extend(opcode.to_le_bytes());
+                //     }
+                // }
+                // Shl(d, src, shift) => {
+                //     let opcode = 0x9ac02000_u32
+                //         | d.to_aarch64()
+                //         | src.to_aarch64() << 5
+                //         | shift.to_aarch64() << 16;
+                //     code.extend(opcode.to_le_bytes());
+                // }
+                // Shr(d, src, shift) => {
+                //     let opcode = 0x9ac02000_u32
+                //         | d.to_aarch64()
+                //         | src.to_aarch64() << 5
+                //         | shift.to_aarch64() << 16;
+                //     code.extend(opcode.to_le_bytes());
+                // }
+                // Sar(d, src, shift) => {
+                //     let opcode = 0x9ac02000_u32
+                //         | d.to_aarch64()
+                //         | src.to_aarch64() << 5
+                //         | shift.to_aarch64() << 16;
+                //     code.extend(opcode.to_le_bytes());
+                // }
                 Sel(cond, d, t, f) => {
                     let opcode: u32 = match cond {
                         Cond::Eq => 0x9a800000,
@@ -223,9 +229,9 @@ impl Executable {
 
                 Vmov(..) | Vnot(..) | Vneg(..) | Vadd(..) | Vsub(..) | Vdiv(..)
                 | Vand(..) | Vor(..) | Vxor(..) | Vld(..) | Vst(..) | Vshl(..)
-                | Vshr(..) | Vmovi(..) | Vrecpe(..) | Vrsqrte(..) => vector::gen_vector_aarch64(&mut code, i.clone())?,
+                | Vshr(..) | Vmovi(..) | Vrecpe(..) | Vrsqrte(..) => vector::gen_vector_aarch64(&mut code, &i)?,
 
-                _ => todo!(),
+                _ => todo!("{i:?}"),
 
             }
         }
@@ -459,10 +465,10 @@ mod tests {
         use Ins::*;
         use Type::*;
         use Vsize::*;
-        let prog = Executable::from_ir(&[Vmov(F32, V32, V(1), V(2)), Ret]).unwrap();
+        let prog = Executable::from_ir(&[Vmov(F32, V32, V(1), V(2))]).unwrap();
         println!("{}", prog.fmt_url());
         // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=ff0302d1+ff030291+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
-        assert_eq!(prog.fmt_32(), "411ca24e c0035fd6");
+        assert_eq!(prog.fmt_32(), "4140201e");
     }
 
     #[test]
@@ -492,13 +498,14 @@ mod tests {
             Ret
         ]).unwrap();
         println!("{}", prog.fmt_url());
-        // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=ff0302d1+ff030291+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
-        assert_eq!(prog.fmt_32(), "4158202e 4158206e c0035fd6");
+        // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=41b8202e+41b8602e+41b8a02e+41b8e07e+41b8206e+41b8606e+41b8a06e+41b8e06e+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
+        assert_eq!(prog.fmt_32(), "41b8202e 41b8602e 41b8a02e 41b8e07e 41b8206e 41b8606e 41b8a06e 41b8e06e c0035fd6");
     }
 
 }
 
-fn vgen2(code: &mut Vec<u8>, opcode: u32, dest: V, src: V, i: &Ins) -> Result<(), Error> {
+fn gen2(code: &mut Vec<u8>, opcode: u32, dest: &R, src: &R, i: &Ins) -> Result<(), Error> {
+    let opcode = opcode & !(0x1f<<5 | 0x1f);
     let opcode = opcode
         | src.to_aarch64() << 5
         | dest.to_aarch64();
@@ -506,7 +513,8 @@ fn vgen2(code: &mut Vec<u8>, opcode: u32, dest: V, src: V, i: &Ins) -> Result<()
     Ok(())
 }
 
-fn vgen3(code: &mut Vec<u8>, opcode: u32, dest: V, src1: V, src2: V, i: &Ins) -> Result<(), Error> {
+fn gen3(code: &mut Vec<u8>, opcode: u32, dest: &R, src1: &R, src2: &R, i: &Ins) -> Result<(), Error> {
+    let opcode = opcode & !(0x1f<<16 | 0x1f<<5 | 0x1f);
     let opcode = opcode
         | src2.to_aarch64() << 16
         | src1.to_aarch64() << 5
@@ -515,8 +523,28 @@ fn vgen3(code: &mut Vec<u8>, opcode: u32, dest: V, src1: V, src2: V, i: &Ins) ->
     Ok(())
 }
 
-fn vgenmem(code: &mut Vec<u8>, opcode: u32, v: V, r: R, imm: i32, i: &Ins) -> Result<(), Error> {
-    if imm >= (1<<12-1) || imm < -(1<<12-1) {
+fn vgen2(code: &mut Vec<u8>, opcode: u32, dest: &V, src: &V, i: &Ins) -> Result<(), Error> {
+    let opcode = opcode & !(0x1f<<5 | 0x1f);
+    let opcode = opcode
+        | src.to_aarch64() << 5
+        | dest.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
+}
+
+fn vgen3(code: &mut Vec<u8>, opcode: u32, dest: &V, src1: &V, src2: &V, i: &Ins) -> Result<(), Error> {
+    let opcode = opcode & !(0x1f<<16 | 0x1f<<5 | 0x1f);
+    let opcode = opcode
+        | src2.to_aarch64() << 16
+        | src1.to_aarch64() << 5
+        | dest.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
+}
+
+fn vgenmem(code: &mut Vec<u8>, opcode: u32, v: &V, r: &R, imm: &i32, i: &Ins) -> Result<(), Error> {
+    let opcode = opcode & !(0xfff<<10 | 0x1f<<5 | 0x1f);
+    if *imm >= (1<<12-1) || *imm < -(1<<12-1) {
         return Err(Error::InvalidImmediate(i.clone()));        
     }
     let opcode = opcode

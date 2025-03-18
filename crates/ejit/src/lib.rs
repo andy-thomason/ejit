@@ -1,5 +1,5 @@
 #![allow(warnings)]
-#![doc = include_str!("../README.md")]
+#![doc = include_str!("../../../README.md")]
 
 use std::path::Display;
 
@@ -161,6 +161,8 @@ enum Error {
     VectorSizeNotSupported(Ins),
     VectorTypeNotSupported(Ins),
     UnsupportedVectorOperation(Ins),
+    UnsupportedBaseOperation(Ins),
+    UnsupportedOperation(Ins),
 }
 
 struct Executable {
