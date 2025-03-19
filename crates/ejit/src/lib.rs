@@ -173,19 +173,38 @@ struct Executable {
 
 impl Executable {
     fn new(code: &[u8], labels: Vec<(u32, usize)>) -> Self {
+        let addr = std::ptr::null_mut();
+        let len = code.len();
+        let fd = -1;
+        let offset = 0;
+        #[cfg(target_os="macos")]
         unsafe {
-            let addr = std::ptr::null_mut();
-            let len = code.len();
+            // https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.cs.allow-jit
+            // Ian Hobson's Mac Jit runes.
+            let prot = libc::PROT_EXEC | libc::PROT_READ | libc::PROT_WRITE;
+            let flags = libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_JIT;
+            let mem = libc::mmap(addr, len, prot, flags, fd, offset);
+
+            libc::pthread_jit_write_protect_np(0);
+
+            let slice = std::slice::from_raw_parts_mut(mem as *mut u8, len);
+            slice.copy_from_slice(&code);
+
+            libc::pthread_jit_write_protect_np(1);
+
+            let bytes = mem as *const u8;
+            clear_cache::clear_cache(bytes, bytes.offset(code.len() as isize));
+            Self { bytes, len, labels }
+        }
+        #[cfg(target_os="linux")]
+        unsafe {
             let prot = libc::PROT_EXEC | libc::PROT_READ | libc::PROT_WRITE;
             let flags = libc::MAP_PRIVATE | libc::MAP_ANONYMOUS;
-            let fd = -1;
-            let offset = 0;
             let mem = libc::mmap(addr, len, prot, flags, fd, offset);
             let slice = std::slice::from_raw_parts_mut(mem as *mut u8, len);
             slice.copy_from_slice(&code);
             let bytes = mem as *const u8;
             clear_cache::clear_cache(bytes, bytes.offset(code.len() as isize));
-            //Self(start, code.len())
             Self { bytes, len, labels }
         }
     }
