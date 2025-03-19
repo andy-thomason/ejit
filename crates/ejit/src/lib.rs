@@ -1,5 +1,5 @@
 #![allow(warnings)]
-#![doc = include_str!("../../../README.md")]
+// #![doc = include_str!("../../../README.md")]
 
 use std::path::Display;
 
@@ -263,20 +263,20 @@ mod generic_tests {
     #[test]
     fn generic_basic() {
         use Ins::*;
+        use regs::*;
 
         {
-            let prog = Executable::from_ir(&[Movi(R(0), 123), Ret]).unwrap();
+            let prog = Executable::from_ir(&[Movi(RES[0], 123), Ret]).unwrap();
             let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
             assert_eq!(res, 123);
         }
         {
-            let prog = Executable::from_ir(&[
-                // Imm(R(1), 123),
-                Sub(R(0), R(0), R(1)),
-                Ret,
-            ])
-            .unwrap();
-            println!("{}", prog.fmt_32());
+            let prog = Executable::from_ir(&[Add(RES[0], ARG[0], ARG[1]),Ret,]).unwrap();
+            let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
+            assert_eq!(res, 101);
+        }
+        {
+            let prog = Executable::from_ir(&[Sub(RES[0], ARG[0], ARG[1]),Ret,]).unwrap();
             let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
             assert_eq!(res, 99);
         }
@@ -302,6 +302,7 @@ mod generic_tests {
                 Ret,
             ])
             .unwrap();
+            println!("{}", prog.fmt_url());
     
             let tv = [[1, 1], [1, 2], [2, 1], [1, !0], [!0, 1]];
             let res = tv.iter().map(|args| unsafe { prog.call(0, &args[..]).unwrap().0 != 0 }).collect::<Vec<_>>();

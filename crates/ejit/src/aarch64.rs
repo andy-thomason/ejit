@@ -27,60 +27,16 @@ impl Executable {
             use Ins::*;
             // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions
             match i {
-                Add(..) | Sub(..) | And(..) | Or(..) | Xor(..) | Shl(..) | Shr(..) | Sar(..) | Mul(..) | UDiv(..) | SDiv(..) | Mov(..) | Movi(..) | Not(..) | Neg(..) => {
+                Add(..) | Sub(..) | And(..) | Or(..) | Xor(..) | Shl(..) | Shr(..) | Sar(..) | Mul(..) | UDiv(..) | SDiv(..) | Not(..) | Neg(..) | Movi(..) | Mov(..)  | Cmpi(..) | Cmp(..) => {
                     base::gen_base_aarch64(&mut code, &i)?;
                 }
                 
                 Label(label) => labels.push((*label, code.len())),
 
-                // Add(dest, src1, src2) => {
-                //     arith(&mut code, 0x000000AB_u32.swap_bytes(), dest, src1, src2)
-                // }
-                // Sub(dest, src1, src2) => {
-                //     arith(&mut code, 0x000000EB_u32.swap_bytes(), dest, src1, src2)
-                // }
-                // And(dest, src1, src2) => {
-                //     arith(&mut code, 0x0000008A_u32.swap_bytes(), dest, src1, src2)
-                // }
-                // Or(dest, src1, src2) => {
-                //     arith(&mut code, 0x000000AA_u32.swap_bytes(), dest, src1, src2)
-                // }
-                // Xor(dest, src1, src2) => {
-                //     arith(&mut code, 0x000000CA_u32.swap_bytes(), dest, src1, src2)
-                // }
-                // Mul(dest, src1, src2) => {
-                //     arith(&mut code, 0x007C009B_u32.swap_bytes(), dest, src1, src2)
-                // }
-                // UDiv(dest, src1, src2) => {
-                //     arith(&mut code, 0x0008C09A_u32.swap_bytes(), dest, src1, src2)
-                // }
-                // SDiv(dest, src1, src2) => {
-                //     arith(&mut code, 0x000CC09A_u32.swap_bytes(), dest, src1, src2)
-                // }
                 Addr(dest, label) => {
                     fixups.push((code.len(), Fixup::Adr(*dest, *label)));
                     code.extend(0x10000000_u32.to_le_bytes());
                 }
-                // Movi(dest, value) => {
-                //     if *value < 0x10000 {
-                //         movzkn(&mut code, 0xd2800000, dest, *value as u32, 0);
-                //     } else {
-                //         return Err(Error::InvalidImmediate(i.clone()));
-                //     }
-                // }
-                // Cmp(lhs, rhs) => {
-                //     // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--shifted-register---Compare--shifted-register---an-alias-of-SUBS--shifted-register--?lang=en
-                //     let opcode = 0xeb00001f_u32 | lhs.to_aarch64() << 5 | rhs.to_aarch64() << 16;
-                //     code.extend(opcode.to_le_bytes());
-                // }
-                // Cmpi(lhs, imm) => {
-                //     // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--immediate---Compare--immediate---an-alias-of-SUBS--immediate--?lang=en
-                //     if *imm >= 0x1000 {
-                //         return Err(Error::InvalidImmediate(i.clone()));
-                //     }
-                //     let opcode = 0xf100001f_u32 | lhs.to_aarch64() << 5 | (*imm as u32) << 10;
-                //     code.extend(opcode.to_le_bytes());
-                // }
                 Call(target) => {
                     let opcode = 0xd63f0000_u32 | target.to_aarch64() << 5;
                     code.extend(opcode.to_le_bytes());
@@ -100,41 +56,6 @@ impl Executable {
                 Ret => {
                     code.extend(0xd65f03c0_u32.to_le_bytes());
                 }
-                // Not(d, src) => {
-                //     let opcode = 0xaa2003e0_u32 | src.to_aarch64() << 5 | d.to_aarch64();
-                //     code.extend(opcode.to_le_bytes());
-                // }
-                // Neg(d, src) => {
-                //     let opcode = 0xcb0003e0_u32 | src.to_aarch64() << 5 | d.to_aarch64();
-                //     code.extend(opcode.to_le_bytes());
-                // }
-                // Mov(d, src) => {
-                //     if d != src {
-                //         let opcode = 0xaa0003e0_u32 | src.to_aarch64() << 16 | d.to_aarch64();
-                //         code.extend(opcode.to_le_bytes());
-                //     }
-                // }
-                // Shl(d, src, shift) => {
-                //     let opcode = 0x9ac02000_u32
-                //         | d.to_aarch64()
-                //         | src.to_aarch64() << 5
-                //         | shift.to_aarch64() << 16;
-                //     code.extend(opcode.to_le_bytes());
-                // }
-                // Shr(d, src, shift) => {
-                //     let opcode = 0x9ac02000_u32
-                //         | d.to_aarch64()
-                //         | src.to_aarch64() << 5
-                //         | shift.to_aarch64() << 16;
-                //     code.extend(opcode.to_le_bytes());
-                // }
-                // Sar(d, src, shift) => {
-                //     let opcode = 0x9ac02000_u32
-                //         | d.to_aarch64()
-                //         | src.to_aarch64() << 5
-                //         | shift.to_aarch64() << 16;
-                //     code.extend(opcode.to_le_bytes());
-                // }
                 Sel(cond, d, t, f) => {
                     let opcode: u32 = match cond {
                         Cond::Eq => 0x9a800000,
@@ -518,6 +439,61 @@ fn gen3(code: &mut Vec<u8>, opcode: u32, dest: &R, src1: &R, src2: &R, i: &Ins) 
     let opcode = opcode
         | src2.to_aarch64() << 16
         | src1.to_aarch64() << 5
+        | dest.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
+}
+
+fn gen_mov(code: &mut Vec<u8>, opcode: u32, dest: &R, src: &R, i: &Ins) -> Result<(), Error> {
+    // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/MOV--register---Move-register-value--an-alias-of-ORR--shifted-register--?lang=en
+    let opcode = opcode & !(0x1f << 16 | 0x1f);
+    let opcode = opcode
+        | dest.to_aarch64() << 16
+        | dest.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
+}
+
+fn gen_movi(code: &mut Vec<u8>, opcode: u32, dest: &R, imm: &u64, i: &Ins) -> Result<(), Error> {
+    // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/MOVZ--Move-wide-with-zero-?lang=en
+    if *imm >= 0x10000 {
+        return Err(Error::InvalidImmediate(i.clone()));
+    }
+    let opcode = opcode & !(0xffff << 5 | 0x1f);
+    let opcode = opcode
+        | (*imm << 5) as u32
+        | dest.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
+}
+
+fn gen_cmp(code: &mut Vec<u8>, opcode: u32, dest: &R, src: &R, i: &Ins) -> Result<(), Error> {
+    // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--extended-register---Compare--extended-register---an-alias-of-SUBS--extended-register--?lang=en
+    let opcode = opcode & !(0x1f << 5 | 0x1f);
+    let opcode = opcode
+        | dest.to_aarch64() << 5
+        | dest.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
+}
+
+fn gen_cmpi(code: &mut Vec<u8>, opcode: u32, dest: &R, imm: &u64, i: &Ins) -> Result<(), Error> {
+    // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/CMP--immediate---Compare--immediate---an-alias-of-SUBS--immediate--?lang=en
+    if *imm >= 0x1000 {
+        return Err(Error::InvalidImmediate(i.clone()));
+    }
+    let opcode = opcode & !(0xfff << 5 | 0x1f);
+    let opcode = opcode
+        | (*imm << 5) as u32
+        | dest.to_aarch64();
+    code.extend(opcode.to_le_bytes());
+    Ok(())
+}
+
+fn gen_ldst(code: &mut Vec<u8>, opcode: u32, ty: Type, dest: &R, ra: &R, imm: &i32, i: &Ins) -> Result<(), Error> {
+    let opcode = opcode & !(0x1f<<5 | 0x1f);
+    let opcode = opcode
+        | ra.to_aarch64() << 5
         | dest.to_aarch64();
     code.extend(opcode.to_le_bytes());
     Ok(())

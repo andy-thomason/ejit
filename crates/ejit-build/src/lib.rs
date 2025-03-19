@@ -27,13 +27,13 @@ pub fn build_aarch_base() {
 //! Update asm/base.c instead
 //! 
 use crate::{Cond, Error, Executable, Ins, Type, Vsize, R, V};
-use super::{gen2, gen3};
+use super::{gen2, gen3, gen_ldst, gen_movi, gen_mov, gen_cmpi, gen_cmp};
 
 pub fn gen_base_aarch64(code: &mut Vec<u8>, i: &Ins) -> Result<(), Error> {
     use Type::*;
     use Vsize::*;
     use Ins::*;
-    match i {"#;
+    match i {"#;    
 
     writeln!(out, "{begin}").unwrap();
 
@@ -58,6 +58,9 @@ pub fn gen_base_aarch64(code: &mut Vec<u8>, i: &Ins) -> Result<(), Error> {
                 "movi" => ("dest, imm", "gen_movi"),
                 "mov" => ("dest, imm", "gen2"),
                 "cmpi" => ("dest, imm", "gen_cmpi"),
+                "cmp" => ("dest, imm", "gen_cmp"),
+                "U8" => ("U8, r, ra, imm", "gen_ldst"),
+                "S8" => ("S8, r, ra, imm", "gen_ldst"),
                 _ => unreachable!("check vector.c {label}")
             };
 

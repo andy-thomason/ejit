@@ -2,7 +2,7 @@
 //! Update asm/base.c instead
 //! 
 use crate::{Cond, Error, Executable, Ins, Type, Vsize, R, V};
-use super::{gen2, gen3};
+use super::{gen2, gen3, gen_ldst, gen_movi, gen_mov, gen_cmpi, gen_cmp};
 
 pub fn gen_base_aarch64(code: &mut Vec<u8>, i: &Ins) -> Result<(), Error> {
     use Type::*;
@@ -22,6 +22,10 @@ pub fn gen_base_aarch64(code: &mut Vec<u8>, i: &Ins) -> Result<(), Error> {
         SDiv(dest, src1, src2) => gen3(code, 0x9ac10c00, dest, src1, src2, &i), //   50:	9ac10c00 	sdiv	x0, x0, x1
         Not(dest, src) => gen2(code, 0xaa2103e0, dest, src, &i), //   58:	aa2103e0 	mvn	x0, x1
         Neg(dest, src) => gen2(code, 0xcb0103e0, dest, src, &i), //   60:	cb0103e0 	neg	x0, x1
+        Movi(dest, imm) => gen_movi(code, 0xd2824680, dest, imm, &i), //   68:	d2824680 	mov	x0, #0x1234                	// #4660
+        Mov(dest, imm) => gen2(code, 0xaa0103e0, dest, imm, &i), //   70:	aa0103e0 	mov	x0, x1
+        Cmpi(dest, imm) => gen_cmpi(code, 0xf100481f, dest, imm, &i), //   78:	f100481f 	cmp	x0, #0x12
+        Cmp(dest, imm) => gen_cmp(code, 0xeb01001f, dest, imm, &i), //   84:	eb01001f 	cmp	x0, x1
         _ => Err(Error::UnsupportedOperation(i.clone()))
     }
 }
