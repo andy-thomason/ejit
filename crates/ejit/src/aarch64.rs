@@ -152,6 +152,16 @@ impl Executable {
                 | Vand(..) | Vor(..) | Vxor(..) | Vld(..) | Vst(..) | Vshl(..)
                 | Vshr(..) | Vmovi(..) | Vrecpe(..) | Vrsqrte(..) => vector::gen_vector_aarch64(&mut code, &i)?,
 
+                D(ty, value) => {
+                    match ty {
+                        Type::U8 => code.extend([*value as u8]),
+                        Type::U16 => code.extend((*value as u16).to_le_bytes()),
+                        Type::U32 => code.extend((*value as u32).to_le_bytes()),
+                        Type::U64 => code.extend((*value as u64).to_le_bytes()),
+                        _ => return Err(Error::InvalidDataType(i.clone())),
+                    }
+                }
+
                 _ => todo!("{i:?}"),
 
             }
@@ -421,6 +431,11 @@ mod tests {
         println!("{}", prog.fmt_url());
         // https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=41b8202e+41b8602e+41b8a02e+41b8e07e+41b8206e+41b8606e+41b8a06e+41b8e06e+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
         assert_eq!(prog.fmt_32(), "41b8202e 41b8602e 41b8a02e 41b8e07e 41b8206e 41b8606e 41b8a06e 41b8e06e c0035fd6");
+    }
+
+    #[test]
+    fn ins_size() {
+        assert_eq!(std::mem::size_of::<Ins>(), 16);
     }
 
 }

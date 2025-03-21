@@ -3,5 +3,5 @@
 resolver = "3"
 
 members = [
-    "crates/ejit", "crates/ejit-build",
+    "crates/ejit", "crates/ejit-build", "crates/ejit-evm",
 ]

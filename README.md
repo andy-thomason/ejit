@@ -24,11 +24,36 @@ functions and so Ejit IR is not portable.
 Note that the stack pointer on both architectures is special
 and cannot be used in all positions.
 
-Both architectures support scaled effective address generation
-for loads and stores.
+
+## Example
 
 ```
-base + (index << shift) + immediate
+    # use ejit::*;
+    use Ins::*;
+    use regs::*;
+    let t0 = std::time::Instant::now();
+    const COUNT : R = R(0);
+    const TOT : R = R(1);
+    const INC : R = R(2);
+    const LOOP : u32 = 0;
+    let mut prog = Executable::from_ir(&[
+        Movi(COUNT, 10000),
+        Movi(TOT, 0),
+        Movi(INC, 1),
+        Label(LOOP),
+        Add(TOT, TOT, COUNT),
+        Sub(COUNT, COUNT, INC),
+        Cmpi(COUNT, 0),
+        B(Cond::Ne, LOOP),
+        Mov(RES[0], TOT),
+        Ret,
+    ])
+    .unwrap();
+    // Compile time varies from 9μs (hot) to 11.4μs (cold).
+    println!("compile time {}ns", std::time::Instant::elapsed(&t0).as_nanos());
+    println!("{}", prog.fmt_url());
+    let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
+    assert_eq!(res, 50005000);
 ```
 
 Both architectures use vector registers for both SIMD integer
@@ -46,7 +71,7 @@ It is possible to build LLVM-like high level IRs (effectively C)
 on top of Ejit. We do not do this ourselves as many applications, such as
 accelerating the Ethereum VM or writing JIT emulators do not
 need this. Such features would increase latency and resource usage
-in situations where the code changes rapidly. It should not be necassary
+in situations where the code changes rapidly. It should not be necessary
 to cache generate code as generaing it is very fast.
 
 It would be possible to implement an EVM using LLVM, but the compile

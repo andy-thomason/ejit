@@ -1,0 +1,8 @@
+[package]
+name = "ejit-evm"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+revm = "19.6.0"
+ejit = { path = "../ejit" }

@@ -1,5 +1,5 @@
 #![allow(warnings)]
-// #![doc = include_str!("../../../README.md")]
+#![doc = include_str!("../../../README.md")]
 
 use std::path::Display;
 
@@ -7,11 +7,11 @@ use clear_cache::clear_cache;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// Virtual 64 bit integer register
-pub struct R(u8);
+pub struct R(pub u8);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// Virtual vector register
-pub struct V(u8);
+pub struct V(pub u8);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Imm(pub u64);
@@ -34,7 +34,7 @@ pub enum Cond {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
-enum Type {
+pub enum Type {
     U8,
     U16,
     U32,
@@ -72,7 +72,7 @@ enum Vsize {
 
 
 #[derive(Clone, Debug, PartialEq)]
-enum Ins {
+pub enum Ins {
     // Remember a PC-rel location.
     Label(u32),
 
@@ -142,10 +142,13 @@ enum Ins {
 
     /// Return using stack or R(30)
     Ret,
+
+    /// Constant data.
+    D(Type, u64),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum Error {
+pub enum Error {
     InvalidRegisterNumber(Ins),
     InvalidLabel,
     InvalidOffset,
@@ -163,9 +166,10 @@ enum Error {
     UnsupportedVectorOperation(Ins),
     UnsupportedBaseOperation(Ins),
     UnsupportedOperation(Ins),
+    InvalidDataType(Ins),
 }
 
-struct Executable {
+pub struct Executable {
     bytes: *const u8,
     len: usize,
     labels: Vec<(u32, usize)>,
@@ -209,7 +213,7 @@ impl Executable {
         }
     }
 
-    unsafe fn call(&self, offset: usize, iargs: &[u64]) -> Result<(u64, u64), Error> {
+    pub unsafe fn call(&self, offset: usize, iargs: &[u64]) -> Result<(u64, u64), Error> {
         if offset >= self.len {
             return Err(Error::InvalidOffset);
         }
@@ -238,11 +242,11 @@ impl Executable {
     }
 
     /// See https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=000001eb+c0035fd6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
-    fn fmt_32(&self) -> String {
+    pub fn fmt_32(&self) -> String {
         self.to_bytes().chunks_exact(4).map(|c| format!("{:08x}", u32::from_be_bytes(c.try_into().unwrap()))).collect::<Vec<String>>().join(" ")
     }
 
-    fn fmt_url(&self) -> String {
+    pub fn fmt_url(&self) -> String {
         let opcodes = self.to_bytes().chunks_exact(4).map(|c| format!("{:08x}", u32::from_be_bytes(c.try_into().unwrap()))).collect::<Vec<String>>().join("+");
         format!("https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes={opcodes}&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly")
     }
@@ -277,6 +281,9 @@ pub use aarch64::regs;
 #[cfg(test)]
 mod generic_tests {
     //! Machine independent tests
+    //! 
+    //! TODO: Extend these to cover every instruction and register permutation.
+    //! 
     use super::*;
 
     #[test]
@@ -394,25 +401,4 @@ mod generic_tests {
         #[cfg(target_endian="big")]
         assert_eq!(res, 0x3412);
     }
-
-    // #[test]
-    // fn generic_load_store() {
-    //     use Ins::*;
-    //     use Type::*;
-    //     use regs::*;
-    //     let mut prog = Executable::from_ir(&[
-    //         Enter(16),
-    //         St(U8, ARGS[0], SP, 6),
-    //         St(U8, ARGS[1], SP, 7),
-    //         Ld(U16, RES[0], SP, 6),
-    //         Leave(16),
-    //         Ret,
-    //     ])
-    //     .unwrap();
-    //     let (res, _) = unsafe { prog.call(0, &[0x34, 0x12]).unwrap() };
-    //     #[cfg(target_endian="little")]
-    //     assert_eq!(res, 0x1234);
-    //     #[cfg(target_endian="big")]
-    //     assert_eq!(res, 0x3412);
-    // }
 }
