@@ -70,6 +70,13 @@ enum Vsize {
     V2048,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Fixup {
+    Adr(R, u32),
+    B(Cond, u32),
+    J(u32),
+}
+
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ins {

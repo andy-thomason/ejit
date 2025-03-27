@@ -3,12 +3,6 @@ use crate::{Cond, Error, Executable, Ins, Type, Vsize, R, V};
 mod base;
 mod vector;
 
-enum Fixup {
-    Adr(R, u32),
-    B(Cond, u32),
-    J(u32),
-}
-
 pub mod regs {
     use crate::R;
 
