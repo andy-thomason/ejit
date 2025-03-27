@@ -1,4 +1,4 @@
-# Ejit: A very stupid JIT
+# Ejit - A very stupid JIT
 
 Ejit is designed to be a very low level JIT compiler with the goal
 to generate code quickly for use in emulators and virtual machines.
