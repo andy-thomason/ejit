@@ -174,6 +174,7 @@ pub enum Error {
     UnsupportedBaseOperation(Ins),
     UnsupportedOperation(Ins),
     InvalidDataType(Ins),
+    InvalidRegs(Ins),
 }
 
 pub struct Executable {
@@ -254,8 +255,16 @@ impl Executable {
     }
 
     pub fn fmt_url(&self) -> String {
-        let opcodes = self.to_bytes().chunks_exact(4).map(|c| format!("{:08x}", u32::from_be_bytes(c.try_into().unwrap()))).collect::<Vec<String>>().join("+");
-        format!("https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes={opcodes}&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly")
+        #[cfg(target_arch = "aarch64")]
+        {
+            let opcodes = self.to_bytes().chunks_exact(4).map(|c| format!("{:08x}", u32::from_be_bytes(c.try_into().unwrap()))).collect::<Vec<String>>().join("+");
+            format!("https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes={opcodes}&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly")
+        }
+        #[cfg(target_arch = "x86_64")]
+        {
+            let opcodes = self.to_bytes().iter().map(|c| format!("{c:02x}")).collect::<Vec<String>>().join("+");
+            format!("https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes={opcodes}&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly")
+        }
     }
 }
 
