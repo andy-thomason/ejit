@@ -38,14 +38,14 @@ pub struct Compiler {
 
 mod cregs {
     pub use ejit::regs::*;
-    pub const T0 : ejit::R = ejit::R(0);
-    pub const T1 : ejit::R = ejit::R(1);
-    pub const T2 : ejit::R = ejit::R(2);
-    pub const T3 : ejit::R = ejit::R(3);
-    pub const MEM : ejit::R = ejit::R(4);
-    pub const MEMSIZE : ejit::R = ejit::R(5);
-    pub const BP : ejit::R = ejit::R(6);
-    pub const GASREG : ejit::R = ejit::R(7);
+    pub const T0 : ejit::R = ejit::regs::ALL[0];
+    pub const T1 : ejit::R = ejit::regs::ALL[1];
+    pub const T2 : ejit::R = ejit::regs::ALL[2];
+    pub const T3 : ejit::R = ejit::regs::ALL[3];
+    pub const MEM : ejit::R = ejit::regs::ALL[4];
+    pub const MEMSIZE : ejit::R = ejit::regs::ALL[5];
+    pub const BP : ejit::R = ejit::regs::ALL[6];
+    pub const GASREG : ejit::R = ejit::regs::ALL[7];
 
     pub const EXTEND_MEM : u32 = 1234;
 }

@@ -27,7 +27,7 @@ pub fn build_aarch_base() {
 //! Update asm/base.c instead
 //! 
 use crate::{Cond, Error, Executable, Ins, Type, Vsize, R, V};
-use super::{gen2, gen3, gen_ldst, gen_movi, gen_mov, gen_cmpi, gen_cmp, gen_shift};
+use super::{gen2, gen3, gen_ldst, gen_movi, gen_mov, gen_cmpi, gen_cmp, gen_shift, gen_adr};
 
 pub fn gen_base_aarch64(code: &mut Vec<u8>, i: &Ins) -> Result<(), Error> {
     use Type::*;
@@ -252,6 +252,10 @@ pub fn gen_base_x86_64(code: &mut Vec<u8>, i: &Ins) -> Result<(), Error> {
             "shift" => {
                 let args = "dest, src1, src2";
                 writeln!(out, "        {op}({args}) => gen_shift(code, &{bytes:?}, {args}, &i),").unwrap();
+            }
+            "adr" => {
+                let args = "label";
+                writeln!(out, "        {op}({args}) => gen_adr(code, &{bytes:?}, {args}, &i),").unwrap();
             }
             _ => unreachable!("{}", s[2])
         }

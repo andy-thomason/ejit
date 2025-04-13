@@ -7,11 +7,11 @@ use clear_cache::clear_cache;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// Virtual 64 bit integer register
-pub struct R(pub u8);
+pub struct R(pub (crate) u8);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// Virtual vector register
-pub struct V(pub u8);
+pub struct V(pub (crate) u8);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Imm(pub u64);
@@ -75,6 +75,7 @@ enum Fixup {
     Adr(R, u32),
     B(Cond, u32),
     J(u32),
+    Const(usize, isize),
 }
 
 
@@ -175,6 +176,7 @@ pub enum Error {
     UnsupportedOperation(Ins),
     InvalidDataType(Ins),
     InvalidRegs(Ins),
+    OffsetToLarge(u32),
 }
 
 pub struct Executable {

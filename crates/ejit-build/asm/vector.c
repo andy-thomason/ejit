@@ -12,7 +12,9 @@ typedef int i32x2 __attribute__ ((vector_size (8)));
 typedef unsigned int u32x2 __attribute__ ((vector_size (8)));
 typedef long long i64x1 __attribute__ ((vector_size (8)));
 typedef unsigned long long u64x1 __attribute__ ((vector_size (8)));
+#ifdef __AARCH64__
 typedef __fp16 f16x4 __attribute__ ((vector_size (8)));
+#endif
 typedef float f32x2 __attribute__ ((vector_size (8)));
 typedef double f64x1 __attribute__ ((vector_size (8)));
 
@@ -54,7 +56,9 @@ i32x2 gen_Vneg_S32_V64_A(i32x2 a, i32x2 b) { return -a; }
 u32x2 gen_Vneg_U32_V64_A(u32x2 a, u32x2 b) { return -a; }
 i64x1 gen_Vneg_S64_V64_A(i64x1 a, i64x1 b) { return -a; }
 u64x1 gen_Vneg_U64_V64_A(u64x1 a, u64x1 b) { return -a; }
+#ifdef __AARCH64__
 f16x4 gen_Vneg_F16_V64_A(f16x4 a, f16x4 b) { return -a; }
+#endif
 f32x2 gen_Vneg_F32_V64_A(f32x2 a, f32x2 b) { return -a; }
 f64x1 gen_Vneg_F64_V64_A(f64x1 a, f64x1 b) { return -a; }
 
@@ -321,6 +325,7 @@ u64x2 gen_Vld_U64_V128_D(char *a, u64x2 b) { return *(u64x2*)(a+1); }
 f32x4 gen_Vld_F32_V128_D(char *a, f32x4 b) { return *(f32x4*)(a+1); }
 f64x2 gen_Vld_F64_V128_D(char *a, f64x2 b) { return *(f64x2*)(a+1); }
 
+#ifdef __AARCH64__
 float gen_Vrecpe_F32_V32_A(float a, float b) { return __builtin_aarch64_frecpesf(a); }
 double gen_Vrecpe_F64_V64_A(double a, double b) { return __builtin_aarch64_frecpedf(a); }
 f32x2 gen_Vrecpe_F32_V64_A(f32x2 a, f32x2 b) { return __builtin_aarch64_frecpev2sf(a); }
@@ -332,4 +337,5 @@ double gen_Vrsqrte_F64_V64_A(double a, double b) { return __builtin_aarch64_rsqr
 f32x2 gen_Vrsqrte_F32_V64_A(f32x2 a, f32x2 b) { return __builtin_aarch64_rsqrtev2sf(a); }
 f32x4 gen_Vrsqrte_F32_V128_A(f32x4 a, f32x4 b) { return __builtin_aarch64_rsqrtev4sf(a); }
 f64x2 gen_Vrsqrte_F64_V128_A(f64x2 a, f64x2 b) { return __builtin_aarch64_rsqrtev2df(a); }
+#endif
 
