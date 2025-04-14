@@ -55,6 +55,32 @@ pub enum Type {
     F256,
 }
 
+impl Type {
+    fn bits(&self) -> usize {
+        use Type::*;
+        match self {
+            U8 => 8,
+            U16 => 16,
+            U32 => 32,
+            U64 => 64,
+            U128 => 128,
+            U256 => 256,
+            S8 => 8,
+            S16 => 16,
+            S32 => 32,
+            S64 => 64,
+            S128 => 128,
+            S256 => 256,
+            F8 => 8,
+            F16 => 16,
+            F32 => 32,
+            F64 => 64,
+            F128 => 128,
+            F256 => 256,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 /// Vector size
@@ -70,12 +96,58 @@ enum Vsize {
     V2048,
 }
 
+impl Vsize {
+    fn bits(&self) -> usize {
+        use Vsize::*;
+        match self {
+            V8 => 8,
+            V16 => 16,
+            V32 => 32,
+            V64 => 64,
+            V128 => 128,
+            V256 => 256,
+            V512 => 512,
+            V1024 => 1024,
+            V2048 => 2048,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(u8)]
+/// Vector size
+enum Scale {
+    X1,
+    X2,
+    X4,
+    X8,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Fixup {
     Adr(R, u32),
     B(Cond, u32),
     J(u32),
     Const(usize, isize),
+}
+
+struct State {
+    code: Vec<u8>,
+    labels: Vec<(u32, usize)>,
+    constants: Vec<u8>,
+    fixups: Vec<(usize, Fixup)>,
+}
+
+impl State {
+    fn constant(&mut self, c: &[u8]) -> usize {
+        if let Some(pos) = self.constants.windows(c.len()).position(|w| w == c) {
+            pos
+        } else {
+            let pos = self.constants.len();
+            self.constants.extend(c);
+            pos
+        }
+    }
 }
 
 
@@ -123,10 +195,9 @@ pub enum Ins {
     Vand(Type, Vsize, V, V, V),
     Vor(Type, Vsize, V, V, V),
     Vxor(Type, Vsize, V, V, V),
-    Vshl(Type, Vsize, V, V, V),
-    Vshr(Type, Vsize, V, V, V),
+    Vshl(Type, Vsize, V, V, V), // Note: on x86 src2 is broadcast.
+    Vshr(Type, Vsize, V, V, V), // Note: on x86 src2 is broadcast.
     Vmul(Type, Vsize, V, V, V),
-    Vdiv(Type, Vsize, V, V, V),
     Vmov(Type, Vsize, V, V),
     Vmovi(Type, Vsize, V, u64),
     Vnot(Type, Vsize, V, V),
@@ -177,6 +248,8 @@ pub enum Error {
     InvalidDataType(Ins),
     InvalidRegs(Ins),
     OffsetToLarge(u32),
+    InvalidAddress(Ins),
+    CodeTooBig,
 }
 
 pub struct Executable {

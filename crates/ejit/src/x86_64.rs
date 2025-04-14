@@ -1,4 +1,4 @@
-use crate::{Cond, Error, Executable, Fixup, Ins, Type, Vsize, R, V};
+use crate::{Cond, Error, Executable, Fixup, Ins, Scale, State, Type, Vsize, R, V};
 
 // mod base;
 mod vector;
@@ -33,12 +33,6 @@ pub mod regs {
     ];
     pub const SP: R = R(4);
 }
-
-// 48 83 c0 08             add    $0x8,%rax
-// 48 83 e8 08             sub    $0x8,%rax
-// 48 83 e0 08             and    $0x8,%rax
-// 48 83 c8 08             or     $0x8,%rax
-// 48 83 f0 08             xor    $0x8,%rax
 
 // See x86_64.s
 // x86_64-linux-gnu-as crates/ejit-build/asm/x86_64.s -o x.o
@@ -81,42 +75,55 @@ const OP_STB: &[u8] = &[0x40, 0x88, 0x00]; // 88 00                   mov    %al
 const OP_STW: &[u8] = &[0x40, 0x89, 0x00]; // 66 89 00                mov    %ax,(%rax)
 const OP_STD: &[u8] = &[0x40, 0x89, 0x00]; // 89 00                   mov    %eax,(%rax)
 const OP_STQ: &[u8] = &[0x48, 0x89, 0x00]; // 48 89 00                mov    %rax,(%rax)
-const OP_VLD: &[u8] = &[0xc5, 0xf8, 0x10, 0x80, 0x00, 0x00, 0x00, 0x00]; // c5 f8 10 80 00 01 00    vmovups 0x100(%rax),%xmm0
-const OP_VST: &[u8] = &[0xc5, 0xf8, 0x11, 0x80, 0x00, 0x00, 0x00, 0x00]; // c5 f8 11 80 00 01 00    vmovups %xmm0,0x100(%rax)
+const OP_VLD: u8 = 0x10; // c5 f8 10 80 00 01 00    vmovups 0x100(%rax),%xmm0
+const OP_VST: u8 = 0x11; // c5 f8 11 80 00 01 00    vmovups %xmm0,0x100(%rax)
+const OP_VADD: [(u8, u8); 6] = [(1, 0xfc), (1, 0xfd), (1, 0xfe), (1, 0xd4), (0, 0x58), (1, 0x58)];
+const OP_VSUB: [(u8, u8); 6] = [(1, 0xf8), (1, 0xf9), (1, 0xfa), (1, 0xfb), (0, 0x5c), (1, 0x5c)];
+const OP_VAND: [(u8, u8); 6] = [(1, 0xdb), (1, 0xdb), (1, 0xdb), (1, 0xdb), (1, 0xdb), (1, 0xdb)];
+const OP_VOR:  [(u8, u8); 6] = [(1, 0xeb), (1, 0xeb), (1, 0xeb), (1, 0xeb), (1, 0xeb), (1, 0xeb)];
+const OP_VXOR: [(u8, u8); 6] = [(1, 0xef), (1, 0xef), (1, 0xef), (1, 0xef), (1, 0xef), (1, 0xef)];
+const OP_VSHL: [(u8, u8); 6] = [(1, 0x00), (1, 0xf1), (1, 0xf2), (1, 0xf3), (1, 0x00), (1, 0x00)];
+const OP_VSHR: [(u8, u8); 6] = [(1, 0x00), (1, 0xd1), (1, 0xd2), (1, 0xd3), (1, 0x00), (1, 0x00)];
+const OP_VSAR: [(u8, u8); 6] = [(1, 0x00), (1, 0xe1), (1, 0xe2), (1, 0x00), (1, 0x00), (1, 0x00)];
+const OP_VMUL: [(u8, u8); 6] = [(1, 0x00), (0, 0x00), (0, 0x00), (0, 0x00), (0, 0x59), (1, 0x59)];
+const OP_VMOV: [(u8, u8); 6] = [(0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10)];
+const OP_VMOVI: [(u8, u8); 6] = [(0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10)];
 
 
 impl Executable {
     pub fn from_ir(ins: &[Ins]) -> Result<Executable, Error> {
-        let mut code = Vec::new();
-        let mut labels: Vec<(u32, usize)> = Vec::new();
-        let mut constants: Vec<(usize, Vec<u8>)> = Vec::new();
-        let mut fixups: Vec<(usize, Fixup)> = Vec::new();
+        let mut state = State {
+            code: Vec::new(),
+            labels: Vec::new(),
+            constants: Vec::new(),
+            fixups: Vec::new(),
+        };
         for i in ins {
             use Ins::*;
             match i {
-                Add(dest, src1, src2) => gen_binary(&mut code, OP_ADD, dest, src1, src2, &i)?,
-                Sub(dest, src1, src2) => gen_binary(&mut code, OP_SUB, dest, src1, src2, &i)?,
-                And(dest, src1, src2) => gen_binary(&mut code, OP_AND, dest, src1, src2, &i)?,
-                Or(dest, src1, src2) => gen_binary(&mut code, OP_OR, dest, src1, src2, &i)?,
-                Xor(dest, src1, src2) => gen_binary(&mut code, OP_XOR, dest, src1, src2, &i)?,
-                Mul(dest, src1, src2) => gen_binary(&mut code, OP_MUL, dest, src1, src2, &i)?,
-                UDiv(dest, src1, src2) => gen_div(&mut code, OP_UDIV, dest, src1, src2, &i)?,
-                SDiv(dest, src1, src2) => gen_div(&mut code, OP_SDIV, dest, src1, src2, &i)?,
-                Not(dest, src) => gen_unary(&mut code, OP_NOT, dest, src, &i)?,
-                Neg(dest, src) => gen_unary(&mut code, OP_NEG, dest, src, &i)?,
-                Movi(dest, imm) => gen_movi(&mut code, dest, imm, &i)?,
-                Mov(dest, src) => gen_mov(&mut code, dest, src)?,
-                Cmpi(src, imm) => gen_immediate(&mut code, OP_CMPI, src, src, *imm),
-                Cmp(src1, src2) => gen_cmp(&mut code, &[72, 57, 0xc0], src1, src2, &i)?,
-                Shl(dest, src1, src2) => gen_shift(&mut code, OP_SHL, dest, src1, src2, &i)?,
-                Shr(dest, src1, src2) => gen_shift(&mut code, OP_SHR, dest, src1, src2, &i)?,
-                Sar(dest, src1, src2) => gen_shift(&mut code, OP_SAR, dest, src1, src2, &i)?,
-                Label(label) => labels.push((*label, code.len())),
+                Add(dest, src1, src2) => gen_binary(&mut state.code, OP_ADD, dest, src1, src2, &i)?,
+                Sub(dest, src1, src2) => gen_binary(&mut state.code, OP_SUB, dest, src1, src2, &i)?,
+                And(dest, src1, src2) => gen_binary(&mut state.code, OP_AND, dest, src1, src2, &i)?,
+                Or(dest, src1, src2) => gen_binary(&mut state.code, OP_OR, dest, src1, src2, &i)?,
+                Xor(dest, src1, src2) => gen_binary(&mut state.code, OP_XOR, dest, src1, src2, &i)?,
+                Mul(dest, src1, src2) => gen_binary(&mut state.code, OP_MUL, dest, src1, src2, &i)?,
+                UDiv(dest, src1, src2) => gen_div(&mut state.code, OP_UDIV, dest, src1, src2, &i)?,
+                SDiv(dest, src1, src2) => gen_div(&mut state.code, OP_SDIV, dest, src1, src2, &i)?,
+                Not(dest, src) => gen_unary(&mut state.code, OP_NOT, dest, src, &i)?,
+                Neg(dest, src) => gen_unary(&mut state.code, OP_NEG, dest, src, &i)?,
+                Movi(dest, imm) => gen_movi(&mut state.code, dest, imm, &i)?,
+                Mov(dest, src) => gen_mov(&mut state.code, dest, src)?,
+                Cmpi(src, imm) => gen_immediate(&mut state.code, OP_CMPI, src, src, *imm),
+                Cmp(src1, src2) => gen_binary(&mut state.code, OP_CMP, src1, src1, src2, &i)?,
+                Shl(dest, src1, src2) => gen_shift(&mut state.code, OP_SHL, dest, src1, src2, &i)?,
+                Shr(dest, src1, src2) => gen_shift(&mut state.code, OP_SHR, dest, src1, src2, &i)?,
+                Sar(dest, src1, src2) => gen_shift(&mut state.code, OP_SAR, dest, src1, src2, &i)?,
+                Label(label) => state.labels.push((*label, state.code.len())),
                 Addr(dest, label) => {
-                    fixups.push((code.len(), Fixup::Adr(*dest, *label)));
+                    state.fixups.push((state.code.len(), Fixup::Adr(*dest, *label)));
                     let rex = 0x48 + dest.to_x86_high();
                     let modrm = 0x05 + dest.to_x86_low() * 8;
-                    code.extend([rex, 0x8d, modrm, 0x00, 0x00, 0x00, 0x00]);
+                    state.code.extend([rex, 0x8d, modrm, 0x00, 0x00, 0x00, 0x00]);
                 }
                 Call(dest) => {
                     let rex = 0x40 + dest.to_x86_high();
@@ -124,9 +131,9 @@ impl Executable {
                     let modrm = 0xd0 + dest.to_x86_low() * 8;
 
                     if dest.to_x86_high() == 0 {
-                        code.extend([op, modrm]);
+                        state.code.extend([op, modrm]);
                     } else {
-                        code.extend([rex, op, modrm]);
+                        state.code.extend([rex, op, modrm]);
                     }
                 }
                 Branch(dest) => {
@@ -135,51 +142,51 @@ impl Executable {
                     let modrm = 0xe0 + dest.to_x86_low() * 8;
 
                     if dest.to_x86_high() == 0 {
-                        code.extend([op, modrm]);
+                        state.code.extend([op, modrm]);
                     } else {
-                        code.extend([rex, op, modrm]);
+                        state.code.extend([rex, op, modrm]);
                     }
                 }
                 B(cond, label) => {
-                    fixups.push((code.len(), Fixup::B(*cond, *label)));
-                    code.extend([0; 6]);
+                    state.fixups.push((state.code.len(), Fixup::B(*cond, *label)));
+                    state.code.extend([0; 6]);
                 }
                 J(label) => {
-                    fixups.push((code.len(), Fixup::J(*label)));
-                    code.extend([0; 6]);
+                    state.fixups.push((state.code.len(), Fixup::J(*label)));
+                    state.code.extend([0; 6]);
                 }
                 Ret => {
-                    code.push(0xc3);
+                    state.code.push(0xc3);
                 }
                 Sel(cond, dest, t, f) => {
-                    gen_mov(&mut code, dest, f);
+                    gen_mov(&mut state.code, dest, f);
                     let rex = 0x48 + dest.to_x86_high() + t.to_x86_high() * 4;
                     let modrm = 0xc0 + dest.to_x86_low() + t.to_x86_low() * 8;
                     let op = cond.cc() + 0x40;
-                    code.extend([rex, 0x0f, op, modrm]);
+                    state.code.extend([rex, 0x0f, op, modrm]);
                 }
                 Enter(imm) => {
                     let imm: u64 = imm.clone().into();
-                    gen_immediate(&mut code, OP_SUBI, &regs::RSP, &regs::RSP, imm);
+                    gen_immediate(&mut state.code, OP_SUBI, &regs::RSP, &regs::RSP, imm);
                 }
                 Leave(imm) => {
                     let imm: u64 = imm.clone().into();
-                    gen_immediate(&mut code, OP_ADDI, &regs::RSP, &regs::RSP, imm);
+                    gen_immediate(&mut state.code, OP_ADDI, &regs::RSP, &regs::RSP, imm);
                 }
                 Ld(ty, r, ra, imm) => {
                     use Type::*;
-                    let (op, pfx_66) = match ty {
-                        U8 => (OP_LDZB, false),
-                        U16 => (OP_LDZW, true),
-                        U32 => (OP_LDZD, false),
-                        U64 => (OP_LDZQ, false),
-                        S8 => (OP_LDSB, false),
-                        S16 => (OP_LDSW, true),
-                        S32 => (OP_LDSD, false),
-                        S64 => (OP_LDSQ, false),
+                    let (op, pfx_66, w) = match ty {
+                        U8 => (OP_LDZB, false, 0),
+                        U16 => (OP_LDZW, true, 1),
+                        U32 => (OP_LDZD, false, 0),
+                        U64 => (OP_LDZQ, false, 1),
+                        S8 => (OP_LDSB, false, 0),
+                        S16 => (OP_LDSW, true, 1),
+                        S32 => (OP_LDSD, false, 0),
+                        S64 => (OP_LDSQ, false, 1),
                         _ => return Err(Error::InvalidType(i.clone())),
                     };
-                    gen_load_store(&mut code, op, pfx_66, r, ra, *imm);
+                    gen_load_store(&mut state.code, op, pfx_66, w, r, ra, *imm, i)?;
                 }
                 St(ty, r, ra, imm) => {
                     use Type::*;
@@ -190,60 +197,85 @@ impl Executable {
                         U64 | S64 => (OP_STQ, false),
                         _ => return Err(Error::InvalidType(i.clone())),
                     };
-                    gen_load_store(&mut code, op, pfx_66, r, ra, *imm);
+                    gen_load_store(&mut state.code, op, pfx_66, 1, r, ra, *imm, i)?;
                 }
                 D(ty, value) => match ty {
-                    Type::U8 => code.extend([*value as u8]),
-                    Type::U16 => code.extend((*value as u16).to_le_bytes()),
-                    Type::U32 => code.extend((*value as u32).to_le_bytes()),
-                    Type::U64 => code.extend((*value as u64).to_le_bytes()),
+                    Type::U8 => state.code.extend([*value as u8]),
+                    Type::U16 => state.code.extend((*value as u16).to_le_bytes()),
+                    Type::U32 => state.code.extend((*value as u32).to_le_bytes()),
+                    Type::U64 => state.code.extend((*value as u64).to_le_bytes()),
                     _ => return Err(Error::InvalidDataType(i.clone())),
                 },
                 Vld(_, vsize, v, ra, imm) => {
-                    gen_vload_store(&mut code, *vsize, OP_VLD, v, ra, *imm, i);
+                    gen_vload_store(&mut state.code, *vsize, OP_VLD, v, ra, *imm, i);
                 }
                 Vst(_, vsize, v, ra, imm) => {
-                    gen_vload_store(&mut code, *vsize, OP_VST, v, ra, *imm, i);
+                    gen_vload_store(&mut state.code, *vsize, OP_VST, v, ra, *imm, i);
                 }
                 Vadd(ty, vsize, v, v1, v2) => {
-                    gen_vaddsub(&mut code, ty, *vsize, v, v1, v2)
+                    gen_vop(&mut state.code, &OP_VADD, ty, *vsize, v, v1, v2, i)?;
                 }
-                Vsub(ty, vsize, v, v1, v2) => todo!(),
-                Vand(_, vsize, v, v1, v2) => todo!(),
-                Vor(_, vsize, v, v1, v2) => todo!(),
-                Vxor(_, vsize, v, v1, v2) => todo!(),
-                Vshl(ty, vsize, v, v1, v2) => todo!(),
-                Vshr(ty, vsize, v, v1, v2) => todo!(),
-                Vmul(ty, vsize, v, v1, v2) => todo!(),
-                Vdiv(ty, vsize, v, v1, v2) => todo!(),
-                Vmov(_, vsize, v, v1) => todo!(),
-                Vmovi(_, vsize, v, imm) => todo!(),
-                Vnot(_, vsize, v, v1) => todo!(),
-                Vneg(ty, vsize, v, v1) => todo!(),
+                Vsub(ty, vsize, v, v1, v2) => {
+                    gen_vop(&mut state.code, &OP_VSUB, ty, *vsize, v, v1, v2, i)?;
+                }
+                Vand(ty, vsize, v, v1, v2) => {
+                    gen_vop(&mut state.code, &OP_VAND, ty, *vsize, v, v1, v2, i)?;
+                }
+                Vor(ty, vsize, v, v1, v2) => {
+                    gen_vop(&mut state.code, &OP_VOR, ty, *vsize, v, v1, v2, i)?;
+                }
+                Vxor(ty, vsize, v, v1, v2) => {
+                    gen_vop(&mut state.code, &OP_VXOR, ty, *vsize, v, v1, v2, i)?;
+                }
+                Vshl(ty, vsize, v, v1, v2) => {
+                    gen_vop(&mut state.code, &OP_VSHL, ty, *vsize, v, v1, v2, i)?;
+                }
+                Vshr(ty, vsize, v, v1, v2) => {
+                    match ty {
+                        Type::U16 | Type::U32 | Type::U64 => gen_vop(&mut state.code, &OP_VSHR, ty, *vsize, v, v1, v2, i)?,
+                        Type::S16 | Type::S32 | Type::S64 => gen_vop(&mut state.code, &OP_VSAR, ty, *vsize, v, v1, v2, i)?,
+                        _ => return Err(Error::UnsupportedVectorOperation(i.clone())),
+                    }
+                }
+                Vmul(ty, vsize, v, v1, v2) => {
+                    gen_vop(&mut state.code, &OP_VMUL, ty, *vsize, v, v1, v2, i)?;
+                }
+                Vmov(ty, vsize, v, v1) => {
+                    gen_vop(&mut state.code, &OP_VMOV, ty, *vsize, v, &V(0), v1, i)?;
+                }
+                Vmovi(ty, vsize, v, imm) => {
+                    gen_vimm(&mut state, &OP_VMOVI, *ty, *vsize, v, *imm, i)?;
+                }
+                Vnot(ty, vsize, v, v1) => {
+                    gen_vimm(&mut state, &OP_VXOR, *ty, *vsize, v, !0, i)?;
+                }
+                Vneg(ty, vsize, v, v1) => {
+                    gen_vimm(&mut state, &OP_VSUB, *ty, *vsize, v, 0, i)?;
+                }
                 Vrecpe(ty, vsize, v, v1) => todo!(),
                 Vrsqrte(ty, vsize, v, v1) => todo!(),
-                _ => todo!("{i:?}"),
+                // _ => todo!("{i:?}"),
             }
         }
-        for (loc, val) in &mut constants {
-            *loc = code.len();
-            code.extend(val.as_slice());
-        }
-        for (loc, f) in fixups {
+
+        let cbase = state.code.len();
+        state.code.extend(&state.constants);
+
+        for (loc, f) in state.fixups {
             match f {
                 Fixup::Adr(dest, label) => {
                     // https://developer.arm.com/documentation/ddi0602/2024-12/Base-Instructions/ADR--Form-PC-relative-address-?lang=en
-                    if let Some((_, offset)) = labels.iter().find(|(n, _)| *n == label) {
+                    if let Some((_, offset)) = state.labels.iter().find(|(n, _)| *n == label) {
                         let delta = *offset as isize - loc as isize - 7;
                         let delta32: i32 =
                             delta.try_into().map_err(|_| Error::OffsetToLarge(label))?;
-                        code[loc + 3..loc + 7].copy_from_slice(&delta32.to_le_bytes());
+                        state.code[loc + 3..loc + 7].copy_from_slice(&delta32.to_le_bytes());
                     } else {
                         return Err(Error::MissingLabel(label));
                     }
                 }
                 Fixup::B(cond, label) => {
-                    if let Some((_, offset)) = labels.iter().find(|(n, _)| *n == label) {
+                    if let Some((_, offset)) = state.labels.iter().find(|(n, _)| *n == label) {
                         let delta = *offset as isize - loc as isize;
                         // if delta-2 >= -0x80 && delta-2 <= 0x7f {
                         //     let op = cond.cc() + 0x70;
@@ -254,7 +286,7 @@ impl Executable {
                             .try_into()
                             .map_err(|e| Error::BranchOutOfRange(label))?;
                         let imm = imm.to_le_bytes();
-                        code[loc..loc + 6]
+                        state.code[loc..loc + 6]
                             .copy_from_slice(&[0x0f, op, imm[0], imm[1], imm[2], imm[3]]);
                     } else {
                         return Err(Error::MissingLabel(label));
@@ -262,120 +294,160 @@ impl Executable {
                 }
                 Fixup::J(label) => {
                     // e9 80 00 00 00          jmp    246 <label1+0xe5>
-                    if let Some((_, offset)) = labels.iter().find(|(n, _)| *n == label) {
+                    if let Some((_, offset)) = state.labels.iter().find(|(n, _)| *n == label) {
                         let delta = *offset as isize - loc as isize;
                         let op = 0xe9;
                         let imm: i32 = (delta - 5)
                             .try_into()
                             .map_err(|e| Error::BranchOutOfRange(label))?;
                         let imm = imm.to_le_bytes();
-                        code[loc..loc + 5].copy_from_slice(&[op, imm[0], imm[1], imm[2], imm[3]]);
+                        state.code[loc..loc + 5].copy_from_slice(&[op, imm[0], imm[1], imm[2], imm[3]]);
                     } else {
                         return Err(Error::MissingLabel(label));
                     }
                 }
-                Fixup::Const(index, delta) => {
-                    // PC relative constant.
+                Fixup::Const(pos, delta) => {
+                    let offset : i32 = ((cbase+pos) as isize - loc as isize - delta).try_into().map_err(|_| Error::CodeTooBig)?;
+                    state.code[loc..loc+4].copy_from_slice(&offset.to_le_bytes());
                 }
             }
         }
-        Ok(Executable::new(&code, labels))
+        Ok(Executable::new(&state.code, state.labels))
     }
 }
 
-fn gen_vaddsub(code: &[u8], ty: &Type, vsize: Vsize, v: &V, v1: &V, v2: &V) {
-    // c5 f8 58 c0             vaddps %xmm0,%xmm0,%xmm0
-    // c5 f8 58 c8             vaddps %xmm0,%xmm0,%xmm1 // v
-    // c5 f8 58 c1             vaddps %xmm1,%xmm0,%xmm0 // v1
-    // c5 f0 58 c0             vaddps %xmm0,%xmm1,%xmm0 // v2
+fn gen_vimm(state: &mut State, opcodes: &[(u8, u8); 6], ty: Type, vsize: Vsize, v: &V, imm: u64, i: &Ins) -> Result<(), Error> {
+    if ty.bits() > vsize.bits() || ty.bits() > 64 {
+        return Err(Error::InvalidType(i.clone()))
+    }
+    if vsize != Vsize::V128 && vsize != Vsize::V256 {
+        return Err(Error::InvalidType(i.clone()))
+    }
+    let elems = vsize.bits() / ty.bits();
+    let mut c = vec![0_u8; vsize.bits()/8];
+    let esize = ty.bits()/8;
+    for e in 0..elems {
+        c[e*esize..(e+1)*esize].copy_from_slice(&imm.to_le_bytes()[0..esize]);
+    }
+    let pos = state.constant(&c);
 
-    // let vex_l = if vsize == Vsize::V128 { 0 } else { 1 };
-    // let vex_m = 0;
-    // let rex_b = ra.to_x86_high();
-    // let rex_r = v.to_x86_high();
-    // let rex_w = 0;
-    // let vex_v = 0x0;
-    // let p = 0x0;
-    // let op = opcode[2];
-    // let modrm = 0xc0 + v.to_x86_low() * 0x08 + v1.to_x86_low() * 0x01;
+    // PC relative load
+    let (p, op) = match ty {
+        Type::U8 | Type::S8 => opcodes[0],
+        Type::U16 | Type::S16 =>  opcodes[1],
+        Type::U32 | Type::S32 =>  opcodes[2],
+        Type::U64 | Type::S64 =>  opcodes[3],
+        Type::F32 =>  opcodes[4],
+        Type::F64 =>  opcodes[5],
+        _ => return Err(Error::UnsupportedVectorOperation(i.clone())),
+    };
+    let (r, x, b, w) = (v.to_x86_high(), 0, 0, 0);
+    let modrm = 0x00 + 5 + v.to_x86_low() * 0x08;
+    let l = if vsize == Vsize::V128 { 0 } else { 1 };
+    gen_vex(&mut state.code, r, x, b, w, 1, 0, l, p, op, modrm);
+    let loc = state.code.len();
+    state.code.extend(0_i32.to_le_bytes());
+    state.fixups.push((loc, Fixup::Const(pos, 4)));
+    Ok(())
 }
 
-fn gen_load_store(code: &mut Vec<u8>, opcode: &[u8], pfx_66: bool, r: &R, ra: &R, imm: i32) {
-    // https://en.wikipedia.org/wiki/ModR/M
-    let has_pfx = opcode[1] == 0x0f;
-    let has_sib = ra.to_x86_low() == 4;
-    let rex = opcode[0] + ra.to_x86_high() + r.to_x86_high() * 4;
-    let op = if has_pfx { opcode[2] } else { opcode[1] };
-    let pfx = 0x0f;
-    let modrm_mod = if imm == 0 && ra.to_x86_low() != 5 {
+fn gen_vop(code: &mut Vec<u8>, opcodes: &[(u8, u8); 6], ty: &Type, vsize: Vsize, v: &V, v1: &V, v2: &V, i: &Ins) -> Result<(), Error> {
+    // https://www.felixcloutier.com/x86/paddb:paddw:paddd:paddq
+    // https://www.felixcloutier.com/x86/addps
+    // https://en.wikipedia.org/wiki/X86_SIMD_instruction_listings
+    let modrm = 0xc0 + v2.to_x86_low() + v.to_x86_low() * 8;
+    let (r, x, b, w) = (v.to_x86_high(), 0, v2.to_x86_high(), 0);
+    let l = if vsize == Vsize::V128 { 0 } else { 1 };
+    let v = v1.to_x86();
+    let m = 1; // 0x0f
+    // See OP_VADD etc.
+    let (p, op) = match ty {
+        Type::U8 | Type::S8 => opcodes[0],
+        Type::U16 | Type::S16 =>  opcodes[1],
+        Type::U32 | Type::S32 =>  opcodes[2],
+        Type::U64 | Type::S64 =>  opcodes[3],
+        Type::F32 =>  opcodes[4],
+        Type::F64 =>  opcodes[5],
+        _ => return Err(Error::UnsupportedVectorOperation(i.clone())),
+    };
+    if op == 0x00 {
+        return Err(Error::UnsupportedVectorOperation(i.clone()));
+    }
+    gen_vex(code, r, x, b, w, 1, v, l, p, op, modrm);
+    Ok(())
+}
+
+fn rex(r: u8, x: u8, b: u8, w: u8) -> u8 {
+    0x40 + w * 8 + r * 4 + x * 2 + b
+}
+
+fn modr(dest: &R, src: &R) -> u8 {
+    0xc0 + dest.to_x86_low() * 8 + src.to_x86_low()
+}
+
+// https://en.wikipedia.org/wiki/VEX_prefix
+fn gen_vex(code: &mut Vec<u8>, r: u8, x: u8, b: u8, w: u8, m: u8, v: u8, l: u8, p: u8, op: u8, modrm: u8) {
+    if w == 0 && b == 0 && x == 0 && m == 1 {
+        // VEX2
+        let vex = 0xc5;
+        let vex_p0 = 0xf8 ^ r * 0x80 ^ v * 0x08 ^ l * 0x04 ^ p;
+        code.extend([vex, vex_p0, op, modrm]);
+    } else {
+        // VEX3
+        let vex = 0xc4;
+        let vex_p0 = 0xe0 ^ r * 0x80 ^ x * 0x40 ^ b * 0x20 ^ m;
+        let vex_p1 = 0x78 ^ w * 0x80 ^ v * 0x08 ^ l * 0x04 ^ p;
+        code.extend([vex, vex_p0, vex_p1, op, modrm]);
+    }
+}
+
+fn gen_addr(code: &mut Vec<u8>, r: u8, base: &R, index: Option<&R>, scale: Scale, imm: i32, i: &Ins) -> Result<(), Error> {
+    if index == Some(&regs::RSP) {
+        return Err(Error::InvalidAddress(i.clone()))
+    }
+    let modrm_mod = if imm == 0 && base.to_x86_low() != 5 {
         0
     } else if TryInto::<i8>::try_into(imm).is_ok() {
         1
     } else {
         2
     };
-    //println!("opcode={opcode:02x?} has_sib={has_sib} has_pfx={has_pfx}");
+    if base.to_x86_low() != 4 && scale == Scale::X1 && index.is_none() {
+        code.push(modrm_mod * 0x40 + r * 0x08 + base.to_x86_low());
+    } else {
+        let index = index.map(R::to_x86_low).unwrap_or(4);
+        code.extend([
+            modrm_mod * 0x40 + r * 0x08 + 4,
+            scale.to_sib() * 0x40 + index * 0x08 + base.to_x86_low()
+        ]);
+    }
+    if modrm_mod == 1 {
+        code.extend(&TryInto::<i8>::try_into(imm).unwrap().to_le_bytes());
+    } else if modrm_mod == 2 {
+        code.extend(imm.to_le_bytes());
+    }
+    Ok(())
+}
+
+fn gen_load_store(code: &mut Vec<u8>, opcode: &[u8], pfx_66: bool, w: u8, r: &R, ra: &R, imm: i32, i: &Ins) -> Result<(), Error> {
+    let has_pfx = opcode[1] == 0x0f;
+    let op = if has_pfx { opcode[2] } else { opcode[1] };
     if pfx_66 {
         code.push(0x66);
     }
-    code.push(rex);
+    code.push(rex(r.to_x86_high(), 0, ra.to_x86_high(), w));
     if has_pfx { code.push(0x0f); }
     code.push(op);
-    if has_sib {
-        let modrm = modrm_mod * 0x40 + 0x04 + r.to_x86_low() * 0x08;
-        let sib = ra.to_x86_low() * 0x01 + 4 * 0x08;
-        code.push(modrm);
-        code.push(sib);
-    } else {
-        let modrm = modrm_mod * 0x40 + ra.to_x86_low() + r.to_x86_low() * 8;
-        code.push(modrm);
-    };
-    match modrm_mod {
-        1 => {
-            let imm = TryInto::<i8>::try_into(imm).unwrap();
-            code.extend(imm.to_le_bytes());
-        }
-        2 => {
-            code.extend(imm.to_le_bytes());
-        }
-        _ => {}
-    }
+    gen_addr(code, r.to_x86_low(), ra, None, Scale::X1, imm, &i)
 }
 
-fn gen_vload_store(code: &mut Vec<u8>, vsize: Vsize, opcode: &[u8], v: &V, ra: &R, imm: i32, i: &Ins) -> Result<(), Error> {
-    // https://en.wikipedia.org/wiki/VEX_prefix#:~:text=The%20VEX%20coding%20scheme%20uses,or%200x0F%200x3E%20opcode%20prefixes.
-    // c5 f8 10 80 00 01 00 ..    vmovups 0x100(%rax),%xmm0
-    // c5 78 10 b8 00 01 00 ..    vmovups 0x100(%rax),%xmm15
-    // c5 fc 10 80 00 01 00 ..    vmovups 0x100(%rax),%ymm0
-
-    // c4 c1 78 10 87 00 01 ..    vmovups 0x100(%r15),%xmm0
-    // c4 41 78 10 bf 00 01 ..    vmovups 0x100(%r15),%xmm15
-    // c4 c1 78 10 80 00 01 ..    vmovups 0x100(%r8),%xmm0
-    // c4 c0 78 10 80 00 00 00 00
-    let vex_l = if vsize == Vsize::V128 { 0 } else { 1 };
-    let (vex_m, vex_v, vex_p) = (1, 0, 0);
-    let (rex_w, rex_r, rex_x, rex_b) = (0, v.to_x86_high(), 0, ra.to_x86_high());
-    let op = opcode[2];
+fn gen_vload_store(code: &mut Vec<u8>, vsize: Vsize, op: u8, v: &V, ra: &R, imm: i32, i: &Ins) -> Result<(), Error> {
+    let (r, x, b, w) = (v.to_x86_high(), 0, ra.to_x86_high(), 0);
     let modrm = 0x80 + ra.to_x86_low() + v.to_x86_low() * 0x08;
-    match vsize {
-        Vsize::V128 | Vsize::V256 => {
-            if rex_b == 0 {
-                // VEX2
-                let vex = 0xc5;
-                let vex_p0 = 0xf8 ^ rex_r * 0x80 ^ vex_v * 0x08 ^ vex_l * 0x04 ^ vex_p;
-                code.extend([vex, vex_p0, op, modrm]);
-            } else {
-                // VEX3
-                let vex = 0xc4;
-                let vex_p0 = 0xe0 ^ rex_r * 0x80 ^ rex_x * 0x40 ^ rex_b * 0x20 ^ vex_m;
-                let vex_p1 = 0x78 ^ rex_w * 0x80 ^ vex_v * 0x08 ^ vex_l * 0x04 ^ vex_p;
-                code.extend([vex, vex_p0, vex_p1, op, modrm]);
-            }
-            code.extend(imm.to_le_bytes());
-            Ok(())
-        }
-        _ => Err(Error::UnsupportedVectorOperation(i.clone()))
-    }
+    let l = if vsize == Vsize::V128 { 0 } else { 1 };
+    gen_vex(code, r, x, b, w, 1, 0, l, 0, op, modrm);
+    code.extend(imm.to_le_bytes());
+    Ok(())
 }
 
 impl R {
@@ -424,6 +496,17 @@ impl Cond {
     }
 }
 
+impl Scale {
+    fn to_sib(&self) -> u8 {
+        match self {
+            Scale::X1 => 0,
+            Scale::X2 => 1,
+            Scale::X4 => 2,
+            Scale::X8 => 3,
+        }
+    }
+}
+
 fn gen_binary(
     code: &mut Vec<u8>,
     opcode: &[u8],
@@ -454,14 +537,6 @@ fn gen_unary(code: &mut Vec<u8>, opcode: &[u8], dest: &R, src: &R, i: &Ins) -> R
     Ok(())
 }
 
-fn gen_cmp(code: &mut Vec<u8>, opcode: &[u8], src1: &R, src2: &R, i: &Ins) -> Result<(), Error> {
-    todo!();
-}
-
-fn gen_cmpi(code: &mut Vec<u8>, opcode: &[u8], src1: &R, imm: &u64, i: &Ins) -> Result<(), Error> {
-    todo!();
-}
-
 fn gen_mov(code: &mut Vec<u8>, dest: &R, src: &R) -> Result<(), Error> {
     if src != dest {
         let rex = 0x48 + dest.to_x86_high() + src.to_x86_high() * 4;
@@ -473,13 +548,13 @@ fn gen_mov(code: &mut Vec<u8>, dest: &R, src: &R) -> Result<(), Error> {
 }
 
 fn gen_movi(code: &mut Vec<u8>, dest: &R, imm: &u64, i: &Ins) -> Result<(), Error> {
-    if *imm < 1 << 32 {
+    if let Ok(imm) = i32::try_from(i64::from_le_bytes(imm.to_le_bytes())) {
         // mov
         let rex = 0x48 + dest.to_x86_high();
         let op = 0xc7;
         let modrm = 0xc0 + dest.to_x86_low();
         code.extend([rex, op, modrm]);
-        code.extend((*imm as u32).to_le_bytes());
+        code.extend(imm.to_le_bytes());
     } else {
         // movabs
         let rex = 0x48 + dest.to_x86_high();
@@ -556,6 +631,7 @@ fn gen_shift(
     src2: &R,
     i: &Ins,
 ) -> Result<(), Error> {
+    // TODO: Use SHLX etc if BMI available.
     if dest != &regs::RCX {
         gen_push(code, &regs::RCX);
     }
@@ -885,11 +961,42 @@ mod tests {
             Vld(Type::S8, Vsize::V128, V(0), R8, 0),
             Vld(Type::S8, Vsize::V128, V(8), RAX, 0),
             Vld(Type::S8, Vsize::V128, V(9), R10, 0),
+            Vld(Type::S8, Vsize::V256, V(0), RAX, 0),
+            Vld(Type::S8, Vsize::V256, V(0), RCX, 0),
+            Vld(Type::S8, Vsize::V256, V(1), RAX, 0),
+            Vld(Type::S8, Vsize::V256, V(0), R8, 0),
+            Vld(Type::S8, Vsize::V256, V(8), RAX, 0),
+            Vld(Type::S8, Vsize::V256, V(9), R10, 0),
         ])
         .unwrap();
         assert_eq!(
             prog.fmt_url(),
             "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f8+10+80+00+00+00+00+c5+f8+10+81+00+00+00+00+c5+f8+10+88+00+00+00+00+c4+c1+78+10+80+00+00+00+00+c5+78+10+80+00+00+00+00+c4+41+78+10+8a+00+00+00+00&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+    }
+
+    #[test]
+    fn test_vst() {
+        use regs::*;
+        use Ins::*;
+        let prog = Executable::from_ir(&[
+            Vst(Type::S8, Vsize::V128, V(0), RAX, 0),
+            Vst(Type::S8, Vsize::V128, V(0), RCX, 0),
+            Vst(Type::S8, Vsize::V128, V(1), RAX, 0),
+            Vst(Type::S8, Vsize::V128, V(0), R8, 0),
+            Vst(Type::S8, Vsize::V128, V(8), RAX, 0),
+            Vst(Type::S8, Vsize::V128, V(9), R10, 0),
+            Vst(Type::S8, Vsize::V256, V(0), RAX, 0),
+            Vst(Type::S8, Vsize::V256, V(0), RCX, 0),
+            Vst(Type::S8, Vsize::V256, V(1), RAX, 0),
+            Vst(Type::S8, Vsize::V256, V(0), R8, 0),
+            Vst(Type::S8, Vsize::V256, V(8), RAX, 0),
+            Vst(Type::S8, Vsize::V256, V(9), R10, 0),
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f8+11+80+00+00+00+00+c5+f8+11+81+00+00+00+00+c5+f8+11+88+00+00+00+00+c4+c1+78+11+80+00+00+00+00+c5+78+11+80+00+00+00+00+c4+41+78+11+8a+00+00+00+00+c5+fc+11+80+00+00+00+00+c5+fc+11+81+00+00+00+00+c5+fc+11+88+00+00+00+00+c4+c1+7c+11+80+00+00+00+00+c5+7c+11+80+00+00+00+00+c4+41+7c+11+8a+00+00+00+00&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
         );
     }
 
@@ -909,7 +1016,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             prog.fmt_url(),
-            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=48+83+ec+10+40+88+7c+24+06+40+88+74+24+07+66+48+0f+b7+44+24+06+48+83+c4+10+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=48+83+ec+10+48+88+7c+24+06+48+88+74+24+07+66+48+0f+b7+44+24+06+48+83+c4+10+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
         );
     }
 
@@ -1085,6 +1192,214 @@ mod tests {
         assert_eq!(
             prog.fmt_url(),
             "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=48+89+00+48+89+04+24+48+89+45+00+49+89+04+24+49+89+45+00+49+89+07+48+89+00+48+89+24+24+48+89+6d+00+4d+89+24+24+4d+89+6d+00+4d+89+3f+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+    }
+
+    #[test]
+    fn test_ld() {
+        use regs::*;
+        use Ins::*;
+        use Type::*;
+        let mut prog = Executable::from_ir(&[
+            Ld(U8, RCX, RSI, 0),
+            Ld(U16, RCX, RSI, 0),
+            Ld(U32, RCX, RSI, 0),
+            Ld(U64, RCX, RAX, 0),
+            Ld(S8, RCX, RSI, 0),
+            Ld(S16, RCX, RSI, 0),
+            Ld(S32, RCX, RSI, 0),
+            Ld(S64, RCX, RAX, 0),
+            Ret,
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=40+0f+b6+0e+66+48+0f+b7+0e+40+8b+0e+48+8b+08+40+0f+be+0e+66+48+0f+bf+0e+40+63+0e+48+8b+08+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+
+    }
+
+    #[test]
+    fn test_vpadd() {
+        use regs::*;
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let mut prog = Executable::from_ir(&[
+            Vadd(U8, V128, V(0),V(0),V(0)),
+            Vadd(U16, V128, V(0),V(0),V(0)),
+            Vadd(U32, V128, V(0),V(0),V(0)),
+            Vadd(U64, V128, V(0),V(0),V(0)),
+            Vadd(F32, V128, V(0),V(0),V(0)),
+            Vadd(F64, V128, V(0),V(0),V(0)),
+            Vadd(U8, V128, V(0),V(0),V(0)),
+            Vadd(U8, V128, V(15),V(0),V(0)),
+            Vadd(U8, V128, V(0),V(15),V(0)),
+            Vadd(U8, V128, V(0),V(0),V(15)),
+            Vadd(U8, V128, V(1),V(2),V(3)),
+            Vadd(U8, V256, V(0),V(0),V(0)),
+            Vadd(U8, V256, V(0),V(0),V(15)),
+            Ret,
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f9+fc+c0+c5+f9+fd+c0+c5+f9+fe+c0+c5+f9+d4+c0+c5+f8+58+c0+c5+f9+58+c0+c5+f9+fc+c0+c5+79+fc+f8+c5+81+fc+c0+c4+c1+79+fc+c7+c5+e9+fc+cb+c5+fd+fc+c0+c4+c1+7d+fc+c7+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+    }
+
+    #[test]
+    fn test_vpsub() {
+        use regs::*;
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let mut prog = Executable::from_ir(&[
+            Vsub(U8, V128, V(0),V(0),V(0)),
+            Vsub(U16, V128, V(0),V(0),V(0)),
+            Vsub(U32, V128, V(0),V(0),V(0)),
+            Vsub(U64, V128, V(0),V(0),V(0)),
+            Vsub(F32, V128, V(0),V(0),V(0)),
+            Vsub(F64, V128, V(0),V(0),V(0)),
+            Vsub(U8, V128, V(0),V(0),V(0)),
+            Vsub(U8, V128, V(15),V(0),V(0)),
+            Vsub(U8, V128, V(0),V(15),V(0)),
+            Vsub(U8, V128, V(0),V(0),V(15)),
+            Vsub(U8, V128, V(1),V(2),V(3)),
+            Vsub(U8, V256, V(0),V(0),V(0)),
+            Vsub(U8, V256, V(0),V(0),V(15)),
+            Ret,
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f9+f8+c0+c5+f9+f9+c0+c5+f9+fa+c0+c5+f9+fb+c0+c5+f8+5c+c0+c5+f9+5c+c0+c5+f9+f8+c0+c5+79+f8+f8+c5+81+f8+c0+c4+c1+79+f8+c7+c5+e9+f8+cb+c5+fd+f8+c0+c4+c1+7d+f8+c7+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+    }
+
+    #[test]
+    fn test_vandorxor() {
+        use regs::*;
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let mut prog = Executable::from_ir(&[
+            Vand(U8, V128, V(1),V(2),V(3)),
+            Vor(U8, V128, V(1),V(2),V(3)),
+            Vxor(U8, V128, V(1),V(2),V(3)),
+            Ret,
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f9+f8+c0+c5+f9+f9+c0+c5+f9+fa+c0+c5+f9+fb+c0+c5+f8+5c+c0+c5+f9+5c+c0+c5+f9+f8+c0+c5+79+f8+f8+c5+81+f8+c0+c4+c1+79+f8+c7+c5+e9+f8+cb+c5+fd+f8+c0+c4+c1+7d+f8+c7+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+    }
+
+    #[test]
+    fn test_vshift() {
+        use regs::*;
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let mut prog = Executable::from_ir(&[
+            Vshl(U32, V128, V(1),V(2),V(3)),
+            Vshr(S32, V128, V(1),V(2),V(3)),
+            Vshr(U32, V128, V(1),V(2),V(3)),
+            Vshl(U32, V256, V(1),V(2),V(3)),
+            Vshr(S32, V256, V(1),V(2),V(3)),
+            Vshr(U32, V256, V(1),V(2),V(3)),
+            Ret,
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f9+f8+c0+c5+f9+f9+c0+c5+f9+fa+c0+c5+f9+fb+c0+c5+f8+5c+c0+c5+f9+5c+c0+c5+f9+f8+c0+c5+79+f8+f8+c5+81+f8+c0+c4+c1+79+f8+c7+c5+e9+f8+cb+c5+fd+f8+c0+c4+c1+7d+f8+c7+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+    }
+
+    #[test]
+    fn test_vmul() {
+        use regs::*;
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let mut prog = Executable::from_ir(&[
+            Vmul(F32, V128, V(1),V(2),V(3)),
+            Vmul(F64, V128, V(1),V(2),V(3)),
+            Vmul(F32, V256, V(1),V(2),V(3)),
+            Vmul(F64, V256, V(1),V(2),V(3)),
+            Ret,
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+e8+59+cb+c5+e9+59+cb+c5+ec+59+cb+c5+ed+59+cb+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+    }
+
+    #[test]
+    fn test_vmovi() {
+        use regs::*;
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let mut prog = Executable::from_ir(&[
+            Vmovi(U8, V128, V(0), 0x12),
+            Vmovi(U16, V128, V(0), 0x1234),
+            Vmovi(U32, V128, V(0), 0x12345678),
+            Vmovi(U64, V128, V(0), 0x123456789abcdef0),
+            Ret,
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+e8+59+cb+c5+e9+59+cb+c5+ec+59+cb+c5+ed+59+cb+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+    }
+
+    #[test]
+    fn test_vnot() {
+        use regs::*;
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let mut prog = Executable::from_ir(&[
+            Vnot(U8, V128, V(0), V(0)),
+            Vnot(U16, V128, V(0), V(0)),
+            Vnot(U32, V128, V(0), V(0)),
+            Vnot(U64, V128, V(0), V(0)),
+            Ret,
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f9+ef+05+19+00+00+00+c5+f9+ef+05+11+00+00+00+c5+f9+ef+05+09+00+00+00+c5+f9+ef+05+01+00+00+00+c3+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        );
+    }
+
+    #[test]
+    fn test_vmov() {
+        use regs::*;
+        use Ins::*;
+        use Type::*;
+        use Vsize::*;
+        let mut prog = Executable::from_ir(&[
+            Vmov(U8, V128, V(0), V(0)),
+            Vmov(U16, V128, V(0), V(0)),
+            Vmov(U32, V128, V(0), V(0)),
+            Vmov(U64, V128, V(0), V(0)),
+            Vmov(U8, V128, V(1), V(2)),
+            Vmov(U8, V128, V(2), V(4)),
+            Vmov(U8, V128, V(3), V(6)),
+            Vmov(U8, V128, V(4), V(8)),
+            Vmov(U8, V128, V(5), V(10)),
+            Ret,
+        ])
+        .unwrap();
+        assert_eq!(
+            prog.fmt_url(),
+            "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f8+10+c0+c5+f8+10+c0+c5+f8+10+c0+c5+f8+10+c0+c5+f8+10+ca+c5+f8+10+d4+c5+f8+10+de+c4+c1+78+10+e0+c4+c1+78+10+ea+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
         );
     }
 }
