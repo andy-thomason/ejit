@@ -17,6 +17,46 @@ pub struct V(pub (crate) u8);
 pub struct Imm(pub u64);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Src {
+    SR(u8),
+    SV(u8),
+    Imm(i64),
+}
+
+impl Src {
+    fn as_reg(&self) -> Option<R> {
+        match self {
+            Src::SR(n) => Some(R(*n)),
+            _ => None,
+        }
+    }
+    fn as_vreg(&self) -> Option<V> {
+        match self {
+            Src::SV(n) => Some(V(*n)),
+            _ => None,
+        }
+    }
+    fn as_imm64(&self) -> Option<i64> {
+        match self {
+            Src::Imm(i) => Some(*i),
+            _ => None,
+        }
+    }
+    fn as_imm32(&self) -> Option<i32> {
+        match self {
+            Src::Imm(i) if TryInto::<i32>::try_into(*i).is_ok() => Some((*i).try_into().unwrap()),
+            _ => None,
+        }
+    }
+    fn as_imm8(&self) -> Option<i8> {
+        match self {
+            Src::Imm(i) if TryInto::<i8>::try_into(*i).is_ok() => Some((*i).try_into().unwrap()),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Cond {
     // Always,
@@ -128,17 +168,31 @@ enum Scale {
 /// https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
 pub enum CpuLevel {
     /// Core features.
-    /// x86-64-v1 sse, sse2
-    Simd64 = 1,
+    /// x86-64-v1 mmx, sse, sse2
+    /// Note: we do not support 64 bit SIMD.
+    Scalar = 1,
     /// 128 bit SIMD. 
     /// x86-64-v2 popcnt, sse3, sse4.1, sse4.2, ssse3
+    /// aarch64: neon
     Simd128 = 2,
     /// 256 bit SIMD. 
     /// x86-64-v3 avx, avx2, f16c, bmi1, bmi2, lzcnt, movbe
+    /// aarch64: neon
     Simd256 = 3,
     /// 512 bit SIMD.
     /// x86-64-v4
     Simd512 = 4,
+}
+
+impl CpuLevel {
+    fn max_vbits(&self) -> usize {
+        match self {
+            CpuLevel::Scalar => 64,
+            CpuLevel::Simd128 => 128,
+            CpuLevel::Simd256 => 256,
+            CpuLevel::Simd512 => 512,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -154,6 +208,7 @@ struct State {
     labels: Vec<(u32, usize)>,
     constants: Vec<u8>,
     fixups: Vec<(usize, Fixup)>,
+    cpu_level: CpuLevel,
 }
 
 impl State {
@@ -268,6 +323,7 @@ pub enum Error {
     OffsetToLarge(u32),
     InvalidAddress(Ins),
     CodeTooBig,
+    CpuLevelTooLow(Ins),
 }
 
 pub struct Executable {
