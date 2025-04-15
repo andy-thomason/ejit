@@ -41,9 +41,9 @@ impl From<V> for Src {
     }
 }
 
-impl From<i64> for Src {
-    fn from(value: i64) -> Self {
-        Self::Imm(value)
+impl<T> From<T> for Src where T : Into<i64> {
+    fn from(value: T) -> Self {
+        Self::Imm(value.into())
     }
 }
 
@@ -253,8 +253,7 @@ pub enum Ins {
     // Remember a PC-rel location.
     Label(u32),
 
-    // Function entry & exit: Adjust sp.
-    // Must be modulo 16 bytes
+    // Function entry & exit: Adjust sp by at least n bytes.
     Enter(u32),
     Leave(u32),
 
@@ -277,12 +276,11 @@ pub enum Ins {
     Shr(R, R, Src),
     Sar(R, R, Src),
     Mul(R, R, Src),
-    UDiv(R, R, Src),
-    SDiv(R, R, Src),
+    Udiv(R, R, Src),
+    Sdiv(R, R, Src),
+
     Mov(R, Src),
-    Movi(R, u64),
     Cmp(R, Src),
-    Cmpi(R, u64),
     Not(R, Src),
     Neg(R, Src),
 
@@ -295,8 +293,10 @@ pub enum Ins {
     Vshl(Type, Vsize, V, V, V), // Note: on x86 src2 is broadcast.
     Vshr(Type, Vsize, V, V, V), // Note: on x86 src2 is broadcast.
     Vmul(Type, Vsize, V, V, V),
-    Vmov(Type, Vsize, V, V),
+
     Vmovi(Type, Vsize, V, u64),
+
+    Vmov(Type, Vsize, V, V),
     Vnot(Type, Vsize, V, V),
     Vneg(Type, Vsize, V, V),
     Vrecpe(Type, Vsize, V, V),
@@ -469,126 +469,4 @@ mod aarch64;
 pub use aarch64::regs;
 
 #[cfg(test)]
-mod generic_tests {
-    //! Machine independent tests
-    //! 
-    //! TODO: Extend these to cover every instruction and register permutation.
-    //! 
-    use super::*;
-
-    #[test]
-    fn generic_basic() {
-        use Ins::*;
-        use regs::*;
-
-        {
-            let prog = Executable::from_ir(&[Movi(RES[0], 123), Ret]).unwrap();
-            let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
-            assert_eq!(res, 123);
-        }
-        {
-            let prog = Executable::from_ir(&[Add(RES[0], ARG[0], ARG[1].into()),Ret,]).unwrap();
-            let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
-            assert_eq!(res, 101);
-        }
-        {
-            let prog = Executable::from_ir(&[Sub(RES[0], ARG[0], ARG[1].into()),Ret,]).unwrap();
-            let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
-            assert_eq!(res, 99);
-        }
-    }
-
-    #[test]
-    fn generic_branch() {
-        fn test_one_branch(c: Cond, expected: [bool; 5]) {
-            use Ins::*;
-            use regs::*;
-            const IS_FALSE : u32 = 0;
-            const IS_TRUE : u32 = 1;
-            let mut prog = Executable::from_ir(&[
-                Cmp(ARG[0], ARG[1].into()),
-                B(c, IS_TRUE),
-    
-                Label(IS_FALSE),
-                Movi(RES[0], 0),
-                Ret,
-    
-                Label(IS_TRUE),
-                Movi(RES[0], 1),
-                Ret,
-            ])
-            .unwrap();
-            println!("{}", prog.fmt_url());
-    
-            let tv = [[1, 1], [1, 2], [2, 1], [1, !0], [!0, 1]];
-            let res = tv.iter().map(|args| unsafe { prog.call(0, &args[..]).unwrap().0 != 0 }).collect::<Vec<_>>();
-            // println!("{res:?}");
-            assert_eq!(&expected[..], &res, "{:?}", c);
-        }
-
-        use Cond::*;
-        // test_one_branch(Always, [true, true, true, true, true]);
-        test_one_branch(Eq, [true, false, false, false, false]);
-        test_one_branch(Ne, [false, true, true, true, true]);
-        test_one_branch(Sgt, [false, false, true, true, false]);
-        test_one_branch(Sge, [true, false, true, true, false]);
-        test_one_branch(Slt, [false, true, false, false, true]);
-        test_one_branch(Sle, [true, true, false, false, true]);
-        test_one_branch(Ugt, [false, false, true, false, true]);
-        test_one_branch(Uge, [true, false, true, false, true]);
-        test_one_branch(Ult, [false, true, false, true, false]);
-        test_one_branch(Ule, [true, true, false, true, false]);
-    }
-
-    #[test]
-    fn generic_loop() {
-        for _ in 0..3 {
-            use Ins::*;
-            use regs::*;
-            let t0 = std::time::Instant::now();
-            const COUNT : R = R(0);
-            const TOT : R = R(1);
-            const INC : R = R(2);
-            const LOOP : u32 = 0;
-            let mut prog = Executable::from_ir(&[
-                Movi(COUNT, 10000),
-                Movi(TOT, 0),
-                Movi(INC, 1),
-                Label(LOOP),
-                Add(TOT, TOT, COUNT.into()),
-                Sub(COUNT, COUNT, INC.into()),
-                Cmpi(COUNT, 0),
-                B(Cond::Ne, LOOP),
-                Mov(RES[0], TOT.into()),
-                Ret,
-            ])
-            .unwrap();
-            // Compile time varies from 9μs (hot) to 11.4μs (cold).
-            println!("compile time {}ns", std::time::Instant::elapsed(&t0).as_nanos());
-            println!("{}", prog.fmt_url());
-            let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
-            assert_eq!(res, 50005000);
-        }
-    }
-
-    #[test]
-    fn generic_load_store() {
-        use Ins::*;
-        use Type::*;
-        use regs::*;
-        let mut prog = Executable::from_ir(&[
-            Enter(16),
-            St(U8, ARG[0], SP, 6),
-            St(U8, ARG[1], SP, 7),
-            Ld(U16, RES[0], SP, 6),
-            Leave(16),
-            Ret,
-        ])
-        .unwrap();
-        let (res, _) = unsafe { prog.call(0, &[0x34, 0x12]).unwrap() };
-        #[cfg(target_endian="little")]
-        assert_eq!(res, 0x1234);
-        #[cfg(target_endian="big")]
-        assert_eq!(res, 0x3412);
-    }
-}
+mod generic_tests;

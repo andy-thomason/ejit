@@ -18,7 +18,7 @@ pub enum VElem {
     Constant([u64; 4]),
 
     /// An unknown item passed to this trace on the stack. ie. [bp, #n*32]
-    Bp(isize),
+    Bp(i32),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -75,7 +75,7 @@ impl Compiler {
                     let Some(&imm) = data.get(pc) else { todo!() };
                     self.vstack.push(VElem::Constant([0, 0, 0, imm as u64]));
                     pc += 1;
-                    self.ins.extend([Movi(T0, 3), Add(GASREG, GASREG, T0.into())]);
+                    self.ins.extend([Mov(T0, 3.into()), Add(GASREG, GASREG, T0.into())]);
                 }
                 ADD => {
                     let (a, b) = self.vstack.top2();
@@ -90,7 +90,7 @@ impl Compiler {
                     self.gen_addr(T0, value);
                     self.gen_u64(T1, addr);
                     self.gen_mem_expand(T1);
-                    self.ins.extend([Movi(T0, 3), Add(GASREG, GASREG, T0.into())]);
+                    self.ins.extend([Add(GASREG, GASREG, 3.into())]);
                     self.ins.extend([
                         Add(T1, T1, MEM.into()),
                         Ld(U64, T2, T0, 0),
@@ -143,7 +143,7 @@ impl Compiler {
                 }
             }
             VElem::Bp(depth) => {
-                self.ins.extend([Movi(dest, depth as u64), Add(dest, BP, dest.into())]);
+                self.ins.extend([Add(dest, BP, depth.into())]);
             }
         };
     }
@@ -164,7 +164,7 @@ impl Compiler {
         use ejit::Cond::*;
         use ejit::Ins::*;
         self.ins.extend([
-            Movi(T2, 32),
+            Mov(T2, 32.into()),
             Add(T2, T2, src.into()),
             Addr(T0, self.label),
             Cmp(T2, MEMSIZE.into()),
@@ -176,7 +176,7 @@ impl Compiler {
     fn gen_value(&mut self, reg: ejit::R) {
         use ejit::Ins::*;
         use ejit::regs::*;
-        self.vstack.push(VElem::Bp(self.vstack.new_values as isize));
+        self.vstack.push(VElem::Bp(self.vstack.new_values as i32));
         self.vstack.new_values += 32;
         self.ins.extend([Mov(reg, SP.into()), Enter(32)]);
     }
@@ -207,7 +207,7 @@ impl VStack {
     /// Ensure at least n items on the vstack.
     fn prep(&mut self, n: usize) {
         while self.stack.len() < n {
-            self.stack.push_back(VElem::Bp(self.old_values as isize));
+            self.stack.push_back(VElem::Bp(self.old_values as i32));
             self.old_values += 32;
         }
     }

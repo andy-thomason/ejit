@@ -156,22 +156,22 @@ fn test_div_eax() {
     use regs::*;
     use Ins::*;
     let prog = Executable::from_ir(&[
-        UDiv(RBX, RBX, RBX.into()),
-        UDiv(RBX, RBX, RAX.into()),
-        UDiv(RBX, RAX, RBX.into()),
-        UDiv(RBX, RAX, RAX.into()),
-        UDiv(RAX, RBX, RBX.into()),
-        UDiv(RAX, RBX, RAX.into()),
-        UDiv(RAX, RAX, RBX.into()),
-        UDiv(RDX, RDX, RDX.into()),
-        UDiv(RBX, RBX, RBX.into()),
-        UDiv(RBX, RBX, RDX.into()),
-        UDiv(RBX, RDX, RBX.into()),
-        UDiv(RBX, RDX, RDX.into()),
-        UDiv(RDX, RBX, RBX.into()),
-        UDiv(RDX, RBX, RDX.into()),
-        UDiv(RDX, RDX, RBX.into()),
-        UDiv(RDX, RDX, RDX.into()),
+        Udiv(RBX, RBX, RBX.into()),
+        Udiv(RBX, RBX, RAX.into()),
+        Udiv(RBX, RAX, RBX.into()),
+        Udiv(RBX, RAX, RAX.into()),
+        Udiv(RAX, RBX, RBX.into()),
+        Udiv(RAX, RBX, RAX.into()),
+        Udiv(RAX, RAX, RBX.into()),
+        Udiv(RDX, RDX, RDX.into()),
+        Udiv(RBX, RBX, RBX.into()),
+        Udiv(RBX, RBX, RDX.into()),
+        Udiv(RBX, RDX, RBX.into()),
+        Udiv(RBX, RDX, RDX.into()),
+        Udiv(RDX, RBX, RBX.into()),
+        Udiv(RDX, RBX, RDX.into()),
+        Udiv(RDX, RDX, RBX.into()),
+        Udiv(RDX, RDX, RDX.into()),
     ])
     .unwrap();
     assert_eq!(
@@ -218,8 +218,8 @@ fn test_binary() {
         Shr(RAX, RAX, RAX.into()),
         Sar(RAX, RAX, RAX.into()),
         Mul(RAX, RAX, RAX.into()),
-        UDiv(RAX, RAX, RAX.into()),
-        SDiv(RAX, RAX, RAX.into()),
+        Udiv(RAX, RAX, RAX.into()),
+        Sdiv(RAX, RAX, RAX.into()),
     ])
     .unwrap();
     assert_eq!(

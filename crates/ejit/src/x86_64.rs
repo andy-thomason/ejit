@@ -37,31 +37,80 @@ pub mod regs {
 // See x86_64.s
 // x86_64-linux-gnu-as crates/ejit-build/asm/x86_64.s -o x.o
 // x86_64-linux-gnu-objdump -d x.o | less
-const OP_ADD: &[u8] = &[0x48, 0x01, 0xc0]; // 48 01 c0                add    %rax,%rax
-const OP_OR: &[u8] = &[0x48, 0x09, 0xc0]; // 48 09 c0                or     %rax,%rax
-const OP_SUB: &[u8] = &[0x48, 0x29, 0xc0]; // 48 29 c0                sub    %rax,%rax
-const OP_AND: &[u8] = &[0x48, 0x21, 0xc0]; // 48 21 c0                and    %rax,%rax
-const OP_XOR: &[u8] = &[0x48, 0x31, 0xc0]; // 48 31 c0                xor    %rax,%rax
-const OP_CMP: &[u8] = &[0x48, 0x39, 0xc0]; // 48 39 c0                cmp    %rax,%rax
-const OP_MUL: &[u8] = &[0x48, 0x0f, 0xaf, 0xc0]; // 48 0f af c0             imul   %rax,%rax
-const OP_UDIV: &[u8] = &[0x48, 0xf7, 0xf0]; // 48 f7 f0                div    %rax
-const OP_SDIV: &[u8] = &[0x48, 0xf7, 0xf8]; // 48 f7 f8                idiv   %rax
-const OP_NOT: &[u8] = &[0x48, 0xf7, 0xd0]; // 48 f7 d0                not    %rax
-const OP_NEG: &[u8] = &[0x48, 0xf7, 0xd8]; // 48 f7 d8                neg    %rax
-const OP_SHL: &[u8] = &[0x48, 0xd3, 0xe0]; // 48 d3 e0                shl    %cl,%rax
-const OP_SHR: &[u8] = &[0x48, 0xd3, 0xe8]; // 48 d3 e8                shr    %cl,%rax
-const OP_SAR: &[u8] = &[0x48, 0xd3, 0xf8]; // 48 d3 f8                sar    %cl,%rax
+const OP_ADD: &[&[u8]] = &[
+    &[0x48, 0x01, 0xc0],  // 48 01 c0         add    %rax,%rax
+    &[0x48, 0x83, 0xc0, 0x00] // 48 83 c0 08  add    $0x8,%rax
+];
 
-const OP_ADDI: &[u8] = &[0x48, 0x83, 0xc0, 0x00]; // 48 83 c0 08             add    $0x8,%rax
-const OP_ORI: &[u8] = &[0x48, 0x83, 0xc8, 0x00]; // 48 83 c8 08             or     $0x8,%rax
-const OP_ANDI: &[u8] = &[0x48, 0x83, 0xe0, 0x00]; // 48 83 e0 08             and    $0x8,%rax
-const OP_SUBI: &[u8] = &[0x48, 0x83, 0xe8, 0x00]; // 48 83 e8 08             sub    $0x8,%rax
-const OP_XORI: &[u8] = &[0x48, 0x83, 0xf0, 0x00]; // 48 83 f0 08             xor    $0x8,%rax
-const OP_CMPI: &[u8] = &[0x48, 0x83, 0xf8, 0x00]; // 48 83 f8 08             cmp    $0x8,%rax
-const OP_MULI: &[u8] = &[0x48, 0x6b, 0xc0, 0x00]; // 48 6b c0 08             imul   $0x8,%rax,%rax
-const OP_SHLI: &[u8] = &[0x48, 0xc1, 0xe0, 0x00]; // 48 c1 e0 05             shl    $0x5,%rax
-const OP_SHRI: &[u8] = &[0x48, 0xc1, 0xe8, 0x00]; // 48 c1 e8 05             shr    $0x5,%rax
-const OP_SARI: &[u8] = &[0x48, 0xc1, 0xf8, 0x00]; // 48 c1 f8 05             sar    $0x5,%rax
+const OP_OR: &[&[u8]] = &[
+    &[0x48, 0x09, 0xc0],  // 48 09 c0         or     %rax,%rax
+    &[0x48, 0x83, 0xc8, 0x00] // 48 83 c8 08  or     $0x8,%rax
+];
+
+const OP_SUB: &[&[u8]] = &[
+    &[0x48, 0x29, 0xc0],  // 48 29 c0         sub    %rax,%rax
+    &[0x48, 0x83, 0xe8, 0x00] // 48 83 e8 08  sub    $0x8,%rax
+];
+
+const OP_AND: &[&[u8]] = &[
+    &[0x48, 0x21, 0xc0],  // 48 21 c0         and    %rax,%rax
+    &[0x48, 0x83, 0xe0, 0x00] // 48 83 e0 08  and    $0x8,%rax
+];
+
+const OP_XOR: &[&[u8]] = &[
+    &[0x48, 0x31, 0xc0],  // 48 31 c0         xor    %rax,%rax
+    &[0x48, 0x83, 0xf0, 0x00] // 48 83 f0 08  xor    $0x8,%rax
+];
+
+const OP_CMP: &[&[u8]] = &[
+    &[0x48, 0x39, 0xc0],  // 48 39 c0         cmp    %rax,%rax
+    &[0x48, 0x83, 0xf8, 0x00] // 48 83 f8 08  cmp    $0x8,%rax
+];
+
+
+const OP_MUL: &[&[u8]] = &[
+    &[0x48, 0x0f, 0xaf, 0xc0], // 48 0f af c0             imul   %rax,%rax
+    &[0x48, 0x6b, 0xc0, 0x00], // 48 6b c0 08             imul   $0x8,%rax,%rax
+];
+
+const OP_UDIV: &[&[u8]] = &[
+    &[0x48, 0xf7, 0xf0], // 48 f7 f0                div    %rax
+    &[0x48, 0xf7, 0xf0], // 48 f7 f0                div    %rax
+];
+
+const OP_SDIV: &[&[u8]] = &[
+    &[0x48, 0xf7, 0xf8], // 48 f7 f8                idiv   %rax
+    &[0x48, 0xf7, 0xf8], // 48 f7 f8                idiv   %rax
+];
+
+const OP_NOT: &[&[u8]] = &[
+    &[0x48, 0xf7, 0xd0], // 48 f7 d0                not    %rax
+];
+
+const OP_NEG: &[&[u8]] = &[
+    &[0x48, 0xf7, 0xd8], // 48 f7 d8                neg    %rax
+];
+
+const OP_SHL: &[&[u8]] = &[
+    &[0x48, 0xd3, 0xe0],       // 48 d3 e0                shl    %cl,%rax
+    &[0x48, 0xc1, 0xe0, 0x00], // 48 c1 e0 05             shl    $0x5,%rax,
+];
+
+const OP_SHR: &[&[u8]] = &[
+    &[0x48, 0xd3, 0xe8],       // 48 d3 e8                shr    %cl,%rax
+    &[0x48, 0xc1, 0xe8, 0x00], // 48 c1 e8 05             shr    $0x5,%rax,
+];
+
+const OP_SAR: &[&[u8]] = &[
+    &[0x48, 0xd3, 0xf8],       // 48 d3 f8                sar    %cl,%rax
+    &[0x48, 0xc1, 0xf8, 0x00], // 48 c1 f8 05             sar    $0x5,%rax,
+];
+
+
+// const OP_MULI: &[u8] = &[0x48, 0x6b, 0xc0, 0x00]; // 48 6b c0 08             imul   $0x8,%rax,%rax
+// const OP_SHLI: &[u8] = &[0x48, 0xc1, 0xe0, 0x00]; // 48 c1 e0 05             shl    $0x5,%rax
+// const OP_SHRI: &[u8] = &[0x48, 0xc1, 0xe8, 0x00]; // 48 c1 e8 05             shr    $0x5,%rax
+// const OP_SARI: &[u8] = &[0x48, 0xc1, 0xf8, 0x00]; // 48 c1 f8 05             sar    $0x5,%rax
 
 const OP_LDZB: &[u8] = &[0x48, 0x0f, 0xb6, 0x00]; // 48 0f b6 00             movzbq (%rax),%rax
 const OP_LDZW: &[u8] = &[0x48, 0x0f, 0xb7, 0x00]; // 48 0f b7 00             movzwq (%rax),%rax
@@ -90,6 +139,8 @@ const OP_VMOV: [(u8, u8); 6] = [(0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 
 const OP_VMOVI: [(u8, u8); 6] = [(0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10)];
 const OP_VRSQRT: [(u8, u8); 6] = [(0, 0x00), (0, 0x00), (0, 0x00), (0, 0x00), (0, 0x52), (1, 0x52)];
 const OP_VRCP: [(u8, u8); 6] = [(0, 0x00), (0, 0x00), (0, 0x00), (0, 0x00), (0, 0x53), (1, 0x53)];
+
+const OP_MOVABS: u8 = 0xb8;
 
 /// A simlified CPU level specification.
 pub fn cpu_level() -> CpuLevel {
@@ -150,13 +201,11 @@ impl Executable {
                 Or(dest, src1, src2) => gen_binary(&mut state, OP_OR, dest, src1, src2, &i)?,
                 Xor(dest, src1, src2) => gen_binary(&mut state, OP_XOR, dest, src1, src2, &i)?,
                 Mul(dest, src1, src2) => gen_binary(&mut state, OP_MUL, dest, src1, src2, &i)?,
-                UDiv(dest, src1, src2) => gen_div(&mut state, OP_UDIV, dest, src1, src2, &i)?,
-                SDiv(dest, src1, src2) => gen_div(&mut state, OP_SDIV, dest, src1, src2, &i)?,
+                Udiv(dest, src1, src2) => gen_div(&mut state, OP_UDIV, dest, src1, src2, &i)?,
+                Sdiv(dest, src1, src2) => gen_div(&mut state, OP_SDIV, dest, src1, src2, &i)?,
                 Not(dest, src) => gen_unary(&mut state, OP_NOT, dest, src, &i)?,
                 Neg(dest, src) => gen_unary(&mut state, OP_NEG, dest, src, &i)?,
-                Movi(dest, imm) => gen_movi(&mut state, dest, imm, &i)?,
                 Mov(dest, src) => gen_mov(&mut state, dest, src, &i)?,
-                Cmpi(src, imm) => gen_immediate(&mut state, OP_CMPI, src, src, *imm, &i),
                 Cmp(src1, src2) => gen_binary(&mut state, OP_CMP, src1, src1, src2, &i)?,
                 Shl(dest, src1, src2) => gen_shift(&mut state, OP_SHL, dest, src1, src2, &i)?,
                 Shr(dest, src1, src2) => gen_shift(&mut state, OP_SHR, dest, src1, src2, &i)?,
@@ -209,12 +258,12 @@ impl Executable {
                     state.code.extend([rex, 0x0f, op, modrm]);
                 }
                 Enter(imm) => {
-                    let imm: u64 = imm.clone().into();
-                    gen_immediate(&mut state, OP_SUBI, &regs::RSP, &regs::RSP, imm, i);
+                    let imm = &(*imm as i64).into();
+                    gen_binary(&mut state, OP_SUB, &regs::RSP, &regs::RSP, imm, i);
                 }
                 Leave(imm) => {
-                    let imm: u64 = imm.clone().into();
-                    gen_immediate(&mut state, OP_ADDI, &regs::RSP, &regs::RSP, imm, i);
+                    let imm = &(*imm as i64).into();
+                    gen_binary(&mut state, OP_ADD, &regs::RSP, &regs::RSP, imm, i);
                 }
                 Ld(ty, r, ra, imm) => {
                     use Type::*;
@@ -563,7 +612,7 @@ impl Scale {
 
 fn gen_binary(
     state: &mut State,
-    opcode: &[u8],
+    opcodes: &[&[u8]],
     dest: &R,
     src1: &R,
     src2: &Src,
@@ -571,28 +620,34 @@ fn gen_binary(
 ) -> Result<(), Error> {
     gen_mov(state, dest, &src1.into(), i)?;
     if let Some(src2) = src2.as_reg() {
-        let rex = opcode[0] + dest.to_x86_high() + src2.to_x86_high() * 4;
-        let op = opcode[1];
+        let opcode = opcodes[0];
         if opcode.len() == 3 {
-            let modrm = opcode[2] + dest.to_x86_low() + src2.to_x86_low() * 8;
-            state.code.extend([rex, op, modrm]);
+            let op = opcode[1];
+            gen_regreg(state, op, dest, &src2.into());
         } else {
-            let op2 = opcode[2];
-            let modrm = opcode[3] + dest.to_x86_low() + src2.to_x86_low() * 8;
-            state.code.extend([rex, op, op2, modrm]);
+            let pfx = opcode[1];
+            let op = opcode[2];
+            if op == OP_MUL[0][2] {
+                // Mul has its params reversed!
+                gen_regreg_pfx(state, pfx, op, &src2, &dest);
+            } else {
+                gen_regreg_pfx(state, pfx, op, dest, &src2.into());
+            }
         }
+    } else if let Some(imm) = src2.as_imm64() {
+        let opcode = opcodes[1];
+        gen_immediate(state, opcode, dest, src1, imm, i);
     } else {
         return Err(Error::InvalidSrcArgument(i.clone()));
     }
     Ok(())
 }
 
-fn gen_unary(state: &mut State, opcode: &[u8], dest: &R, src: &Src, i: &Ins) -> Result<(), Error> {
+fn gen_unary(state: &mut State, opcodes: &[&[u8]], dest: &R, src: &Src, i: &Ins) -> Result<(), Error> {
+    gen_mov(state, dest, src, i)?;
     if let Some(src) = src.as_reg() {
-        let rex = opcode[0] + dest.to_x86_high() + src.to_x86_high() * 4;
-        let op = opcode[1];
-        let modrm = opcode[2] + dest.to_x86_low() + src.to_x86_low() * 8;
-        state.code.extend([rex, op, modrm]);
+        let opcode = opcodes[0];
+        gen_regreg(state, opcode[1], dest, &src);
     } else {
         return Err(Error::InvalidSrcArgument(i.clone()));
     }
@@ -602,33 +657,43 @@ fn gen_unary(state: &mut State, opcode: &[u8], dest: &R, src: &Src, i: &Ins) -> 
 fn gen_mov(state: &mut State, dest: &R, src: &Src, i: &Ins) -> Result<(), Error> {
     if let Some(src) = src.as_reg() {
         if &src != dest {
-            let rex = 0x48 + dest.to_x86_high() + src.to_x86_high() * 4;
-            let op = 0x89;
-            let modrm = 0xc0 + dest.to_x86_low() + src.to_x86_low() * 8;
-            state.code.extend([rex, op, modrm]);
+            gen_regreg(state, 0x89, dest, &src);
         }
+    } else if let Some(imm) = src.as_imm32() {
+        gen_regreg(state, 0xc7, dest, &R(0));
+        state.code.extend(imm.to_le_bytes());
+    } else if let Some(imm) = src.as_imm64() {
+        gen_reg(state, OP_MOVABS, dest);
+        state.code.extend(imm.to_le_bytes());
     } else {
         return Err(Error::InvalidSrcArgument(i.clone()));
     }
     Ok(())
 }
 
-fn gen_movi(state: &mut State, dest: &R, imm: &u64, i: &Ins) -> Result<(), Error> {
-    if let Ok(imm) = i32::try_from(i64::from_le_bytes(imm.to_le_bytes())) {
-        // mov
-        let rex = 0x48 + dest.to_x86_high();
-        let op = 0xc7;
-        let modrm = 0xc0 + dest.to_x86_low();
-        state.code.extend([rex, op, modrm]);
-        state.code.extend(imm.to_le_bytes());
-    } else {
-        // movabs
-        let rex = 0x48 + dest.to_x86_high();
-        let op = 0xb8 + dest.to_x86_low();
-        state.code.extend([rex, op]);
-        state.code.extend(imm.to_le_bytes());
-    }
-    Ok(())
+// push, pop, movabs
+fn gen_reg(state: &mut State, op: u8, dest: &R) {
+    let rex = 0x48 + dest.to_x86_high();
+    let op = op + dest.to_x86_low();
+    state.code.extend([rex, op]);
+}
+
+fn gen_regreg(state: &mut State, op: u8, dest: &R, src: &R) {
+    let rex = 0x48 + dest.to_x86_high() + src.to_x86_high() * 4;
+    let modrm = 0xc0 + dest.to_x86_low() + src.to_x86_low() * 8;
+    state.code.extend([rex, op, modrm]);
+}
+
+fn gen_reg_pfx(state: &mut State, pfx: u8, op: u8, dest: &R) {
+    let rex = 0x48 + dest.to_x86_high();
+    let op = op + dest.to_x86_low();
+    state.code.extend([rex, pfx, op]);
+}
+
+fn gen_regreg_pfx(state: &mut State, pfx: u8, op: u8, dest: &R, src: &R) {
+    let rex = 0x48 + dest.to_x86_high() + src.to_x86_high() * 4;
+    let modrm = 0xc0 + dest.to_x86_low() + src.to_x86_low() * 8;
+    state.code.extend([rex, pfx, op, modrm]);
 }
 
 /// Div is pretty nasty as it uses the fixed registers rdx::rax
@@ -636,37 +701,38 @@ fn gen_movi(state: &mut State, dest: &R, imm: &u64, i: &Ins) -> Result<(), Error
 /// We need to save these registers and deal with the case where they occur as inputs.
 fn gen_div(
     state: &mut State,
-    opcode: &[u8],
+    opcodes: &[&[u8]],
     dest: &R,
     src1: &R,
     src2: &Src,
     i: &Ins,
 ) -> Result<(), Error> {
-    let Some(src2) = src2.as_reg() else { return Err(Error::InvalidSrcArgument(i.clone())); };
+    let opcode = opcodes[0];
 
     let save_rax = dest != &regs::RAX;
     let save_rdx = dest != &regs::RDX;
-    let use_stack = src2 == regs::RAX || src2 == regs::RDX;
+    let use_stack = src2.as_imm64().is_some() || src2.as_reg() == Some(regs::RAX) || src2.as_reg() == Some(regs::RDX);
 
     if save_rax {
-        gen_push(state, &regs::RAX);
+        gen_push(state, &regs::RAX.into(), i)?;
     }
     if save_rdx {
-        gen_push(state, &regs::RDX);
+        gen_push(state, &regs::RDX.into(), i)?;
     }
     if use_stack {
-        gen_push(state, &src2);
+        gen_push(state, src2, i)?;
     }
 
     gen_mov(state, &regs::RAX, &src1.into(), i)?;
-    if let Ins::UDiv(..) = i {
-        gen_movi(state, &regs::RDX, &0, i)?;
+    if let Ins::Udiv(..) = i {
+        gen_mov(state, &regs::RDX, &0.into(), i)?;
     } else {
         // cqto
         state.code.extend([0x48, 0x99]);
     }
 
     if !use_stack {
+        let Some(src2) = src2.as_reg() else { return Err(Error::InvalidSrcArgument(i.clone())); };
         // 48 f7 f0                div    %rax
         let rex = opcode[0] + src2.to_x86_high();
         let op = opcode[1];
@@ -683,7 +749,7 @@ fn gen_div(
     gen_mov(state, dest, &regs::RAX.into(), i)?;
 
     if use_stack {
-        gen_immediate(state, OP_ADDI, &regs::RSP, &regs::RSP, 8, i);
+        gen_binary(state, OP_ADD, &regs::RSP, &regs::RSP, &8.into(), i);
     }
     if save_rdx {
         gen_pop(state, &regs::RDX);
@@ -696,39 +762,63 @@ fn gen_div(
 
 fn gen_shift(
     state: &mut State,
-    opcode: &[u8],
+    opcodes: &[&[u8]],
     dest: &R,
     src1: &R,
     src2: &Src,
     i: &Ins,
 ) -> Result<(), Error> {
-    // TODO: Use SHLX etc if BMI available.
-    if dest != &regs::RCX {
-        gen_push(state, &regs::RCX);
-    }
+    if let Some(reg) = src2.as_reg() {
+        // TODO: Use SHLX etc if BMI available.
+        if dest != &regs::RCX {
+            gen_push(state, &regs::RCX.into(), i)?;
+        }
 
-    gen_mov(state, dest, &src1.into(), i)?;
-    gen_mov(state, &regs::RCX, &src2, i)?;
+        let opcode = opcodes[0];
 
-    let rex = opcode[0] + dest.to_x86_high();
-    let op = opcode[1];
-    let modrm = opcode[2] + dest.to_x86_low();
-    state.code.extend([rex, op, modrm]);
+        gen_mov(state, dest, &src1.into(), i)?;
+        gen_mov(state, &regs::RCX, &src2, i)?;
 
-    if dest != &regs::RCX {
-        gen_pop(state, &regs::RCX);
+        let rex = opcode[0] + dest.to_x86_high();
+        let op = opcode[1];
+        let modrm = opcode[2] + dest.to_x86_low();
+        state.code.extend([rex, op, modrm]);
+
+        if dest != &regs::RCX {
+            gen_pop(state, &regs::RCX);
+        }
+    } else if let Some(imm) = src2.as_imm8() {
+        let opcode = opcodes[1];
+        gen_mov(state, dest, &src1.into(), i)?;
+
+        let pfx = opcode[1];
+        let op = opcode[2];
+        gen_reg_pfx(state, pfx, op, dest);
+        state.code.push(imm.to_le_bytes()[0]);
+    } else {
+        return Err(Error::InvalidSrcArgument(i.clone()));
     }
     Ok(())
 }
 
-fn gen_push(state: &mut State, dest: &R) {
-    let op = 0x50 + dest.to_x86_low();
-    if dest.to_x86_high() == 0 {
-        state.code.extend([op]);
+fn gen_push(state: &mut State, src: &Src, i: &Ins) -> Result<(), Error> {
+    if let Some(src) = src.as_reg() {
+        let op = 0x50 + src.to_x86_low();
+        if src.to_x86_high() == 0 {
+            state.code.extend([op]);
+        } else {
+            let rex = 0x40 + src.to_x86_high();
+            state.code.extend([rex, op]);
+        }
+    } else if let Some(imm) = src.as_imm8() {
+        state.code.extend([0x6a, imm.to_le_bytes()[0]]);
+    } else if let Some(imm) = src.as_imm32() {
+        let imm = imm.to_le_bytes();
+        state.code.extend([0x68, imm[0], imm[1], imm[2], imm[3]]);
     } else {
-        let rex = 0x40 + dest.to_x86_high();
-        state.code.extend([rex, op]);
+        return Err(Error::InvalidSrcArgument(i.clone()))
     }
+    Ok(())
 }
 
 fn gen_pop(state: &mut State, dest: &R) {
@@ -741,8 +831,8 @@ fn gen_pop(state: &mut State, dest: &R) {
     }
 }
 
-fn gen_immediate(state: &mut State, opcode: &[u8], dest: &R, src: &R, imm: u64, i: &Ins) {
-    if opcode == OP_MULI {
+fn gen_immediate(state: &mut State, opcode: &[u8], dest: &R, src: &R, imm: i64, i: &Ins) {
+    if opcode == OP_MUL[1] {
         if let Ok(imm) = TryInto::<i8>::try_into(imm) {
             let rex = opcode[0] + dest.to_x86_high() + src.to_x86_high() * 4;
             let pfx = opcode[1];
@@ -759,8 +849,8 @@ fn gen_immediate(state: &mut State, opcode: &[u8], dest: &R, src: &R, imm: u64, 
             // Use a fixup and a pcrel constant.
             todo!();
         }
-    } else if opcode == OP_SHLI || opcode == OP_SHRI || opcode == OP_SARI {
-        let imm = TryInto::<u8>::try_into(imm & 0x3f).unwrap();
+    } else if opcode == OP_SHL[1] || opcode == OP_SHR[1] || opcode == OP_SAR[1] {
+        // let imm = TryInto::<u8>::try_into(imm & 0x3f).unwrap();
         let rex = opcode[0] + dest.to_x86_high();
         let pfx = opcode[1];
         let modrm = opcode[2] + dest.to_x86_low();
