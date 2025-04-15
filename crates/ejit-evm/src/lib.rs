@@ -64,7 +64,7 @@ impl Compiler {
     fn compile(&mut self, data: &[u8]) {
         use Ins::*;
         use cregs::*;
-        self.ins.extend([Mov(BP, SP)]);
+        self.ins.extend([Mov(BP, SP.into())]);
         let mut pc = 0;
         use revm::interpreter::opcode::*;
         use Ins::*;
@@ -75,7 +75,7 @@ impl Compiler {
                     let Some(&imm) = data.get(pc) else { todo!() };
                     self.vstack.push(VElem::Constant([0, 0, 0, imm as u64]));
                     pc += 1;
-                    self.ins.extend([Movi(T0, 3), Add(GASREG, GASREG, T0)]);
+                    self.ins.extend([Movi(T0, 3), Add(GASREG, GASREG, T0.into())]);
                 }
                 ADD => {
                     let (a, b) = self.vstack.top2();
@@ -90,9 +90,9 @@ impl Compiler {
                     self.gen_addr(T0, value);
                     self.gen_u64(T1, addr);
                     self.gen_mem_expand(T1);
-                    self.ins.extend([Movi(T0, 3), Add(GASREG, GASREG, T0)]);
+                    self.ins.extend([Movi(T0, 3), Add(GASREG, GASREG, T0.into())]);
                     self.ins.extend([
-                        Add(T1, T1, MEM),
+                        Add(T1, T1, MEM.into()),
                         Ld(U64, T2, T0, 0),
                         Ld(U64, T3, T0, 8),
                         St(U64, T2, T1, 0),
@@ -110,7 +110,7 @@ impl Compiler {
                     self.gen_addr(RES[0], addr);
                     self.gen_u64(RES[1], len);
                     self.gen_mem_expand(T1);
-                    self.ins.extend([Mov(SP, BP), Ret]);
+                    self.ins.extend([Mov(SP, BP.into()), Ret]);
                 }
                 _ => todo!(),
             }
@@ -143,7 +143,7 @@ impl Compiler {
                 }
             }
             VElem::Bp(depth) => {
-                self.ins.extend([Movi(dest, depth as u64), Add(dest, BP, dest)]);
+                self.ins.extend([Movi(dest, depth as u64), Add(dest, BP, dest.into())]);
             }
         };
     }
@@ -165,9 +165,9 @@ impl Compiler {
         use ejit::Ins::*;
         self.ins.extend([
             Movi(T2, 32),
-            Add(T2, T2, src),
+            Add(T2, T2, src.into()),
             Addr(T0, self.label),
-            Cmp(T2, MEMSIZE),
+            Cmp(T2, MEMSIZE.into()),
             B(Ugt, EXTEND_MEM),
             Label(self.label),
         ]);
@@ -178,7 +178,7 @@ impl Compiler {
         use ejit::regs::*;
         self.vstack.push(VElem::Bp(self.vstack.new_values as isize));
         self.vstack.new_values += 32;
-        self.ins.extend([Mov(reg, SP), Enter(32)]);
+        self.ins.extend([Mov(reg, SP.into()), Enter(32)]);
     }
 }
 

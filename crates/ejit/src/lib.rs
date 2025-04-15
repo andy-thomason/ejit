@@ -23,6 +23,30 @@ pub enum Src {
     Imm(i64),
 }
 
+impl From<R> for Src {
+    fn from(value: R) -> Self {
+        Self::SR(value.0)
+    }
+}
+
+impl From<&R> for Src {
+    fn from(value: &R) -> Self {
+        Self::SR(value.0)
+    }
+}
+
+impl From<V> for Src {
+    fn from(value: V) -> Self {
+        Self::SV(value.0)
+    }
+}
+
+impl From<i64> for Src {
+    fn from(value: i64) -> Self {
+        Self::Imm(value)
+    }
+}
+
 impl Src {
     fn as_reg(&self) -> Option<R> {
         match self {
@@ -244,23 +268,23 @@ pub enum Ins {
     Vst(Type, Vsize, V, R, i32),
 
     // Integer Arithmetic.
-    Add(R, R, R),
-    Sub(R, R, R),
-    And(R, R, R),
-    Or(R, R, R),
-    Xor(R, R, R),
-    Shl(R, R, R),
-    Shr(R, R, R),
-    Sar(R, R, R),
-    Mul(R, R, R),
-    UDiv(R, R, R),
-    SDiv(R, R, R),
-    Mov(R, R),
+    Add(R, R, Src),
+    Sub(R, R, Src),
+    And(R, R, Src),
+    Or(R, R, Src),
+    Xor(R, R, Src),
+    Shl(R, R, Src),
+    Shr(R, R, Src),
+    Sar(R, R, Src),
+    Mul(R, R, Src),
+    UDiv(R, R, Src),
+    SDiv(R, R, Src),
+    Mov(R, Src),
     Movi(R, u64),
-    Cmp(R, R),
+    Cmp(R, Src),
     Cmpi(R, u64),
-    Not(R, R),
-    Neg(R, R),
+    Not(R, Src),
+    Neg(R, Src),
 
     /// Vector arithmetic
     Vadd(Type, Vsize, V, V, V),
@@ -324,6 +348,7 @@ pub enum Error {
     InvalidAddress(Ins),
     CodeTooBig,
     CpuLevelTooLow(Ins),
+    InvalidSrcArgument(Ins),
 }
 
 pub struct Executable {
@@ -462,12 +487,12 @@ mod generic_tests {
             assert_eq!(res, 123);
         }
         {
-            let prog = Executable::from_ir(&[Add(RES[0], ARG[0], ARG[1]),Ret,]).unwrap();
+            let prog = Executable::from_ir(&[Add(RES[0], ARG[0], ARG[1].into()),Ret,]).unwrap();
             let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
             assert_eq!(res, 101);
         }
         {
-            let prog = Executable::from_ir(&[Sub(RES[0], ARG[0], ARG[1]),Ret,]).unwrap();
+            let prog = Executable::from_ir(&[Sub(RES[0], ARG[0], ARG[1].into()),Ret,]).unwrap();
             let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
             assert_eq!(res, 99);
         }
@@ -481,7 +506,7 @@ mod generic_tests {
             const IS_FALSE : u32 = 0;
             const IS_TRUE : u32 = 1;
             let mut prog = Executable::from_ir(&[
-                Cmp(ARG[0], ARG[1]),
+                Cmp(ARG[0], ARG[1].into()),
                 B(c, IS_TRUE),
     
                 Label(IS_FALSE),
@@ -530,11 +555,11 @@ mod generic_tests {
                 Movi(TOT, 0),
                 Movi(INC, 1),
                 Label(LOOP),
-                Add(TOT, TOT, COUNT),
-                Sub(COUNT, COUNT, INC),
+                Add(TOT, TOT, COUNT.into()),
+                Sub(COUNT, COUNT, INC.into()),
                 Cmpi(COUNT, 0),
                 B(Cond::Ne, LOOP),
-                Mov(RES[0], TOT),
+                Mov(RES[0], TOT.into()),
                 Ret,
             ])
             .unwrap();

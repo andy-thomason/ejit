@@ -5,54 +5,54 @@ fn test_add() {
     use regs::*;
     use Ins::*;
     let prog = Executable::from_ir(&[
-        Add(RAX, RAX, RAX),
-        Add(RAX, RAX, RCX),
-        Add(RAX, RAX, RDX),
-        Add(RAX, RAX, RBX),
-        Add(RAX, RAX, RSP),
-        Add(RAX, RAX, RBP),
-        Add(RAX, RAX, RSI),
-        Add(RAX, RAX, RDI),
-        Add(RAX, RAX, R8),
-        Add(RAX, RAX, R9),
-        Add(RAX, RAX, R10),
-        Add(RAX, RAX, R11),
-        Add(RAX, RAX, R12),
-        Add(RAX, RAX, R13),
-        Add(RAX, RAX, R14),
-        Add(RAX, RAX, R15),
-        Add(RAX, RAX, RAX),
-        Add(RAX, RCX, RAX),
-        Add(RAX, RDX, RAX),
-        Add(RAX, RBX, RAX),
-        Add(RAX, RSP, RAX),
-        Add(RAX, RBP, RAX),
-        Add(RAX, RSI, RAX),
-        Add(RAX, RDI, RAX),
-        Add(RAX, R8, RAX),
-        Add(RAX, R9, RAX),
-        Add(RAX, R10, RAX),
-        Add(RAX, R11, RAX),
-        Add(RAX, R12, RAX),
-        Add(RAX, R13, RAX),
-        Add(RAX, R14, RAX),
-        Add(RAX, R15, RAX),
-        Add(RAX, RAX, RAX),
-        Add(RCX, RAX, RAX),
-        Add(RDX, RAX, RAX),
-        Add(RBX, RAX, RAX),
-        Add(RSP, RAX, RAX),
-        Add(RBP, RAX, RAX),
-        Add(RSI, RAX, RAX),
-        Add(RDI, RAX, RAX),
-        Add(R8, RAX, RAX),
-        Add(R9, RAX, RAX),
-        Add(R10, RAX, RAX),
-        Add(R11, RAX, RAX),
-        Add(R12, RAX, RAX),
-        Add(R13, RAX, RAX),
-        Add(R14, RAX, RAX),
-        Add(R15, RAX, RAX),
+        Add(RAX, RAX, RAX.into()),
+        Add(RAX, RAX, RCX.into()),
+        Add(RAX, RAX, RDX.into()),
+        Add(RAX, RAX, RBX.into()),
+        Add(RAX, RAX, RSP.into()),
+        Add(RAX, RAX, RBP.into()),
+        Add(RAX, RAX, RSI.into()),
+        Add(RAX, RAX, RDI.into()),
+        Add(RAX, RAX, R8.into()),
+        Add(RAX, RAX, R9.into()),
+        Add(RAX, RAX, R10.into()),
+        Add(RAX, RAX, R11.into()),
+        Add(RAX, RAX, R12.into()),
+        Add(RAX, RAX, R13.into()),
+        Add(RAX, RAX, R14.into()),
+        Add(RAX, RAX, R15.into()),
+        Add(RAX, RAX, RAX.into()),
+        Add(RAX, RCX, RAX.into()),
+        Add(RAX, RDX, RAX.into()),
+        Add(RAX, RBX, RAX.into()),
+        Add(RAX, RSP, RAX.into()),
+        Add(RAX, RBP, RAX.into()),
+        Add(RAX, RSI, RAX.into()),
+        Add(RAX, RDI, RAX.into()),
+        Add(RAX, R8, RAX.into()),
+        Add(RAX, R9, RAX.into()),
+        Add(RAX, R10, RAX.into()),
+        Add(RAX, R11, RAX.into()),
+        Add(RAX, R12, RAX.into()),
+        Add(RAX, R13, RAX.into()),
+        Add(RAX, R14, RAX.into()),
+        Add(RAX, R15, RAX.into()),
+        Add(RAX, RAX, RAX.into()),
+        Add(RCX, RAX, RAX.into()),
+        Add(RDX, RAX, RAX.into()),
+        Add(RBX, RAX, RAX.into()),
+        Add(RSP, RAX, RAX.into()),
+        Add(RBP, RAX, RAX.into()),
+        Add(RSI, RAX, RAX.into()),
+        Add(RDI, RAX, RAX.into()),
+        Add(R8, RAX, RAX.into()),
+        Add(R9, RAX, RAX.into()),
+        Add(R10, RAX, RAX.into()),
+        Add(R11, RAX, RAX.into()),
+        Add(R12, RAX, RAX.into()),
+        Add(R13, RAX, RAX.into()),
+        Add(R14, RAX, RAX.into()),
+        Add(R15, RAX, RAX.into()),
     ])
     .unwrap();
     assert_eq!(
@@ -68,54 +68,54 @@ fn test_binary_regs() {
     use regs::*;
     use Ins::*;
     let prog = Executable::from_ir(&[
-        Sub(RAX, RAX, RAX),
-        Sub(RAX, RAX, RCX),
-        Sub(RAX, RAX, RDX),
-        Sub(RAX, RAX, RBX),
-        Sub(RAX, RAX, RSP),
-        Sub(RAX, RAX, RBP),
-        Sub(RAX, RAX, RSI),
-        Sub(RAX, RAX, RDI),
-        Sub(RAX, RAX, R8),
-        Sub(RAX, RAX, R9),
-        Sub(RAX, RAX, R10),
-        Sub(RAX, RAX, R11),
-        Sub(RAX, RAX, R12),
-        Sub(RAX, RAX, R13),
-        Sub(RAX, RAX, R14),
-        Sub(RAX, RAX, R15),
-        Sub(RAX, RAX, RAX),
-        Sub(RAX, RCX, RAX),
-        Sub(RAX, RDX, RAX),
-        Sub(RAX, RBX, RAX),
-        Sub(RAX, RSP, RAX),
-        Sub(RAX, RBP, RAX),
-        Sub(RAX, RSI, RAX),
-        Sub(RAX, RDI, RAX),
-        Sub(RAX, R8, RAX),
-        Sub(RAX, R9, RAX),
-        Sub(RAX, R10, RAX),
-        Sub(RAX, R11, RAX),
-        Sub(RAX, R12, RAX),
-        Sub(RAX, R13, RAX),
-        Sub(RAX, R14, RAX),
-        Sub(RAX, R15, RAX),
-        Sub(RAX, RAX, RAX),
-        Sub(RCX, RAX, RAX),
-        Sub(RDX, RAX, RAX),
-        Sub(RBX, RAX, RAX),
-        Sub(RSP, RAX, RAX),
-        Sub(RBP, RAX, RAX),
-        Sub(RSI, RAX, RAX),
-        Sub(RDI, RAX, RAX),
-        Sub(R8, RAX, RAX),
-        Sub(R9, RAX, RAX),
-        Sub(R10, RAX, RAX),
-        Sub(R11, RAX, RAX),
-        Sub(R12, RAX, RAX),
-        Sub(R13, RAX, RAX),
-        Sub(R14, RAX, RAX),
-        Sub(R15, RAX, RAX),
+        Sub(RAX, RAX, RAX.into()),
+        Sub(RAX, RAX, RCX.into()),
+        Sub(RAX, RAX, RDX.into()),
+        Sub(RAX, RAX, RBX.into()),
+        Sub(RAX, RAX, RSP.into()),
+        Sub(RAX, RAX, RBP.into()),
+        Sub(RAX, RAX, RSI.into()),
+        Sub(RAX, RAX, RDI.into()),
+        Sub(RAX, RAX, R8.into()),
+        Sub(RAX, RAX, R9.into()),
+        Sub(RAX, RAX, R10.into()),
+        Sub(RAX, RAX, R11.into()),
+        Sub(RAX, RAX, R12.into()),
+        Sub(RAX, RAX, R13.into()),
+        Sub(RAX, RAX, R14.into()),
+        Sub(RAX, RAX, R15.into()),
+        Sub(RAX, RAX, RAX.into()),
+        Sub(RAX, RCX, RAX.into()),
+        Sub(RAX, RDX, RAX.into()),
+        Sub(RAX, RBX, RAX.into()),
+        Sub(RAX, RSP, RAX.into()),
+        Sub(RAX, RBP, RAX.into()),
+        Sub(RAX, RSI, RAX.into()),
+        Sub(RAX, RDI, RAX.into()),
+        Sub(RAX, R8, RAX.into()),
+        Sub(RAX, R9, RAX.into()),
+        Sub(RAX, R10, RAX.into()),
+        Sub(RAX, R11, RAX.into()),
+        Sub(RAX, R12, RAX.into()),
+        Sub(RAX, R13, RAX.into()),
+        Sub(RAX, R14, RAX.into()),
+        Sub(RAX, R15, RAX.into()),
+        Sub(RAX, RAX, RAX.into()),
+        Sub(RCX, RAX, RAX.into()),
+        Sub(RDX, RAX, RAX.into()),
+        Sub(RBX, RAX, RAX.into()),
+        Sub(RSP, RAX, RAX.into()),
+        Sub(RBP, RAX, RAX.into()),
+        Sub(RSI, RAX, RAX.into()),
+        Sub(RDI, RAX, RAX.into()),
+        Sub(R8, RAX, RAX.into()),
+        Sub(R9, RAX, RAX.into()),
+        Sub(R10, RAX, RAX.into()),
+        Sub(R11, RAX, RAX.into()),
+        Sub(R12, RAX, RAX.into()),
+        Sub(R13, RAX, RAX.into()),
+        Sub(R14, RAX, RAX.into()),
+        Sub(R15, RAX, RAX.into()),
     ])
     .unwrap();
     assert_eq!(
@@ -132,14 +132,14 @@ fn test_shift_ecx() {
     use regs::*;
     use Ins::*;
     let prog = Executable::from_ir(&[
-        Shl(RAX, RAX, RAX),
-        Shl(RAX, RAX, RCX),
-        Shl(RAX, RCX, RAX),
-        Shl(RAX, RCX, RCX),
-        Shl(RCX, RAX, RAX),
-        Shl(RCX, RAX, RCX),
-        Shl(RCX, RCX, RAX),
-        Shl(RCX, RCX, RCX),
+        Shl(RAX, RAX, RAX.into()),
+        Shl(RAX, RAX, RCX.into()),
+        Shl(RAX, RCX, RAX.into()),
+        Shl(RAX, RCX, RCX.into()),
+        Shl(RCX, RAX, RAX.into()),
+        Shl(RCX, RAX, RCX.into()),
+        Shl(RCX, RCX, RAX.into()),
+        Shl(RCX, RCX, RCX.into()),
     ])
     .unwrap();
     assert_eq!(
@@ -156,27 +156,27 @@ fn test_div_eax() {
     use regs::*;
     use Ins::*;
     let prog = Executable::from_ir(&[
-        UDiv(RBX, RBX, RBX),
-        UDiv(RBX, RBX, RAX),
-        UDiv(RBX, RAX, RBX),
-        UDiv(RBX, RAX, RAX),
-        UDiv(RAX, RBX, RBX),
-        UDiv(RAX, RBX, RAX),
-        UDiv(RAX, RAX, RBX),
-        UDiv(RDX, RDX, RDX),
-        UDiv(RBX, RBX, RBX),
-        UDiv(RBX, RBX, RDX),
-        UDiv(RBX, RDX, RBX),
-        UDiv(RBX, RDX, RDX),
-        UDiv(RDX, RBX, RBX),
-        UDiv(RDX, RBX, RDX),
-        UDiv(RDX, RDX, RBX),
-        UDiv(RDX, RDX, RDX),
+        UDiv(RBX, RBX, RBX.into()),
+        UDiv(RBX, RBX, RAX.into()),
+        UDiv(RBX, RAX, RBX.into()),
+        UDiv(RBX, RAX, RAX.into()),
+        UDiv(RAX, RBX, RBX.into()),
+        UDiv(RAX, RBX, RAX.into()),
+        UDiv(RAX, RAX, RBX.into()),
+        UDiv(RDX, RDX, RDX.into()),
+        UDiv(RBX, RBX, RBX.into()),
+        UDiv(RBX, RBX, RDX.into()),
+        UDiv(RBX, RDX, RBX.into()),
+        UDiv(RBX, RDX, RDX.into()),
+        UDiv(RDX, RBX, RBX.into()),
+        UDiv(RDX, RBX, RDX.into()),
+        UDiv(RDX, RDX, RBX.into()),
+        UDiv(RDX, RDX, RDX.into()),
     ])
     .unwrap();
     assert_eq!(
         prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=50+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c3+5a+58+50+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f0+48+89+c3+5a+58+50+52+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c3+5a+58+50+52+48+c7+c2+00+00+00+00+48+f7+f0+48+89+c3+5a+58+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f3+5a+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f0+5a+52+48+c7+c2+00+00+00+00+48+f7+f3+5a+50+48+89+d0+48+c7+c2+00+00+00+00+48+f7+f2+48+89+c2+58+50+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c3+5a+58+50+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f2+48+89+c3+5a+58+50+52+48+89+d0+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c3+5a+58+50+52+48+89+d0+48+c7+c2+00+00+00+00+48+f7+f2+48+89+c3+5a+58+50+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c2+58+50+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f2+48+89+c2+58+50+48+89+d0+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c2+58+50+48+89+d0+48+c7+c2+00+00+00+00+48+f7+f2+48+89+c2+58&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=50+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c3+5a+58+50+52+50+48+89+d8+48+c7+c2+00+00+00+00+48+f7+34+24+48+89+c3+48+83+c4+08+5a+58+50+52+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c3+5a+58+50+52+50+48+c7+c2+00+00+00+00+48+f7+34+24+48+89+c3+48+83+c4+08+5a+58+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f3+5a+52+50+48+89+d8+48+c7+c2+00+00+00+00+48+f7+34+24+48+83+c4+08+5a+52+48+c7+c2+00+00+00+00+48+f7+f3+5a+50+52+48+89+d0+48+c7+c2+00+00+00+00+48+f7+34+24+48+89+c2+48+83+c4+08+58+50+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c3+5a+58+50+52+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+34+24+48+89+c3+48+83+c4+08+5a+58+50+52+48+89+d0+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c3+5a+58+50+52+52+48+89+d0+48+c7+c2+00+00+00+00+48+f7+34+24+48+89+c3+48+83+c4+08+5a+58+50+48+89+d8+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c2+58+50+52+48+89+d8+48+c7+c2+00+00+00+00+48+f7+34+24+48+89+c2+48+83+c4+08+58+50+48+89+d0+48+c7+c2+00+00+00+00+48+f7+f3+48+89+c2+58+50+52+48+89+d0+48+c7+c2+00+00+00+00+48+f7+34+24+48+89+c2+48+83+c4+08+58&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
     );
 
     // TODO: Add(RAX,RSP,RSP)
@@ -187,13 +187,13 @@ fn test_shift_regs() {
     use regs::*;
     use Ins::*;
     let prog = Executable::from_ir(&[
-        Shl(RAX, RAX, RAX),
-        Shl(RAX, RAX, RDI),
-        Shl(RAX, RAX, R15),
-        Shl(RAX, RDI, RAX),
-        Shl(RAX, R15, RAX),
-        Shl(RDI, RAX, RAX),
-        Shl(R15, RAX, RAX),
+        Shl(RAX, RAX, RAX.into()),
+        Shl(RAX, RAX, RDI.into()),
+        Shl(RAX, RAX, R15.into()),
+        Shl(RAX, RDI, RAX.into()),
+        Shl(RAX, R15, RAX.into()),
+        Shl(RDI, RAX, RAX.into()),
+        Shl(R15, RAX, RAX.into()),
     ])
     .unwrap();
     assert_eq!(
@@ -209,22 +209,22 @@ fn test_binary() {
     use regs::*;
     use Ins::*;
     let prog = Executable::from_ir(&[
-        Add(RAX, RAX, RAX),
-        Sub(RAX, RAX, RAX),
-        And(RAX, RAX, RAX),
-        Or(RAX, RAX, RAX),
-        Xor(RAX, RAX, RAX),
-        Shl(RAX, RAX, RAX),
-        Shr(RAX, RAX, RAX),
-        Sar(RAX, RAX, RAX),
-        Mul(RAX, RAX, RAX),
-        UDiv(RAX, RAX, RAX),
-        SDiv(RAX, RAX, RAX),
+        Add(RAX, RAX, RAX.into()),
+        Sub(RAX, RAX, RAX.into()),
+        And(RAX, RAX, RAX.into()),
+        Or(RAX, RAX, RAX.into()),
+        Xor(RAX, RAX, RAX.into()),
+        Shl(RAX, RAX, RAX.into()),
+        Shr(RAX, RAX, RAX.into()),
+        Sar(RAX, RAX, RAX.into()),
+        Mul(RAX, RAX, RAX.into()),
+        UDiv(RAX, RAX, RAX.into()),
+        SDiv(RAX, RAX, RAX.into()),
     ])
     .unwrap();
     assert_eq!(
         prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=48+8d+04+00+48+29+c0+48+21+c0+48+09+c0+48+31+c0+51+48+89+c1+48+d3+e0+59+51+48+89+c1+48+d3+e8+59+51+48+89+c1+48+d3+f8+59+48+0f+af+c0+52+48+c7+c2+00+00+00+00+48+f7+f0+5a+52+48+99+48+f7+f8+5a&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=48+01+c0+48+29+c0+48+21+c0+48+09+c0+48+31+c0+51+48+89+c1+48+d3+e0+59+51+48+89+c1+48+d3+e8+59+51+48+89+c1+48+d3+f8+59+48+0f+af+c0+52+50+48+c7+c2+00+00+00+00+48+f7+34+24+48+83+c4+08+5a+52+50+48+99+48+f7+3c+24+48+83+c4+08+5a&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
     );
 
     // TODO: Add(RAX,RSP,RSP)
@@ -251,7 +251,7 @@ fn test_vld() {
     .unwrap();
     assert_eq!(
         prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f8+10+80+00+00+00+00+c5+f8+10+81+00+00+00+00+c5+f8+10+88+00+00+00+00+c4+c1+78+10+80+00+00+00+00+c5+78+10+80+00+00+00+00+c4+41+78+10+8a+00+00+00+00&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f8+10+80+00+00+00+00+c5+f8+10+81+00+00+00+00+c5+f8+10+88+00+00+00+00+c4+c1+78+10+80+00+00+00+00+c5+78+10+80+00+00+00+00+c4+41+78+10+8a+00+00+00+00+c5+fc+10+80+00+00+00+00+c5+fc+10+81+00+00+00+00+c5+fc+10+88+00+00+00+00+c4+c1+7c+10+80+00+00+00+00+c5+7c+10+80+00+00+00+00+c4+41+7c+10+8a+00+00+00+00&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
     );
 }
 
@@ -296,7 +296,7 @@ fn test_xxx() {
     .unwrap();
     assert_eq!(
         prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=48+83+ec+10+48+88+7c+24+06+48+88+74+24+07+66+48+0f+b7+44+24+06+48+83+c4+10+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=48+83+ec+10+40+88+7c+24+06+40+88+74+24+07+66+48+0f+b7+44+24+06+48+83+c4+10+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
     );
 }
 
@@ -494,7 +494,7 @@ fn test_ld() {
     .unwrap();
     assert_eq!(
         prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=40+0f+b6+0e+66+48+0f+b7+0e+40+8b+0e+48+8b+08+40+0f+be+0e+66+48+0f+bf+0e+40+63+0e+48+8b+08+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=48+0f+b6+0e+66+48+0f+b7+0e+40+8b+0e+48+8b+08+48+0f+be+0e+66+48+0f+bf+0e+48+63+0e+48+8b+08+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
     );
 
 }
@@ -567,12 +567,15 @@ fn test_vandorxor() {
         Vand(U8, V128, V(1),V(2),V(3)),
         Vor(U8, V128, V(1),V(2),V(3)),
         Vxor(U8, V128, V(1),V(2),V(3)),
+        Vand(U8, V256, V(1),V(2),V(3)),
+        Vor(U8, V256, V(1),V(2),V(3)),
+        Vxor(U8, V256, V(1),V(2),V(3)),
         Ret,
     ])
     .unwrap();
     assert_eq!(
         prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f9+f8+c0+c5+f9+f9+c0+c5+f9+fa+c0+c5+f9+fb+c0+c5+f8+5c+c0+c5+f9+5c+c0+c5+f9+f8+c0+c5+79+f8+f8+c5+81+f8+c0+c4+c1+79+f8+c7+c5+e9+f8+cb+c5+fd+f8+c0+c4+c1+7d+f8+c7+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+e9+db+cb+c5+e9+eb+cb+c5+e9+ef+cb+c5+ed+db+cb+c5+ed+eb+cb+c5+ed+ef+cb+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
     );
 }
 
@@ -594,7 +597,7 @@ fn test_vshift() {
     .unwrap();
     assert_eq!(
         prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f9+f8+c0+c5+f9+f9+c0+c5+f9+fa+c0+c5+f9+fb+c0+c5+f8+5c+c0+c5+f9+5c+c0+c5+f9+f8+c0+c5+79+f8+f8+c5+81+f8+c0+c4+c1+79+f8+c7+c5+e9+f8+cb+c5+fd+f8+c0+c4+c1+7d+f8+c7+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+e9+f2+cb+c5+e9+e2+cb+c5+e9+d2+cb+c5+ed+f2+cb+c5+ed+e2+cb+c5+ed+d2+cb+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
     );
 }
 
@@ -634,7 +637,7 @@ fn test_vmovi() {
     .unwrap();
     assert_eq!(
         prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+e8+59+cb+c5+e9+59+cb+c5+ec+59+cb+c5+ed+59+cb+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f8+10+05+19+00+00+00+c5+f8+10+05+21+00+00+00+c5+f8+10+05+29+00+00+00+c5+f8+10+05+31+00+00+00+c3+12+12+12+12+12+12+12+12+12+12+12+12+12+12+12+12+34+12+34+12+34+12+34+12+34+12+34+12+34+12+34+12+78+56+34+12+78+56+34+12+78+56+34+12+78+56+34+12+f0+de+bc+9a+78+56+34+12+f0+de+bc+9a+78+56+34+12&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
     );
 }
 
