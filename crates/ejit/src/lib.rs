@@ -123,6 +123,24 @@ enum Scale {
     X8,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+/// Cpu level supported.
+/// https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
+pub enum CpuLevel {
+    /// Core features.
+    /// x86-64-v1 sse, sse2
+    Simd64 = 1,
+    /// 128 bit SIMD. 
+    /// x86-64-v2 popcnt, sse3, sse4.1, sse4.2, ssse3
+    Simd128 = 2,
+    /// 256 bit SIMD. 
+    /// x86-64-v3 avx, avx2, f16c, bmi1, bmi2, lzcnt, movbe
+    Simd256 = 3,
+    /// 512 bit SIMD.
+    /// x86-64-v4
+    Simd512 = 4,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Fixup {
     Adr(R, u32),

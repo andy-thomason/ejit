@@ -93,5 +93,76 @@ fn main() {
         // if is_aarch64_feature_detected!("v9.5a") { println!("v9.5a") }
         // if is_aarch64_feature_detected!("v9a") { println!("v9a") }
     }
+    #[cfg(target_arch="x86_64")]
+    {
+        // see https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
+        use std::arch::is_x86_feature_detected;
+        if is_x86_feature_detected!("aes") { println!("aes"); }
+        if is_x86_feature_detected!("pclmulqdq") { println!("pclmulqdq"); }
+        if is_x86_feature_detected!("rdrand") { println!("rdrand"); }
+        if is_x86_feature_detected!("rdseed") { println!("rdseed"); }
+        if is_x86_feature_detected!("tsc") { println!("tsc"); }
+        if is_x86_feature_detected!("mmx") { println!("mmx"); }
+        if is_x86_feature_detected!("sse") { println!("sse"); }
+        if is_x86_feature_detected!("sse2") { println!("sse2"); }
+        if is_x86_feature_detected!("sse3") { println!("sse3"); }
+        if is_x86_feature_detected!("ssse3") { println!("ssse3"); }
+        if is_x86_feature_detected!("sse4.1") { println!("sse4.1"); }
+        if is_x86_feature_detected!("sse4.2") { println!("sse4.2"); }
+        if is_x86_feature_detected!("sse4a") { println!("sse4a"); }
+        if is_x86_feature_detected!("sha") { println!("sha"); }
+        if is_x86_feature_detected!("avx") { println!("avx"); }
+        if is_x86_feature_detected!("avx2") { println!("avx2"); }
+        // if is_x86_feature_detected!("sha512") { println!("sha512"); }
+        // if is_x86_feature_detected!("sm3") { println!("sm3"); }
+        // if is_x86_feature_detected!("sm4") { println!("sm4"); }
+        if is_x86_feature_detected!("avx512f") { println!("avx512f"); }
+        if is_x86_feature_detected!("avx512cd") { println!("avx512cd"); }
+        if is_x86_feature_detected!("avx512er") { println!("avx512er"); }
+        if is_x86_feature_detected!("avx512pf") { println!("avx512pf"); }
+        if is_x86_feature_detected!("avx512bw") { println!("avx512bw"); }
+        if is_x86_feature_detected!("avx512dq") { println!("avx512dq"); }
+        if is_x86_feature_detected!("avx512vl") { println!("avx512vl"); }
+        if is_x86_feature_detected!("avx512ifma") { println!("avx512ifma"); }
+        if is_x86_feature_detected!("avx512vbmi") { println!("avx512vbmi"); }
+        if is_x86_feature_detected!("avx512vpopcntdq") { println!("avx512vpopcntdq"); }
+        if is_x86_feature_detected!("avx512vbmi2") { println!("avx512vbmi2"); }
+        if is_x86_feature_detected!("gfni") { println!("gfni"); }
+        if is_x86_feature_detected!("vaes") { println!("vaes"); }
+        if is_x86_feature_detected!("vpclmulqdq") { println!("vpclmulqdq"); }
+        if is_x86_feature_detected!("avx512vnni") { println!("avx512vnni"); }
+        if is_x86_feature_detected!("avx512bitalg") { println!("avx512bitalg"); }
+        if is_x86_feature_detected!("avx512bf16") { println!("avx512bf16"); }
+        if is_x86_feature_detected!("avx512vp2intersect") { println!("avx512vp2intersect"); }
+        if is_x86_feature_detected!("avx512fp16") { println!("avx512fp16"); }
+        // if is_x86_feature_detected!("avxvnni") { println!("avxvnni"); }
+        // if is_x86_feature_detected!("avxifma") { println!("avxifma"); }
+        // if is_x86_feature_detected!("avxneconvert") { println!("avxneconvert"); }
+        // if is_x86_feature_detected!("avxvnniint8") { println!("avxvnniint8"); }
+        // if is_x86_feature_detected!("avxvnniint16") { println!("avxvnniint16"); }
+        // if is_x86_feature_detected!("amx-tile") { println!("tile"); }
+        // if is_x86_feature_detected!("amx-int8") { println!("int8"); }
+        // if is_x86_feature_detected!("amx-bf16") { println!("bf16"); }
+        // if is_x86_feature_detected!("amx-fp16") { println!("fp16"); }
+        // if is_x86_feature_detected!("amx-complex") { println!("complex"); }
+        if is_x86_feature_detected!("f16c") { println!("f16c"); }
+        if is_x86_feature_detected!("fma") { println!("fma"); }
+        if is_x86_feature_detected!("bmi1") { println!("bmi1"); }
+        if is_x86_feature_detected!("bmi2") { println!("bmi2"); }
+        if is_x86_feature_detected!("abm") { println!("abm"); }
+        if is_x86_feature_detected!("lzcnt") { println!("lzcnt"); }
+        if is_x86_feature_detected!("tbm") { println!("tbm"); }
+        if is_x86_feature_detected!("popcnt") { println!("popcnt"); }
+        if is_x86_feature_detected!("fxsr") { println!("fxsr"); }
+        if is_x86_feature_detected!("xsave") { println!("xsave"); }
+        if is_x86_feature_detected!("xsaveopt") { println!("xsaveopt"); }
+        if is_x86_feature_detected!("xsaves") { println!("xsaves"); }
+        if is_x86_feature_detected!("xsavec") { println!("xsavec"); }
+        if is_x86_feature_detected!("cmpxchg16b") { println!("cmpxchg16b"); }
+        if is_x86_feature_detected!("adx") { println!("adx"); }
+        if is_x86_feature_detected!("rtm") { println!("rtm"); }
+        if is_x86_feature_detected!("movbe") { println!("movbe"); }
+        if is_x86_feature_detected!("ermsb") { println!("ermsb"); }
+    }
 }
 
