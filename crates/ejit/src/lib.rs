@@ -415,7 +415,7 @@ pub enum Ins {
     Br(Cond, u32),
     Jmp(u32),
 
-    Sel(Cond, R, R, R),
+    Cmov(Cond, R, Src),
 
     /// Return using stack or R(30)
     Ret,

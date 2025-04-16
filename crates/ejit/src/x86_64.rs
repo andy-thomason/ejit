@@ -270,12 +270,13 @@ impl Executable {
                 Ret => {
                     state.code.push(0xc3);
                 }
-                Sel(cond, dest, t, f) => {
-                    gen_mov(&mut state, dest, &f.into(), i);
-                    let rex = 0x48 + dest.to_x86_high() + t.to_x86_high() * 4;
-                    let modrm = 0xc0 + dest.to_x86_low() + t.to_x86_low() * 8;
-                    let op = cond.cc() + 0x40;
-                    state.code.extend([rex, 0x0f, op, modrm]);
+                Cmov(cond, dest, src) => {
+                    if let Some(src) = src.as_reg() {
+                        let op = cond.cc() + 0x40;
+                        gen_regreg(&mut state, op, dest, &src);
+                    } else {
+                        return Err(Error::InvalidSrcArgument(i.clone()));
+                    }
                 }
                 Enter(imm) => {
                     let imm = &(*imm as i64).into();
