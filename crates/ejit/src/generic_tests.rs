@@ -2,25 +2,37 @@
 //! 
 //! TODO: Extend these to cover every instruction and register permutation.
 //! 
+use crate::x86_64::cpu_info;
+
 use super::*;
+
+
+#[test]
+fn instruction_size() {
+    assert!(std::mem::size_of::<Ins>() <= 32);
+}
 
 #[test]
 fn generic_basic() {
     use Ins::*;
-    use regs::*;
+    // use regs::*;
+    let cpu_info = cpu_info();
+    let res0 = cpu_info.res()[0];
+    let arg0 = cpu_info.args()[0];
+    let arg1 = cpu_info.args()[1];
 
     {
-        let prog = Executable::from_ir(&[Mov(RES[0], 123.into()), Ret]).unwrap();
+        let prog = Executable::from_ir(&[Mov(res0, 123.into()), Ret]).unwrap();
         let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
         assert_eq!(res, 123);
     }
     {
-        let prog = Executable::from_ir(&[Add(RES[0], ARG[0], ARG[1].into()),Ret,]).unwrap();
+        let prog = Executable::from_ir(&[Add(res0, arg0, arg1.into()),Ret,]).unwrap();
         let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
         assert_eq!(res, 101);
     }
     {
-        let prog = Executable::from_ir(&[Sub(RES[0], ARG[0], ARG[1].into()),Ret,]).unwrap();
+        let prog = Executable::from_ir(&[Sub(res0, arg0, arg1.into()),Ret,]).unwrap();
         let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
         assert_eq!(res, 99);
     }
@@ -33,16 +45,20 @@ fn generic_branch() {
         use regs::*;
         const IS_FALSE : u32 = 0;
         const IS_TRUE : u32 = 1;
+        let cpu_info = cpu_info();
+        let res0 = cpu_info.res()[0];
+        let arg0 = cpu_info.args()[0];
+        let arg1 = cpu_info.args()[1];
         let mut prog = Executable::from_ir(&[
-            Cmp(ARG[0], ARG[1].into()),
-            B(c, IS_TRUE),
+            Cmp(arg0, arg1.into()),
+            Br(c, IS_TRUE),
 
             Label(IS_FALSE),
-            Mov(RES[0], 0.into()),
+            Mov(res0, 0.into()),
             Ret,
 
             Label(IS_TRUE),
-            Mov(RES[0], 1.into()),
+            Mov(res0, 1.into()),
             Ret,
         ])
         .unwrap();
@@ -73,6 +89,10 @@ fn generic_loop() {
         use Ins::*;
         use regs::*;
         let t0 = std::time::Instant::now();
+        let cpu_info = cpu_info();
+        let res0 = cpu_info.res()[0];
+        let arg0 = cpu_info.args()[0];
+        let arg1 = cpu_info.args()[1];
         const COUNT : R = R(0);
         const TOT : R = R(1);
         const LOOP : u32 = 0;
@@ -83,8 +103,8 @@ fn generic_loop() {
             Add(TOT, TOT, COUNT.into()),
             Sub(COUNT, COUNT, 1.into()),
             Cmp(COUNT, 0.into()),
-            B(Cond::Ne, LOOP),
-            Mov(RES[0], TOT.into()),
+            Br(Cond::Ne, LOOP),
+            Mov(res0, TOT.into()),
             Ret,
         ])
         .unwrap();
@@ -100,11 +120,16 @@ fn generic_load_store() {
     use Ins::*;
     use Type::*;
     use regs::*;
+    let cpu_info = cpu_info();
+    let res0 = cpu_info.res()[0];
+    let arg0 = cpu_info.args()[0];
+    let arg1 = cpu_info.args()[1];
+    let sp = cpu_info.sp();
     let mut prog = Executable::from_ir(&[
         Enter(16),
-        St(U8, ARG[0], SP, 6),
-        St(U8, ARG[1], SP, 7),
-        Ld(U16, RES[0], SP, 6),
+        St(U8, arg0, sp, 6),
+        St(U8, arg1, sp, 7),
+        Ld(U16, res0, sp, 6),
         Leave(16),
         Ret,
     ])
@@ -136,63 +161,67 @@ fn generic_regreg() {
         a[10].wrapping_div(b[10]),
     ];
 
-    const A : R = SC[4];
-    const B : R = SC[5];
+    let cpu_info = cpu_info();
+    let res0 = cpu_info.res()[0];
+    let arg0 = cpu_info.args()[0];
+    let arg1 = cpu_info.args()[1];
+    let ra = cpu_info.scratch()[4];
+    let rb = cpu_info.scratch()[5];
     let mut prog = Executable::from_ir(&[
-        Ld(U64, A, ARG[0], 0*8),
-        Ld(U64, B, ARG[1], 0*8),
-        Add(A, A, B.into()),
-        St(U64, A, ARG[0], 0*8),
+        Ld(U64, ra, arg0, 0*8),
+        Ld(U64, rb, arg1, 0*8),
+        Add(ra, ra, rb.into()),
+        St(U64, ra, arg0, 0*8),
 
-        Ld(U64, A, ARG[0], 1*8),
-        Ld(U64, B, ARG[1], 1*8),
-        Sub(A, A, B.into()),
-        St(U64, A, ARG[0], 1*8),
+        Ld(U64, ra, arg0, 1*8),
+        Ld(U64, rb, arg1, 1*8),
+        Sub(ra, ra, rb.into()),
+        St(U64, ra, arg0, 1*8),
 
-        Ld(U64, A, ARG[0], 2*8),
-        Ld(U64, B, ARG[1], 2*8),
-        And(A, A, B.into()),
-        St(U64, A, ARG[0], 2*8),
+        Ld(U64, ra, arg0, 2*8),
+        Ld(U64, rb, arg1, 2*8),
+        And(ra, ra, rb.into()),
+        St(U64, ra, arg0, 2*8),
 
-        Ld(U64, A, ARG[0], 3*8),
-        Ld(U64, B, ARG[1], 3*8),
-        Or(A, A, B.into()),
-        St(U64, A, ARG[0], 3*8),
+        Ld(U64, ra, arg0, 3*8),
+        Ld(U64, rb, arg1, 3*8),
+        Or(ra, ra, rb.into()),
+        St(U64, ra, arg0, 3*8),
 
-        Ld(U64, A, ARG[0], 4*8),
-        Ld(U64, B, ARG[1], 4*8),
-        Xor(A, A, B.into()),
-        St(U64, A, ARG[0], 4*8),
+        Ld(U64, ra, arg0, 4*8),
+        Ld(U64, rb, arg1, 4*8),
+        Xor(ra, ra, rb.into()),
+        St(U64, ra, arg0, 4*8),
 
-        Ld(U64, A, ARG[0], 5*8),
-        Ld(U64, B, ARG[1], 5*8),
-        Shl(A, A, B.into()),
-        St(U64, A, ARG[0], 5*8),
+        Ld(U64, ra, arg0, 5*8),
+        Ld(U64, rb, arg1, 5*8),
+        Shl(ra, ra, rb.into()),
+        St(U64, ra, arg0, 5*8),
 
-        Ld(U64, A, ARG[0], 6*8),
-        Ld(U64, B, ARG[1], 6*8),
-        Shr(A, A, B.into()),
-        St(U64, A, ARG[0], 6*8),
+        Ld(U64, ra, arg0, 6*8),
+        Ld(U64, rb, arg1, 6*8),
+        Shr(ra, ra, rb.into()),
+        St(U64, ra, arg0, 6*8),
 
-        Ld(U64, A, ARG[0], 7*8),
-        Ld(U64, B, ARG[1], 7*8),
-        Sar(A, A, B.into()),
-        St(U64, A, ARG[0], 7*8),
+        Ld(U64, ra, arg0, 7*8),
+        Ld(U64, rb, arg1, 7*8),
+        Sar(ra, ra, rb.into()),
+        St(U64, ra, arg0, 7*8),
 
-        Ld(U64, A, ARG[0], 8*8),
-        Ld(U64, B, ARG[1], 8*8),
-        Mul(A, A, B.into()),
-        St(U64, A, ARG[0], 8*8),
+        Ld(U64, ra, arg0, 8*8),
+        Ld(U64, rb, arg1, 8*8),
+        Mul(ra, ra, rb.into()),
+        St(U64, ra, arg0, 8*8),
 
-        Ld(U64, A, ARG[0], 9*8),
-        Ld(U64, B, ARG[1], 9*8),
-        Udiv(A, A, B.into()),
-        St(U64, A, ARG[0], 9*8),
+        Ld(U64, ra, arg0, 9*8),
+        Ld(U64, rb, arg1, 9*8),
+        Udiv(ra, ra, rb.into()),
+        St(U64, ra, arg0, 9*8),
 
-        Ld(U64, A, ARG[0], 10*8),
-        Ld(U64, B, ARG[1], 10*8),
-        Sdiv(A, A, B.into()),
-        St(U64, A, ARG[0], 10*8),
+        Ld(U64, ra, arg0, 10*8),
+        Ld(U64, rb, arg1, 10*8),
+        Sdiv(ra, ra, rb.into()),
+        St(U64, ra, arg0, 10*8),
         Ret,
     ])
     .unwrap();
@@ -226,60 +255,63 @@ fn generic_regimm() {
         a[10].wrapping_div(b[10]),
     ];
 
-    const A : R = SC[4];
-    const B : R = SC[5];
+    let cpu_info = cpu_info();
+    let res0 = cpu_info.res()[0];
+    let arg0 = cpu_info.args()[0];
+    let arg1 = cpu_info.args()[1];
+    let ra = cpu_info.scratch()[4];
     let mut prog = Executable::from_ir(&[
-        Ld(U64, A, ARG[0], 0*8),
-        Add(A, A, b[0].into()),
-        St(U64, A, ARG[0], 0*8),
+        Ld(U64, ra, arg0, 0*8),
+        Add(ra, ra, b[0].into()),
+        St(U64, ra, arg0, 0*8),
 
-        Ld(U64, A, ARG[0], 1*8),
-        Sub(A, A, b[1].into()),
-        St(U64, A, ARG[0], 1*8),
+        Ld(U64, ra, arg0, 1*8),
+        Sub(ra, ra, b[1].into()),
+        St(U64, ra, arg0, 1*8),
 
-        Ld(U64, A, ARG[0], 2*8),
-        And(A, A, b[2].into()),
-        St(U64, A, ARG[0], 2*8),
+        Ld(U64, ra, arg0, 2*8),
+        And(ra, ra, b[2].into()),
+        St(U64, ra, arg0, 2*8),
 
-        Ld(U64, A, ARG[0], 3*8),
-        Or(A, A, b[3].into()),
-        St(U64, A, ARG[0], 3*8),
+        Ld(U64, ra, arg0, 3*8),
+        Or(ra, ra, b[3].into()),
+        St(U64, ra, arg0, 3*8),
 
-        Ld(U64, A, ARG[0], 4*8),
-        Xor(A, A, b[4].into()),
-        St(U64, A, ARG[0], 4*8),
+        Ld(U64, ra, arg0, 4*8),
+        Xor(ra, ra, b[4].into()),
+        St(U64, ra, arg0, 4*8),
 
-        Ld(U64, A, ARG[0], 5*8),
-        Shl(A, A, b[5].into()),
-        St(U64, A, ARG[0], 5*8),
+        Ld(U64, ra, arg0, 5*8),
+        Shl(ra, ra, b[5].into()),
+        St(U64, ra, arg0, 5*8),
 
-        Ld(U64, A, ARG[0], 6*8),
-        Shr(A, A, b[6].into()),
-        St(U64, A, ARG[0], 6*8),
+        Ld(U64, ra, arg0, 6*8),
+        Shr(ra, ra, b[6].into()),
+        St(U64, ra, arg0, 6*8),
 
-        Ld(U64, A, ARG[0], 7*8),
-        Sar(A, A, b[7].into()),
-        St(U64, A, ARG[0], 7*8),
+        Ld(U64, ra, arg0, 7*8),
+        Sar(ra, ra, b[7].into()),
+        St(U64, ra, arg0, 7*8),
 
-        Ld(U64, A, ARG[0], 8*8),
-        Mul(A, A, b[8].into()),
-        St(U64, A, ARG[0], 8*8),
+        Ld(U64, ra, arg0, 8*8),
+        Mul(ra, ra, b[8].into()),
+        St(U64, ra, arg0, 8*8),
 
-        Ld(U64, A, ARG[0], 9*8),
-        Udiv(A, A, b[9].into()),
-        St(U64, A, ARG[0], 9*8),
+        Ld(U64, ra, arg0, 9*8),
+        Udiv(ra, ra, b[9].into()),
+        St(U64, ra, arg0, 9*8),
 
-        Ld(U64, A, ARG[0], 10*8),
-        Sdiv(A, A, b[10].into()),
-        St(U64, A, ARG[0], 10*8),
+        Ld(U64, ra, arg0, 10*8),
+        Sdiv(ra, ra, b[10].into()),
+        St(U64, ra, arg0, 10*8),
         Ret,
     ])
     .unwrap();
     
+    // println!("{}", prog.fmt_url());
     let a0 = a.as_ptr() as u64;
     let a1 = b.as_ptr() as u64;
     let (res, _) = unsafe { prog.call(0, &[a0, a1]).unwrap() };
-    //println!("{}", prog.fmt_url());
 
     assert_eq!(a, expected);
 }

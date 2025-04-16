@@ -3,7 +3,7 @@
 
 use std::collections::VecDeque;
 
-use ejit::{Ins, Type};
+use ejit::{cpu_info, CpuInfo, Ins, Type, R};
 use revm::{primitives::{EVMResult, TxKind}, Database, Evm};
 
 pub struct EjitEvm<'a, EXT, DB: Database> {
@@ -34,29 +34,47 @@ pub struct Compiler {
     vstack: VStack,
     constants : Vec<[u64; 4]>,
     label: u32,
+    cpu_info: CpuInfo,
+    t0 : R,
+    t1 : R,
+    t2 : R,
+    t3 : R,
+    mem : R,
+    memsize : R,
+    bp : R,
+    gasreg : R,
 }
 
 mod cregs {
-    pub use ejit::regs::*;
-    pub const T0 : ejit::R = ejit::regs::ALL[0];
-    pub const T1 : ejit::R = ejit::regs::ALL[1];
-    pub const T2 : ejit::R = ejit::regs::ALL[2];
-    pub const T3 : ejit::R = ejit::regs::ALL[3];
-    pub const MEM : ejit::R = ejit::regs::ALL[4];
-    pub const MEMSIZE : ejit::R = ejit::regs::ALL[5];
-    pub const BP : ejit::R = ejit::regs::ALL[6];
-    pub const GASREG : ejit::R = ejit::regs::ALL[7];
-
     pub const EXTEND_MEM : u32 = 1234;
 }
 
 impl Compiler {
     fn new() -> Self {
+        let cpu_info = ejit::cpu_info();
+        let t0 = cpu_info.avail()[0];
+        let t1 = cpu_info.avail()[1];
+        let t2 = cpu_info.avail()[2];
+        let t3 = cpu_info.avail()[3];
+        let mem = cpu_info.avail()[4];
+        let memsize = cpu_info.avail()[5];
+        let bp = cpu_info.avail()[6];
+        let gasreg = cpu_info.avail()[7];
+
         let mut c = Self {
             ins: Default::default(),
             vstack: Default::default(),
             constants: Default::default(),
             label: 10000,
+            cpu_info,
+            t0,
+            t1,
+            t2,
+            t3,
+            mem,
+            memsize,
+            bp,
+            gasreg,
         };
         c
     }
@@ -64,7 +82,17 @@ impl Compiler {
     fn compile(&mut self, data: &[u8]) {
         use Ins::*;
         use cregs::*;
-        self.ins.extend([Mov(BP, SP.into())]);
+        let sp = self.cpu_info.sp();
+        let bp = self.bp;
+        let t0 = self.t0;
+        let t1 = self.t1;
+        let t2 = self.t2;
+        let t3 = self.t3;
+        let mem = self.mem;
+        let memsize = self.memsize;
+        let BP = self.bp;
+        let gasreg = self.gasreg;
+        self.ins.extend([Mov(bp, sp.into())]);
         let mut pc = 0;
         use revm::interpreter::opcode::*;
         use Ins::*;
@@ -75,42 +103,42 @@ impl Compiler {
                     let Some(&imm) = data.get(pc) else { todo!() };
                     self.vstack.push(VElem::Constant([0, 0, 0, imm as u64]));
                     pc += 1;
-                    self.ins.extend([Mov(T0, 3.into()), Add(GASREG, GASREG, T0.into())]);
+                    self.ins.extend([Mov(t0, 3.into()), Add(gasreg, gasreg, t0.into())]);
                 }
                 ADD => {
                     let (a, b) = self.vstack.top2();
-                    self.gen_addr(T0, a);
-                    self.gen_addr(T1, b);
-                    self.gen_value(T2);
+                    self.gen_addr(t0, a);
+                    self.gen_addr(t1, b);
+                    self.gen_value(t2);
                 }
                 MSTORE => {
                     use ejit::Type::*;
                     use ejit::Cond::*;
                     let (addr, value) = self.vstack.top2();
-                    self.gen_addr(T0, value);
-                    self.gen_u64(T1, addr);
-                    self.gen_mem_expand(T1);
-                    self.ins.extend([Add(GASREG, GASREG, 3.into())]);
+                    self.gen_addr(t0, value);
+                    self.gen_u64(t1, addr);
+                    self.gen_mem_expand(t1);
+                    self.ins.extend([Add(gasreg, gasreg, 3.into())]);
                     self.ins.extend([
-                        Add(T1, T1, MEM.into()),
-                        Ld(U64, T2, T0, 0),
-                        Ld(U64, T3, T0, 8),
-                        St(U64, T2, T1, 0),
-                        St(U64, T3, T1, 8),
-                        Ld(U64, T2, T0, 16),
-                        Ld(U64, T3, T0, 24),
-                        St(U64, T2, T1, 16),
-                        St(U64, T3, T1, 24),
+                        Add(t1, t1, mem.into()),
+                        Ld(U64, t2, t0, 0),
+                        Ld(U64, t3, t0, 8),
+                        St(U64, t2, t1, 0),
+                        St(U64, t3, t1, 8),
+                        Ld(U64, t2, t0, 16),
+                        Ld(U64, t3, t0, 24),
+                        St(U64, t2, t1, 16),
+                        St(U64, t3, t1, 24),
                     ]);
                     self.label += 1;
                 }
                 RETURN => {
                     let (addr, len) = self.vstack.top2();
                     use ejit::regs::*;
-                    self.gen_addr(RES[0], addr);
-                    self.gen_u64(RES[1], len);
-                    self.gen_mem_expand(T1);
-                    self.ins.extend([Mov(SP, BP.into()), Ret]);
+                    self.gen_addr(self.cpu_info.res()[0], addr);
+                    self.gen_u64(self.cpu_info.res()[1], len);
+                    self.gen_mem_expand(t1);
+                    self.ins.extend([Mov(sp, BP.into()), Ret]);
                 }
                 _ => todo!(),
             }
@@ -143,7 +171,7 @@ impl Compiler {
                 }
             }
             VElem::Bp(depth) => {
-                self.ins.extend([Add(dest, BP, depth.into())]);
+                self.ins.extend([Add(dest, self.bp, depth.into())]);
             }
         };
     }
@@ -164,11 +192,11 @@ impl Compiler {
         use ejit::Cond::*;
         use ejit::Ins::*;
         self.ins.extend([
-            Mov(T2, 32.into()),
-            Add(T2, T2, src.into()),
-            Addr(T0, self.label),
-            Cmp(T2, MEMSIZE.into()),
-            B(Ugt, EXTEND_MEM),
+            Mov(self.t2, 32.into()),
+            Add(self.t2, self.t2, src.into()),
+            Addr(self.t0, self.label),
+            Cmp(self.t2, self.memsize.into()),
+            Br(Ugt, EXTEND_MEM),
             Label(self.label),
         ]);
     }
@@ -176,9 +204,10 @@ impl Compiler {
     fn gen_value(&mut self, reg: ejit::R) {
         use ejit::Ins::*;
         use ejit::regs::*;
+        let sp = self.cpu_info.sp();
         self.vstack.push(VElem::Bp(self.vstack.new_values as i32));
         self.vstack.new_values += 32;
-        self.ins.extend([Mov(reg, SP.into()), Enter(32)]);
+        self.ins.extend([Mov(reg, sp.into()), Enter(32)]);
     }
 }
 

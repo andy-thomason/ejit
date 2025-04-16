@@ -16,11 +16,12 @@ pub struct V(pub (crate) u8);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Imm(pub u64);
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Src {
     SR(u8),
     SV(u8),
     Imm(i64),
+    Bytes(Box<[u8]>),
 }
 
 impl From<R> for Src {
@@ -41,9 +42,35 @@ impl From<V> for Src {
     }
 }
 
-impl<T> From<T> for Src where T : Into<i64> {
-    fn from(value: T) -> Self {
-        Self::Imm(value.into())
+macro_rules! from_t_for_src {
+    ($($t : ty),*) => {
+        $(
+            impl From<$t> for Src {
+                fn from(value: $t) -> Self {
+                    Self::Imm(value.into())
+                }
+            }
+        )*
+    };
+}
+
+from_t_for_src!(u8, i8, u16, i16, u32, i32, i64);
+
+impl From<u64> for Src {
+    fn from(value: u64) -> Self {
+        Self::Imm(i64::from_le_bytes(value.to_le_bytes()))
+    }
+}
+
+impl From<f32> for Src {
+    fn from(value: f32) -> Self {
+        Self::from(value.to_bits())
+    }
+}
+
+impl From<f64> for Src {
+    fn from(value: f64) -> Self {
+        Self::from(value.to_bits())
     }
 }
 
@@ -208,6 +235,79 @@ pub enum CpuLevel {
     Simd512 = 4,
 }
 
+#[derive(Clone, Debug)]
+pub struct CpuInfo {
+    cpu_level: CpuLevel,
+
+    args: Box<[R]>,
+    res: Box<[R]>,
+    save: Box<[R]>,
+    scratch: Box<[R]>,
+    avail: Box<[R]>,
+
+    vargs: Box<[V]>,
+    vres: Box<[V]>,
+    vsave: Box<[V]>,
+    vscratch: Box<[V]>,
+    vavail: Box<[V]>,
+
+    sp: R,
+}
+
+impl CpuInfo {
+    pub fn max_vbits(&self) -> usize {
+        self.cpu_level.max_vbits()
+    }
+    
+    pub fn cpu_level(&self) -> CpuLevel {
+        self.cpu_level
+    }
+    
+    pub fn args(&self) -> &[R] {
+        &self.args
+    }
+    
+    pub fn res(&self) -> &[R] {
+        &self.res
+    }
+    
+    pub fn save(&self) -> &[R] {
+        &self.save
+    }
+    
+    pub fn scratch(&self) -> &[R] {
+        &self.scratch
+    }
+    
+    pub fn avail(&self) -> &[R] {
+        &self.avail
+    }
+    
+    pub fn vargs(&self) -> &[V] {
+        &self.vargs
+    }
+    
+    pub fn vres(&self) -> &[V] {
+        &self.vres
+    }
+    
+    pub fn vsave(&self) -> &[V] {
+        &self.vsave
+    }
+    
+    pub fn vscratch(&self) -> &[V] {
+        &self.vscratch
+    }
+    
+    pub fn vavail(&self) -> &[V] {
+        &self.vavail
+    }
+    
+    pub fn sp(&self) -> R {
+        self.sp
+    }
+}
+
 impl CpuLevel {
     fn max_vbits(&self) -> usize {
         match self {
@@ -285,34 +385,35 @@ pub enum Ins {
     Neg(R, Src),
 
     /// Vector arithmetic
-    Vadd(Type, Vsize, V, V, V),
-    Vsub(Type, Vsize, V, V, V),
-    Vand(Type, Vsize, V, V, V),
-    Vor(Type, Vsize, V, V, V),
-    Vxor(Type, Vsize, V, V, V),
-    Vshl(Type, Vsize, V, V, V), // Note: on x86 src2 is broadcast.
-    Vshr(Type, Vsize, V, V, V), // Note: on x86 src2 is broadcast.
-    Vmul(Type, Vsize, V, V, V),
+    Vadd(Type, Vsize, V, V, Src),
+    Vsub(Type, Vsize, V, V, Src),
+    Vand(Type, Vsize, V, V, Src),
+    Vor(Type, Vsize, V, V, Src),
+    Vxor(Type, Vsize, V, V, Src),
+    Vshl(Type, Vsize, V, V, Src), // Note: on x86 src2 is broadcast.
+    Vshr(Type, Vsize, V, V, Src), // Note: on x86 src2 is broadcast.
+    Vmul(Type, Vsize, V, V, Src),
 
-    Vmovi(Type, Vsize, V, u64),
+    Vmov(Type, Vsize, V, Src),
+    Vrecpe(Type, Vsize, V, Src),
+    Vrsqrte(Type, Vsize, V, Src),
 
-    Vmov(Type, Vsize, V, V),
-    Vnot(Type, Vsize, V, V),
-    Vneg(Type, Vsize, V, V),
-    Vrecpe(Type, Vsize, V, V),
-    Vrsqrte(Type, Vsize, V, V),
+    // Vcmp(Cond, Type, Vsize, V, Src),
+    // Vsel(Type, Vsize, V, V, Src),
+    // Vany(Type, Vsize, V, Src), // nz if any true
+    // Vall(Type, Vsize, V, Src), // nz if all true
 
     // Control flow
     /// Call indirect using stack or R(30)
-    Call(R),
+    Ci(R),
 
     /// Branch indirect
-    Branch(R),
+    Bi(R),
 
     /// Use the flags to branch conditionally
     /// Only after a Cmp
-    B(Cond, u32),
-    J(u32),
+    Br(Cond, u32),
+    Jmp(u32),
 
     Sel(Cond, R, R, R),
 
@@ -461,6 +562,9 @@ mod x86_64;
 
 #[cfg(target_arch = "x86_64")]
 pub use x86_64::regs;
+
+#[cfg(target_arch = "x86_64")]
+pub use x86_64::cpu_info;
 
 #[cfg(target_arch = "aarch64")]
 mod aarch64;

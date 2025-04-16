@@ -281,26 +281,6 @@ fn test_vst() {
 }
 
 #[test]
-fn test_xxx() {
-    use regs::*;
-    use Ins::*;
-    use Type::*;
-    let mut prog = Executable::from_ir(&[
-        Enter(16),
-        St(U8, ARG[0], SP, 6),
-        St(U8, ARG[1], SP, 7),
-        Ld(U16, RES[0], SP, 6),
-        Leave(16),
-        Ret,
-    ])
-    .unwrap();
-    assert_eq!(
-        prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=48+83+ec+10+40+88+7c+24+06+40+88+74+24+07+66+48+0f+b7+44+24+06+48+83+c4+10+c3&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
-    );
-}
-
-#[test]
 fn test_modrm() {
     use regs::*;
     use Ins::*;
@@ -506,19 +486,19 @@ fn test_vpadd() {
     use Type::*;
     use Vsize::*;
     let mut prog = Executable::from_ir(&[
-        Vadd(U8, V128, V(0),V(0),V(0)),
-        Vadd(U16, V128, V(0),V(0),V(0)),
-        Vadd(U32, V128, V(0),V(0),V(0)),
-        Vadd(U64, V128, V(0),V(0),V(0)),
-        Vadd(F32, V128, V(0),V(0),V(0)),
-        Vadd(F64, V128, V(0),V(0),V(0)),
-        Vadd(U8, V128, V(0),V(0),V(0)),
-        Vadd(U8, V128, V(15),V(0),V(0)),
-        Vadd(U8, V128, V(0),V(15),V(0)),
-        Vadd(U8, V128, V(0),V(0),V(15)),
-        Vadd(U8, V128, V(1),V(2),V(3)),
-        Vadd(U8, V256, V(0),V(0),V(0)),
-        Vadd(U8, V256, V(0),V(0),V(15)),
+        Vadd(U8, V128, V(0), V(0), V(0).into()),
+        Vadd(U16, V128, V(0), V(0), V(0).into()),
+        Vadd(U32, V128, V(0), V(0), V(0).into()),
+        Vadd(U64, V128, V(0), V(0), V(0).into()),
+        Vadd(F32, V128, V(0), V(0), V(0).into()),
+        Vadd(F64, V128, V(0), V(0), V(0).into()),
+        Vadd(U8, V128, V(0), V(0), V(0).into()),
+        Vadd(U8, V128, V(15), V(0), V(0).into()),
+        Vadd(U8, V128, V(0), V(15), V(0).into()),
+        Vadd(U8, V128, V(0), V(0), V(15).into()),
+        Vadd(U8, V128, V(1), V(2), V(3).into()),
+        Vadd(U8, V256, V(0), V(0), V(0).into()),
+        Vadd(U8, V256, V(0), V(0), V(15).into()),
         Ret,
     ])
     .unwrap();
@@ -529,25 +509,47 @@ fn test_vpadd() {
 }
 
 #[test]
+fn test_vpaddi() {
+    use regs::*;
+    use Ins::*;
+    use Type::*;
+    use Vsize::*;
+    let mut prog = Executable::from_ir(&[
+        Vadd(U8, V128, V(1), V(15), 0x12.into()),
+        Vadd(U16, V128, V(1), V(15), 0x1234.into()),
+        Vadd(U32, V128, V(1), V(15), 0x12345678.into()),
+        Vadd(U64, V128, V(1), V(15), 0x123456789abcdef0_i64.into()),
+        Vadd(F32, V128, V(1), V(15), 1.0_f32.into()),
+        Vadd(F64, V128, V(1), V(15), 1.0_f64.into()),
+        Ret,
+    ])
+    .unwrap();
+    assert_eq!(
+        prog.fmt_url(),
+        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f9+fc+0d+29+00+00+00+c5+f9+fd+0d+31+00+00+00+c5+f9+fe+0d+39+00+00+00+c5+f9+d4+0d+41+00+00+00+c5+f8+58+0d+49+00+00+00+c5+f9+58+0d+51+00+00+00+c3+12+12+12+12+12+12+12+12+12+12+12+12+12+12+12+12+34+12+34+12+34+12+34+12+34+12+34+12+34+12+34+12+78+56+34+12+78+56+34+12+78+56+34+12+78+56+34+12+f0+de+bc+9a+78+56+34+12+f0+de+bc+9a+78+56+34+12+00+00+80+3f+00+00+80+3f+00+00+80+3f+00+00+80+3f+00+00+00+00+00+00+f0+3f+00+00+00+00+00+00+f0+3f&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
+    );
+}
+
+#[test]
 fn test_vpsub() {
     use regs::*;
     use Ins::*;
     use Type::*;
     use Vsize::*;
     let mut prog = Executable::from_ir(&[
-        Vsub(U8, V128, V(0),V(0),V(0)),
-        Vsub(U16, V128, V(0),V(0),V(0)),
-        Vsub(U32, V128, V(0),V(0),V(0)),
-        Vsub(U64, V128, V(0),V(0),V(0)),
-        Vsub(F32, V128, V(0),V(0),V(0)),
-        Vsub(F64, V128, V(0),V(0),V(0)),
-        Vsub(U8, V128, V(0),V(0),V(0)),
-        Vsub(U8, V128, V(15),V(0),V(0)),
-        Vsub(U8, V128, V(0),V(15),V(0)),
-        Vsub(U8, V128, V(0),V(0),V(15)),
-        Vsub(U8, V128, V(1),V(2),V(3)),
-        Vsub(U8, V256, V(0),V(0),V(0)),
-        Vsub(U8, V256, V(0),V(0),V(15)),
+        Vsub(U8, V128, V(0), V(0), V(0).into()),
+        Vsub(U16, V128, V(0), V(0), V(0).into()),
+        Vsub(U32, V128, V(0), V(0), V(0).into()),
+        Vsub(U64, V128, V(0), V(0), V(0).into()),
+        Vsub(F32, V128, V(0), V(0), V(0).into()),
+        Vsub(F64, V128, V(0), V(0), V(0).into()),
+        Vsub(U8, V128, V(0), V(0), V(0).into()),
+        Vsub(U8, V128, V(15), V(0), V(0).into()),
+        Vsub(U8, V128, V(0), V(15), V(0).into()),
+        Vsub(U8, V128, V(0), V(0), V(15).into()),
+        Vsub(U8, V128, V(1), V(2), V(3).into()),
+        Vsub(U8, V256, V(0), V(0), V(0).into()),
+        Vsub(U8, V256, V(0), V(0), V(15).into()),
         Ret,
     ])
     .unwrap();
@@ -564,12 +566,12 @@ fn test_vandorxor() {
     use Type::*;
     use Vsize::*;
     let mut prog = Executable::from_ir(&[
-        Vand(U8, V128, V(1),V(2),V(3)),
-        Vor(U8, V128, V(1),V(2),V(3)),
-        Vxor(U8, V128, V(1),V(2),V(3)),
-        Vand(U8, V256, V(1),V(2),V(3)),
-        Vor(U8, V256, V(1),V(2),V(3)),
-        Vxor(U8, V256, V(1),V(2),V(3)),
+        Vand(U8, V128, V(1), V(2), V(3).into()),
+        Vor(U8, V128, V(1), V(2), V(3).into()),
+        Vxor(U8, V128, V(1), V(2), V(3).into()),
+        Vand(U8, V256, V(1), V(2), V(3).into()),
+        Vor(U8, V256, V(1), V(2), V(3).into()),
+        Vxor(U8, V256, V(1), V(2), V(3).into()),
         Ret,
     ])
     .unwrap();
@@ -586,12 +588,12 @@ fn test_vshift() {
     use Type::*;
     use Vsize::*;
     let mut prog = Executable::from_ir(&[
-        Vshl(U32, V128, V(1),V(2),V(3)),
-        Vshr(S32, V128, V(1),V(2),V(3)),
-        Vshr(U32, V128, V(1),V(2),V(3)),
-        Vshl(U32, V256, V(1),V(2),V(3)),
-        Vshr(S32, V256, V(1),V(2),V(3)),
-        Vshr(U32, V256, V(1),V(2),V(3)),
+        Vshl(U32, V128, V(1), V(2), V(3).into()),
+        Vshr(S32, V128, V(1), V(2), V(3).into()),
+        Vshr(U32, V128, V(1), V(2), V(3).into()),
+        Vshl(U32, V256, V(1), V(2), V(3).into()),
+        Vshr(S32, V256, V(1), V(2), V(3).into()),
+        Vshr(U32, V256, V(1), V(2), V(3).into()),
         Ret,
     ])
     .unwrap();
@@ -608,10 +610,10 @@ fn test_vmul() {
     use Type::*;
     use Vsize::*;
     let mut prog = Executable::from_ir(&[
-        Vmul(F32, V128, V(1),V(2),V(3)),
-        Vmul(F64, V128, V(1),V(2),V(3)),
-        Vmul(F32, V256, V(1),V(2),V(3)),
-        Vmul(F64, V256, V(1),V(2),V(3)),
+        Vmul(F32, V128, V(1), V(2), V(3).into()),
+        Vmul(F64, V128, V(1), V(2), V(3).into()),
+        Vmul(F32, V256, V(1), V(2), V(3).into()),
+        Vmul(F64, V256, V(1), V(2), V(3).into()),
         Ret,
     ])
     .unwrap();
@@ -628,10 +630,12 @@ fn test_vmovi() {
     use Type::*;
     use Vsize::*;
     let mut prog = Executable::from_ir(&[
-        Vmovi(U8, V128, V(0), 0x12),
-        Vmovi(U16, V128, V(0), 0x1234),
-        Vmovi(U32, V128, V(0), 0x12345678),
-        Vmovi(U64, V128, V(0), 0x123456789abcdef0),
+        Vmov(U8, V128, V(15), 0x12.into()),
+        Vmov(U16, V128, V(15), 0x1234.into()),
+        Vmov(U32, V128, V(15), 0x12345678.into()),
+        Vmov(U64, V128, V(15), 0x123456789abcdef0_i64.into()),
+        Vmov(F32, V128, V(15), 1.0_f32.into()),
+        Vmov(F64, V128, V(15), 1.0_f64.into()),
         Ret,
     ])
     .unwrap();
@@ -642,41 +646,21 @@ fn test_vmovi() {
 }
 
 #[test]
-fn test_vnot() {
-    use regs::*;
-    use Ins::*;
-    use Type::*;
-    use Vsize::*;
-    let mut prog = Executable::from_ir(&[
-        Vnot(U8, V128, V(0), V(0)),
-        Vnot(U16, V128, V(0), V(0)),
-        Vnot(U32, V128, V(0), V(0)),
-        Vnot(U64, V128, V(0), V(0)),
-        Ret,
-    ])
-    .unwrap();
-    assert_eq!(
-        prog.fmt_url(),
-        "https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=c5+f9+ef+05+19+00+00+00+c5+f9+ef+05+11+00+00+00+c5+f9+ef+05+09+00+00+00+c5+f9+ef+05+01+00+00+00+c3+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff+ff&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly"
-    );
-}
-
-#[test]
 fn test_vmov() {
     use regs::*;
     use Ins::*;
     use Type::*;
     use Vsize::*;
     let mut prog = Executable::from_ir(&[
-        Vmov(U8, V128, V(0), V(0)),
-        Vmov(U16, V128, V(0), V(0)),
-        Vmov(U32, V128, V(0), V(0)),
-        Vmov(U64, V128, V(0), V(0)),
-        Vmov(U8, V128, V(1), V(2)),
-        Vmov(U8, V128, V(2), V(4)),
-        Vmov(U8, V128, V(3), V(6)),
-        Vmov(U8, V128, V(4), V(8)),
-        Vmov(U8, V128, V(5), V(10)),
+        Vmov(U8, V128, V(0), V(0).into()),
+        Vmov(U16, V128, V(0), V(0).into()),
+        Vmov(U32, V128, V(0), V(0).into()),
+        Vmov(U64, V128, V(0), V(0).into()),
+        Vmov(U8, V128, V(1), V(2).into()),
+        Vmov(U8, V128, V(2), V(4).into()),
+        Vmov(U8, V128, V(3), V(6).into()),
+        Vmov(U8, V128, V(4), V(8).into()),
+        Vmov(U8, V128, V(5), V(10).into()),
         Ret,
     ])
     .unwrap();

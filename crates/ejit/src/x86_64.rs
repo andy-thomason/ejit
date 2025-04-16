@@ -1,7 +1,4 @@
-use crate::{Cond, CpuLevel, Error, Executable, Fixup, Ins, Scale, Src, State, Type, Vsize, R, V};
-
-#[cfg(test)]
-mod tests;
+use crate::{Cond, CpuInfo, CpuLevel, Error, Executable, Fixup, Ins, Scale, Src, State, Type, Vsize, R, V};
 
 pub mod regs {
     use crate::R;
@@ -24,14 +21,14 @@ pub mod regs {
     pub const R15: R = R(15);
 
     // https://en.wikipedia.org/wiki/X86_calling_conventions
-    pub const ARG: [R; 6] = [RDI, RSI, RDX, RCX, R8, R9];
-    pub const RES: [R; 2] = [RAX, RDX];
-    pub const SAVE: [R; 6] = [RBX, RBP, R12, R13, R14, R15];
-    pub const SC: [R; 7] = [RAX, RCX, RDX, R8, R9, R10, R11];
-    pub const ALL: [R; 15] = [
-        RAX, RBX, RCX, RDX, RBP, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15,
-    ];
-    pub const SP: R = R(4);
+    // pub const ARG: [R; 6] = [RDI, RSI, RDX, RCX, R8, R9];
+    // pub const RES: [R; 2] = [RAX, RDX];
+    // pub const SAVE: [R; 6] = [RBX, RBP, R12, R13, R14, R15];
+    // pub const SC: [R; 7] = [RAX, RCX, RDX, R8, R9, R10, R11];
+    // pub const ALL: [R; 15] = [
+    //     RAX, RBX, RCX, RDX, RBP, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15,
+    // ];
+    // pub const SP: R = R(4);
 }
 
 // See x86_64.s
@@ -136,22 +133,27 @@ const OP_VSHR: [(u8, u8); 6] = [(1, 0x00), (1, 0xd1), (1, 0xd2), (1, 0xd3), (1, 
 const OP_VSAR: [(u8, u8); 6] = [(1, 0x00), (1, 0xe1), (1, 0xe2), (1, 0x00), (1, 0x00), (1, 0x00)];
 const OP_VMUL: [(u8, u8); 6] = [(1, 0x00), (0, 0x00), (0, 0x00), (0, 0x00), (0, 0x59), (1, 0x59)];
 const OP_VMOV: [(u8, u8); 6] = [(0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10)];
-const OP_VMOVI: [(u8, u8); 6] = [(0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10), (0, 0x10)];
 const OP_VRSQRT: [(u8, u8); 6] = [(0, 0x00), (0, 0x00), (0, 0x00), (0, 0x00), (0, 0x52), (1, 0x52)];
 const OP_VRCP: [(u8, u8); 6] = [(0, 0x00), (0, 0x00), (0, 0x00), (0, 0x00), (0, 0x53), (1, 0x53)];
 
 const OP_MOVABS: u8 = 0xb8;
+const OP_PUSH: u8 = 0x50;
+const OP_PUSH8: u8 = 0x6a;
+const OP_PUSH32: u8 = 0x68;
+const OP_POP: u8 = 0x58;
+const OP_PFX_66: u8 = 0x66;
+
 
 /// A simlified CPU level specification.
-pub fn cpu_level() -> CpuLevel {
-    if
+pub fn cpu_info() -> CpuInfo {
+    let cpu_level = if
         !is_x86_feature_detected!("sse") ||
         !is_x86_feature_detected!("sse2") ||
         !is_x86_feature_detected!("sse3") ||
         !is_x86_feature_detected!("ssse3") ||
         !is_x86_feature_detected!("sse4.1") ||
-        !is_x86_feature_detected!("sse4.2") ||
-        !is_x86_feature_detected!("sse4a")
+        !is_x86_feature_detected!("sse4.2")
+        // !is_x86_feature_detected!("sse4a")
     {
         CpuLevel::Scalar
     } else if 
@@ -174,10 +176,28 @@ pub fn cpu_level() -> CpuLevel {
         CpuLevel::Simd256
     } else {
         CpuLevel::Simd512
+    };
+
+    use regs::*;
+    CpuInfo {
+        cpu_level,
+        args: Box::from(&[RDI, RSI, RDX, RCX, R8, R9][..]),
+        res: Box::from(&[RAX, RDX][..]),
+        save: Box::from(&[RBX, RBP, R12, R13, R14, R15][..]),
+        scratch: Box::from(&[RAX, RCX, RDX, R8, R9, R10, R11][..]),
+        avail: Box::from(&[
+            RAX, RCX, RDX, RBX, RBP, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15,
+        ][..]),
+        sp: RSP,
+        vargs: Box::from(&[][..]),
+        vres: Box::from(&[][..]),
+        vsave: Box::from(&[][..]),
+        vscratch: Box::from(&[][..]),
+        vavail: Box::from(&[
+            
+        ][..]),
     }
-
 }
-
 
 impl Executable {
     pub fn from_ir(ins: &[Ins]) -> Result<Executable, Error> {
@@ -217,7 +237,7 @@ impl Executable {
                     let modrm = 0x05 + dest.to_x86_low() * 8;
                     state.code.extend([rex, 0x8d, modrm, 0x00, 0x00, 0x00, 0x00]);
                 }
-                Call(dest) => {
+                Ci(dest) => {
                     let rex = 0x40 + dest.to_x86_high();
                     let op = 0xff;
                     let modrm = 0xd0 + dest.to_x86_low() * 8;
@@ -228,7 +248,7 @@ impl Executable {
                         state.code.extend([rex, op, modrm]);
                     }
                 }
-                Branch(dest) => {
+                Bi(dest) => {
                     let rex = 0x40 + dest.to_x86_high();
                     let op = 0xff;
                     let modrm = 0xe0 + dest.to_x86_low() * 8;
@@ -239,11 +259,11 @@ impl Executable {
                         state.code.extend([rex, op, modrm]);
                     }
                 }
-                B(cond, label) => {
+                Br(cond, label) => {
                     state.fixups.push((state.code.len(), Fixup::B(*cond, *label)));
                     state.code.extend([0; 6]);
                 }
-                J(label) => {
+                Jmp(label) => {
                     state.fixups.push((state.code.len(), Fixup::J(*label)));
                     state.code.extend([0; 6]);
                 }
@@ -335,15 +355,6 @@ impl Executable {
                 Vmov(ty, vsize, v, v1) => {
                     gen_vop(&mut state, &OP_VMOV, ty, *vsize, v, &V(0), v1, i)?;
                 }
-                Vmovi(ty, vsize, v, imm) => {
-                    gen_vimm(&mut state, &OP_VMOVI, *ty, *vsize, v, *imm, i)?;
-                }
-                Vnot(ty, vsize, v, v1) => {
-                    gen_vimm(&mut state, &OP_VXOR, *ty, *vsize, v, !0, i)?;
-                }
-                Vneg(ty, vsize, v, v1) => {
-                    gen_vimm(&mut state, &OP_VSUB, *ty, *vsize, v, 0, i)?;
-                }
                 Vrecpe(ty, vsize, v, v1) => {
                     gen_vop(&mut state, &OP_VRCP, ty, *vsize, v, &V(0), v1, i)?;
                 }
@@ -412,7 +423,7 @@ impl Executable {
 }
 
 /// Vector immediate instructions use constants.
-fn gen_vimm(state: &mut State, opcodes: &[(u8, u8); 6], ty: Type, vsize: Vsize, v: &V, imm: u64, i: &Ins) -> Result<(), Error> {
+fn gen_vimm(state: &mut State, opcodes: &[(u8, u8); 6], ty: Type, vsize: Vsize, v: &V, imm: i64, i: &Ins) -> Result<(), Error> {
     if ty.bits() > vsize.bits() || ty.bits() > 64 {
         return Err(Error::InvalidType(i.clone()))
     }
@@ -448,7 +459,7 @@ fn gen_vimm(state: &mut State, opcodes: &[(u8, u8); 6], ty: Type, vsize: Vsize, 
     Ok(())
 }
 
-fn gen_vop(state: &mut State, opcodes: &[(u8, u8); 6], ty: &Type, vsize: Vsize, v: &V, v1: &V, v2: &V, i: &Ins) -> Result<(), Error> {
+fn gen_vop(state: &mut State, opcodes: &[(u8, u8); 6], ty: &Type, vsize: Vsize, v: &V, v1: &V, v2: &Src, i: &Ins) -> Result<(), Error> {
     // https://www.felixcloutier.com/x86/paddb:paddw:paddd:paddq
     // https://www.felixcloutier.com/x86/addps
     // https://en.wikipedia.org/wiki/X86_SIMD_instruction_listings
@@ -458,25 +469,32 @@ fn gen_vop(state: &mut State, opcodes: &[(u8, u8); 6], ty: &Type, vsize: Vsize, 
         return Err(Error::InvalidType(i.clone()))
     }
 
-    let modrm = 0xc0 + v2.to_x86_low() + v.to_x86_low() * 8;
-    let (r, x, b, w) = (v.to_x86_high(), 0, v2.to_x86_high(), 0);
-    let l = if vsize == Vsize::V128 { 0 } else { 1 };
-    let v = v1.to_x86();
-    let m = 1; // 0x0f
-    // See OP_VADD etc.
-    let (p, op) = match ty {
-        Type::U8 | Type::S8 => opcodes[0],
-        Type::U16 | Type::S16 =>  opcodes[1],
-        Type::U32 | Type::S32 =>  opcodes[2],
-        Type::U64 | Type::S64 =>  opcodes[3],
-        Type::F32 =>  opcodes[4],
-        Type::F64 =>  opcodes[5],
-        _ => return Err(Error::UnsupportedVectorOperation(i.clone())),
-    };
-    if op == 0x00 {
-        return Err(Error::UnsupportedVectorOperation(i.clone()));
+    if let Some(v2) = v2.as_vreg() {
+        let modrm = 0xc0 + v2.to_x86_low() + v.to_x86_low() * 8;
+        let (r, x, b, w) = (v.to_x86_high(), 0, v2.to_x86_high(), 0);
+        let l = if vsize == Vsize::V128 { 0 } else { 1 };
+        let v = v1.to_x86();
+        let m = 1; // 0x0f
+        // See OP_VADD etc.
+        let (p, op) = match ty {
+            Type::U8 | Type::S8 => opcodes[0],
+            Type::U16 | Type::S16 =>  opcodes[1],
+            Type::U32 | Type::S32 =>  opcodes[2],
+            Type::U64 | Type::S64 =>  opcodes[3],
+            Type::F32 =>  opcodes[4],
+            Type::F64 =>  opcodes[5],
+            _ => return Err(Error::UnsupportedVectorOperation(i.clone())),
+        };
+        if op == 0x00 {
+            return Err(Error::UnsupportedVectorOperation(i.clone()));
+        }
+        gen_vex(state, r, x, b, w, 1, v, l, p, op, modrm);
+    } else if let Some(imm) = v2.as_imm64() {
+        gen_vimm(state, opcodes, *ty, vsize, v, imm, i)?;
+    } else {
+        return Err(Error::InvalidSrcArgument(i.clone()));
     }
-    gen_vex(state, r, x, b, w, 1, v, l, p, op, modrm);
+
     Ok(())
 }
 
@@ -504,24 +522,25 @@ fn gen_vex(state: &mut State, r: u8, x: u8, b: u8, w: u8, m: u8, v: u8, l: u8, p
     }
 }
 
-fn gen_addr(state: &mut State, r: u8, base: &R, index: Option<&R>, scale: Scale, imm: i32, i: &Ins) -> Result<(), Error> {
+fn gen_addr(state: &mut State, r: u8, base: Option<&R>, index: Option<&R>, scale: Scale, imm: i32, i: &Ins) -> Result<(), Error> {
     if index == Some(&regs::RSP) {
         return Err(Error::InvalidAddress(i.clone()))
     }
-    let modrm_mod = if imm == 0 && base.to_x86_low() != 5 {
+    let base_low = base.map(|r| r.to_x86_low()).unwrap_or_default();
+    let modrm_mod = if imm == 0 && base_low != 5 {
         0
     } else if TryInto::<i8>::try_into(imm).is_ok() {
         1
     } else {
         2
     };
-    if base.to_x86_low() != 4 && scale == Scale::X1 && index.is_none() {
-        state.code.push(modrm_mod * 0x40 + r * 0x08 + base.to_x86_low());
+    if base_low != 4 && scale == Scale::X1 && index.is_none() {
+        state.code.push(modrm_mod * 0x40 + r * 0x08 + base_low);
     } else {
         let index = index.map(R::to_x86_low).unwrap_or(4);
         state.code.extend([
             modrm_mod * 0x40 + r * 0x08 + 4,
-            scale.to_sib() * 0x40 + index * 0x08 + base.to_x86_low()
+            scale.to_sib() * 0x40 + index * 0x08 + base_low
         ]);
     }
     if modrm_mod == 1 {
@@ -532,16 +551,43 @@ fn gen_addr(state: &mut State, r: u8, base: &R, index: Option<&R>, scale: Scale,
     Ok(())
 }
 
+/// deprecate this.
 fn gen_load_store(state: &mut State, opcode: &[u8], pfx_66: bool, w: u8, r: &R, ra: &R, imm: i32, i: &Ins) -> Result<(), Error> {
     let has_pfx = opcode[1] == 0x0f;
     let op = if has_pfx { opcode[2] } else { opcode[1] };
     if pfx_66 {
-        state.code.push(0x66);
+        state.code.push(OP_PFX_66);
     }
     state.code.push(rex(r.to_x86_high(), 0, ra.to_x86_high(), w));
     if has_pfx { state.code.push(0x0f); }
     state.code.push(op);
-    gen_addr(state, r.to_x86_low(), ra, None, Scale::X1, imm, &i)
+    gen_addr(state, r.to_x86_low(), Some(ra), None, Scale::X1, imm, &i)
+}
+
+fn gen_mem(state: &mut State, pfx66: Option<u8>, pfx0f: Option<u8>, op: u8, w: u8, r: &R, base: Option<&R>, imm: i32, i: &Ins) -> Result<(), Error> {
+    if let Some(pfx) = pfx66 {
+        state.code.push(pfx);
+    }
+    let base_high = base.map(|r| r.to_x86_high()).unwrap_or_default();
+    state.code.push(rex(r.to_x86_high(), 0, base_high, w));
+    if let Some(pfx) = pfx0f {
+        state.code.push(pfx);
+    }
+    state.code.push(op);
+    gen_addr(state, r.to_x86_low(), base, None, Scale::X1, imm, &i)
+}
+
+fn gen_constant(state: &mut State, pfx66: Option<u8>, pfx0f: Option<u8>, op: u8, w: u8, r: &R, imm: i64, i: &Ins) -> Result<(), Error> {
+    if let Some(pfx) = pfx66 {
+        state.code.push(pfx);
+    }
+    state.code.push(rex(r.to_x86_high(), 0, 0, w));
+    if let Some(pfx) = pfx0f {
+        state.code.push(pfx);
+    }
+    state.code.push(op);
+    // gen_addr(state, r.to_x86_low(), None, None, Scale::X1, imm, &i)
+    Ok(())
 }
 
 fn gen_vload_store(state: &mut State, vsize: Vsize, op: u8, v: &V, ra: &R, imm: i32, i: &Ins) -> Result<(), Error> {
@@ -801,9 +847,11 @@ fn gen_shift(
     Ok(())
 }
 
+/// The push instruction on x86 is quite efficient and is great
+/// fo constant generation.
 fn gen_push(state: &mut State, src: &Src, i: &Ins) -> Result<(), Error> {
     if let Some(src) = src.as_reg() {
-        let op = 0x50 + src.to_x86_low();
+        let op = OP_PUSH + src.to_x86_low();
         if src.to_x86_high() == 0 {
             state.code.extend([op]);
         } else {
@@ -811,10 +859,14 @@ fn gen_push(state: &mut State, src: &Src, i: &Ins) -> Result<(), Error> {
             state.code.extend([rex, op]);
         }
     } else if let Some(imm) = src.as_imm8() {
-        state.code.extend([0x6a, imm.to_le_bytes()[0]]);
+        state.code.extend([OP_PUSH8, imm.to_le_bytes()[0]]);
     } else if let Some(imm) = src.as_imm32() {
         let imm = imm.to_le_bytes();
-        state.code.extend([0x68, imm[0], imm[1], imm[2], imm[3]]);
+        state.code.extend([OP_PUSH32, imm[0], imm[1], imm[2], imm[3]]);
+    } else if let Some(imm) = src.as_imm64() {
+        let imm = imm.to_le_bytes();
+        state.code.extend([OP_PFX_66, OP_PUSH32, imm[0], imm[1], imm[2], imm[3]]);
+        state.code.extend([OP_PFX_66, OP_PUSH32, imm[4], imm[5], imm[6], imm[7]]);
     } else {
         return Err(Error::InvalidSrcArgument(i.clone()))
     }
@@ -822,7 +874,7 @@ fn gen_push(state: &mut State, src: &Src, i: &Ins) -> Result<(), Error> {
 }
 
 fn gen_pop(state: &mut State, dest: &R) {
-    let op = 0x58 + dest.to_x86_low();
+    let op = OP_POP + dest.to_x86_low();
     if dest.to_x86_high() == 0 {
         state.code.extend([op]);
     } else {
@@ -834,20 +886,16 @@ fn gen_pop(state: &mut State, dest: &R) {
 fn gen_immediate(state: &mut State, opcode: &[u8], dest: &R, src: &R, imm: i64, i: &Ins) {
     if opcode == OP_MUL[1] {
         if let Ok(imm) = TryInto::<i8>::try_into(imm) {
-            let rex = opcode[0] + dest.to_x86_high() + src.to_x86_high() * 4;
-            let pfx = opcode[1];
-            let modrm = opcode[2] + dest.to_x86_low() + src.to_x86_high() * 8;
-            let imm = imm.to_le_bytes();
-            state.code.extend([rex, pfx, modrm, imm[0]]);
+            gen_regreg(state, 0x6b, dest, src);
+            state.code.extend(imm.to_le_bytes());
         } else if let Ok(imm) = TryInto::<i32>::try_into(imm) {
-            let rex = opcode[0] + dest.to_x86_high() + src.to_x86_high() * 4;
-            let pfx = opcode[1];
-            let modrm = 0x69 + dest.to_x86_low() + src.to_x86_high() * 8;
-            let imm = imm.to_le_bytes();
-            state.code.extend([rex, pfx, modrm, imm[0], imm[1], imm[2], imm[3]]);
+            gen_regreg(state, 0x69, dest, src);
+            state.code.extend(imm.to_le_bytes());
         } else {
-            // Use a fixup and a pcrel constant.
             todo!();
+            // gen_push(state, &imm.into(), i);
+            // gen_mem(state, None, None, 0xaf, 1, dest, Some(&regs::SP), 0, i).unwrap();
+            // gen_binary(state, OP_ADD, &regs::RSP, &regs::RSP, &8.into(), i);
         }
     } else if opcode == OP_SHL[1] || opcode == OP_SHR[1] || opcode == OP_SAR[1] {
         // let imm = TryInto::<u8>::try_into(imm & 0x3f).unwrap();
@@ -883,3 +931,7 @@ fn gen_immediate(state: &mut State, opcode: &[u8], dest: &R, src: &R, imm: i64, 
 // GraphSAGE
 // AMP-BERT
 // LLM ProtTrans
+
+#[cfg(test)]
+mod tests;
+
