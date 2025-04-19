@@ -378,6 +378,30 @@ impl CpuInfo {
         }
         return Err(Error::NoAvailableRegisters);
     }
+
+    /// User integer register allocation.
+    pub fn alloc_arg(&mut self) -> Result<R, Error> {
+        for R(i) in &self.args {
+            let mask = 1 << (*i as u32);
+            if self.alloc[0] & mask == 0 {
+                self.alloc[0] |= mask;
+                return Ok(R(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+}
+
+pub fn src0() -> Box<[Src]> {
+    Box::from(&[][..])
+}
+
+pub fn src1<T0 : Into<Src>>(arg0 : T0) -> Box<[Src]> {
+    Box::from(&[arg0.into()][..])
+}
+
+pub fn src2<T0 : Into<Src>, T1 : Into<Src>>(arg0 : T0, arg1: T1) -> Box<[Src]> {
+    Box::from(&[arg0.into(), arg1.into()][..])
 }
 
 impl CpuLevel {
@@ -455,19 +479,19 @@ pub struct CallInfo {
     ptr: u64,
     args: Box<[Src]>,
     res: Box<[Src]>,
-    saves: Option<Box<[Src]>>,
+    saves: Box<[Src]>,
 }
 
 macro_rules! from_fn {
     ($($t : ty , $na : expr , $nr : expr);*;) => {
         $(
             /// Call a function saving necessary volatile registers.
-            impl From<($t, [Src; $na], [Src; $nr], Option<&[Src]>)> for Box<CallInfo> {
-                fn from(value: ($t, [Src; $na], [Src; $nr], Option<&[Src]>)) -> Self {
+            impl From<($t, Box<[Src]>, Box<[Src]>, Box<[Src]>)> for Box<CallInfo> {
+                fn from(value: ($t, Box<[Src]>, Box<[Src]>, Box<[Src]>)) -> Self {
                     let ptr = value.0 as usize as u64;
-                    let args = Box::from(&value.1[..]);
-                    let res = Box::from(&value.2[..]);
-                    let saves = value.3.map(|v| Box::from(v));
+                    let args = value.1;
+                    let res = value.2;
+                    let saves = value.3;
                     Box::new(CallInfo {
                         ptr,
                         args,

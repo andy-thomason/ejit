@@ -190,7 +190,8 @@ pub fn cpu_info() -> CpuInfo {
         max_regs,
         args: Box::from(&[RDI, RSI, RDX, RCX, R8, R9][..]),
         res: Box::from(&[RAX, RDX][..]),
-        save: Box::from(&[RBX, RBP, R12, R13, R14, R15][..]),
+        // TODO: There is something about r15 that crashes the tests. Investigate.
+        save: Box::from(&[RBX, RBP, R12, R13, R14][..]),
         scratch: Box::from(&[RAX, RCX, RDX, R8, R9, R10, R11][..]),
         avail: Box::from(&[
             RAX, RCX, RDX, RBX, RBP, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15,
@@ -471,19 +472,19 @@ fn gen_leave(state: &mut State, info: &EntryInfo, i: &Ins) -> Result<(), Error> 
 
 /// Generate a call including register assignments and saves.
 fn gen_call(state: &mut State, call_info: &CallInfo, i: &Ins) -> Result<(), Error> {
-    if let Some(saves) = &call_info.saves {
-        for src in saves {
-            gen_push(state, src, i)?;
-        }
+    for src in call_info.saves.iter() {
+        gen_push(state, src, i)?;
     }
 
     let mut num_iargs = 0;
     let mut num_vargs = 0;
     let mut bytes_pushed = 0;
+    let mut movs = Vec::new();
     for arg in &call_info.args {
         if arg.is_reg() || arg.is_imm64() {
             if let Some(dest) = state.cpu_info.args.get(num_iargs).cloned() {
-                gen_mov(state, &dest, &arg, i)?;
+                movs.push((dest, arg.clone()));
+                // gen_mov(state, &dest, &arg, i)?;
                 num_iargs += 1;
             } else {
                 gen_push(state, &arg, i)?;
@@ -492,6 +493,24 @@ fn gen_call(state: &mut State, call_info: &CallInfo, i: &Ins) -> Result<(), Erro
         } else { // TODO: vector/fp args
             return Err(Error::InvalidSrcArgument(i.clone()));
         }
+    }
+
+    // The parameter moves may break if an earlier dest is a later src.
+    // Example:
+    //    mov  rdi, rbx
+    //    mov  rsi, rdi
+    // Here we need to re-order.
+    for i in 0..movs.len() {
+        let (dest, src) = movs[i].clone();
+        if movs[1..].iter().find(|(dest2, src2)| src2.as_reg() == Some(dest)).is_some() {
+            movs.push((dest.clone(), src.clone()));
+            // Noop mov.
+            movs[i] = (dest, dest.into());
+        }
+    }
+
+    for (dest, src) in movs {
+        gen_mov(state, &dest, &src, i)?;
     }
 
     let pos = state.constant(&call_info.ptr.to_le_bytes());
@@ -504,10 +523,8 @@ fn gen_call(state: &mut State, call_info: &CallInfo, i: &Ins) -> Result<(), Erro
         gen_binary(state, OP_ADD, &regs::RSP, &regs::RSP, &bytes_pushed.into(), i)?;
     }
  
-    if let Some(saves) = &call_info.saves {
-        for src in saves.iter().rev() {
-            gen_pop(state, src, i)?;
-        }
+    for src in call_info.saves.iter().rev() {
+        gen_pop(state, src, i)?;
     }
     Ok(())
 }

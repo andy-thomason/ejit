@@ -331,7 +331,7 @@ fn generic_call0() {
     let cpu_info = cpu_info();
     let mut prog = Executable::from_ir(&[
         Enter(0.into()),
-        Call((hello_world as fn(), [], [], None).into()),
+        Call((hello_world as fn(), src0(), src0(), src0()).into()),
         Leave(0.into()),
         Ret,
     ])
@@ -346,8 +346,10 @@ fn alloc_save() {
     use Type::*;
     use regs::*;
 
-    fn hello_world(x: u64) {
-        println!("hello world! {x}");
+    fn hello_world(x: u64, y: u64) {
+        println!("{x:x} {y:x}");
+        let res = y as *mut String;
+        unsafe { *res = format!("hello world! {x}"); }
     }
 
     let mut cpu_info = cpu_info();
@@ -357,24 +359,27 @@ fn alloc_save() {
     // do need to save it on entry.
     // Note: if we change this to alloc_scratch(), we will
     // save it in the function call instead.
+    let arg_in = cpu_info.alloc_arg().unwrap();
     while let Ok(arg0) = cpu_info.alloc_save() {
         println!("using {arg0:?}");
         let entry : Box<EntryInfo> = (0, [Src::from(arg0)]).into();
         let mut prog = Executable::from_ir(&[
             Enter(entry.clone()),
             Mov(arg0, 123.into()),
-            Call((hello_world as fn(u64), [arg0.into()], [], None).into()),
-            Call((hello_world as fn(u64), [arg0.into()], [], None).into()),
+            Call((hello_world as fn(u64, u64), src2(arg0, arg_in), src0(), src1(arg_in)).into()),
+            Call((hello_world as fn(u64, u64), src2(arg0, arg_in), src0(), src1(arg_in)).into()),
             Leave(entry),
             Ret,
         ])
         .unwrap();
 
-        let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
+        let mut res = String::new();
+        let res_ptr = &mut res as * mut String as u64;
 
+        unsafe { prog.call(0, &[res_ptr]) };
+        // println!("{}", prog.fmt_url());
+        assert_eq!(res, "hello world! 123");
     }
-    // println!("{}", prog.fmt_url());
-    // todo!();
 }
 
 #[test]
@@ -398,8 +403,8 @@ fn alloc_scratch() {
         let mut prog = Executable::from_ir(&[
             Enter(entry.clone()),
             Mov(arg0, 123.into()),
-            Call((hello_world as fn(u64), [arg0.into()], [], Some(&[Src::from(arg0)][..])).into()),
-            Call((hello_world as fn(u64), [arg0.into()], [], Some(&[Src::from(arg0)][..])).into()),
+            Call((hello_world as fn(u64), src1(arg0), src0(), src1(arg0)).into()),
+            Call((hello_world as fn(u64), src1(arg0), src0(), src1(arg0)).into()),
             Leave(entry),
             Ret,
         ])
