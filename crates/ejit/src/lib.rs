@@ -2,6 +2,7 @@
 #![doc = include_str!("../../../README.md")]
 
 use std::path::Display;
+use std::rc::Rc;
 
 use clear_cache::clear_cache;
 
@@ -62,6 +63,20 @@ impl From<u64> for Src {
     }
 }
 
+impl From<usize> for Src {
+    fn from(value: usize) -> Self {
+        assert!(std::mem::size_of::<usize>() == 8);
+        Self::Imm(i64::from_le_bytes(value.to_le_bytes()))
+    }
+}
+
+impl From<isize> for Src {
+    fn from(value: isize) -> Self {
+        assert!(std::mem::size_of::<isize>() == 8);
+        Self::Imm(i64::from_le_bytes(value.to_le_bytes()))
+    }
+}
+
 impl From<f32> for Src {
     fn from(value: f32) -> Self {
         Self::from(value.to_bits())
@@ -103,6 +118,37 @@ impl Src {
         match self {
             Src::Imm(i) if TryInto::<i8>::try_into(*i).is_ok() => Some((*i).try_into().unwrap()),
             _ => None,
+        }
+    }
+
+    fn is_reg(&self) -> bool {
+        match self {
+            Src::SR(n) => true,
+            _ => false,
+        }
+    }
+    fn is_vreg(&self) -> bool {
+        match self {
+            Src::SV(n) => true,
+            _ => false,
+        }
+    }
+    fn is_imm64(&self) -> bool {
+        match self {
+            Src::Imm(i) => true,
+            _ => false,
+        }
+    }
+    fn is_imm32(&self) -> bool {
+        match self {
+            Src::Imm(i) if TryInto::<i32>::try_into(*i).is_ok() => true,
+            _ => false,
+        }
+    }
+    fn is_imm8(&self) -> bool {
+        match self {
+            Src::Imm(i) if TryInto::<i8>::try_into(*i).is_ok() => true,
+            _ => false,
         }
     }
 }
@@ -238,6 +284,8 @@ pub enum CpuLevel {
 #[derive(Clone, Debug)]
 pub struct CpuInfo {
     cpu_level: CpuLevel,
+    alloc: [u128; 2],
+    max_regs: [usize; 2],
 
     args: Box<[R]>,
     res: Box<[R]>,
@@ -306,6 +354,30 @@ impl CpuInfo {
     pub fn sp(&self) -> R {
         self.sp
     }
+
+    /// User integer register allocation.
+    pub fn alloc_scratch(&mut self) -> Result<R, Error> {
+        for R(i) in &self.scratch {
+            let mask = 1 << (*i as u32);
+            if self.alloc[0] & mask == 0 {
+                self.alloc[0] |= mask;
+                return Ok(R(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+
+    /// User integer register allocation.
+    pub fn alloc_save(&mut self) -> Result<R, Error> {
+        for R(i) in &self.save {
+            let mask = 1 << (*i as u32);
+            if self.alloc[0] & mask == 0 {
+                self.alloc[0] |= mask;
+                return Ok(R(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
 }
 
 impl CpuLevel {
@@ -323,8 +395,8 @@ impl CpuLevel {
 enum Fixup {
     Adr(R, u32),
     B(Cond, u32),
-    J(u32),
     Const(usize, isize),
+    Label(u32, isize),
 }
 
 struct State {
@@ -332,7 +404,7 @@ struct State {
     labels: Vec<(u32, usize)>,
     constants: Vec<u8>,
     fixups: Vec<(usize, Fixup)>,
-    cpu_level: CpuLevel,
+    cpu_info: CpuInfo,
 }
 
 impl State {
@@ -347,6 +419,79 @@ impl State {
     }
 }
 
+/// A function entry including register saves
+#[derive(Debug, Clone, PartialEq)]
+pub struct EntryInfo {
+    saves: Option<Box<[Src]>>,
+    args: Box<[Src]>,
+    stack_size: usize,
+}
+
+impl From<usize> for Box<EntryInfo> {
+    fn from(stack_size: usize) -> Self {
+        Box::new(EntryInfo {
+            saves: None,
+            args: Box::from([]),
+            stack_size,
+        })
+    }
+}
+
+impl<T : AsRef<[Src]>> From<(usize, T)> for Box<EntryInfo> {
+    fn from(v: (usize, T)) -> Self {
+        let stack_size = v.0;
+        let args = v.1.as_ref();
+        let args = Box::from(args);
+        Box::new(EntryInfo {
+            saves: None,
+            args,
+            stack_size,
+        })
+    }
+}
+/// A call to a function including args and scratch registers to be saved.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallInfo {
+    ptr: u64,
+    args: Box<[Src]>,
+    res: Box<[Src]>,
+    saves: Option<Box<[Src]>>,
+}
+
+macro_rules! from_fn {
+    ($($t : ty , $na : expr , $nr : expr);*;) => {
+        $(
+            /// Call a function saving necessary volatile registers.
+            impl From<($t, [Src; $na], [Src; $nr], Option<&[Src]>)> for Box<CallInfo> {
+                fn from(value: ($t, [Src; $na], [Src; $nr], Option<&[Src]>)) -> Self {
+                    let ptr = value.0 as usize as u64;
+                    let args = Box::from(&value.1[..]);
+                    let res = Box::from(&value.2[..]);
+                    let saves = value.3.map(|v| Box::from(v));
+                    Box::new(CallInfo {
+                        ptr,
+                        args,
+                        res,
+                        saves,
+                    })
+                }
+            }
+
+        )*
+        
+    };
+}
+
+from_fn!(
+    fn() , 0, 0;
+    fn(u64), 1, 0;
+    fn(u64, u64), 1, 0;
+    fn() -> u64 , 0, 1;
+    fn(u64) -> u64, 1, 1;
+    fn(u64, u64) -> u64, 1, 1;
+);
+
+
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ins {
@@ -354,8 +499,8 @@ pub enum Ins {
     Label(u32),
 
     // Function entry & exit: Adjust sp by at least n bytes.
-    Enter(u32),
-    Leave(u32),
+    Enter(Box<EntryInfo>),
+    Leave(Box<EntryInfo>),
 
     // constants
     Addr(R, u32),
@@ -404,6 +549,8 @@ pub enum Ins {
     // Vall(Type, Vsize, V, Src), // nz if all true
 
     // Control flow
+    Call(Box<CallInfo>),
+
     /// Call indirect using stack or R(30)
     Ci(R),
 
@@ -450,6 +597,7 @@ pub enum Error {
     CodeTooBig,
     CpuLevelTooLow(Ins),
     InvalidSrcArgument(Ins),
+    NoAvailableRegisters,
 }
 
 pub struct Executable {

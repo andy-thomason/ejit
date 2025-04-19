@@ -207,7 +207,7 @@ impl Compiler {
         let sp = self.cpu_info.sp();
         self.vstack.push(VElem::Bp(self.vstack.new_values as i32));
         self.vstack.new_values += 32;
-        self.ins.extend([Mov(reg, sp.into()), Enter(32)]);
+        self.ins.extend([Mov(reg, sp.into()), Enter(32.into())]);
     }
 }
 

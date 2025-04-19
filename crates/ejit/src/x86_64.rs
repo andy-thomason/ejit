@@ -1,4 +1,4 @@
-use crate::{Cond, CpuInfo, CpuLevel, Error, Executable, Fixup, Ins, Scale, Src, State, Type, Vsize, R, V};
+use crate::{CallInfo, Cond, CpuInfo, CpuLevel, EntryInfo, Error, Executable, Fixup, Ins, Scale, Src, State, Type, Vsize, R, V};
 
 pub mod regs {
     use crate::R;
@@ -142,6 +142,7 @@ const OP_PUSH8: u8 = 0x6a;
 const OP_PUSH32: u8 = 0x68;
 const OP_POP: u8 = 0x58;
 const OP_PFX_66: u8 = 0x66;
+const OP_JMP: u8 = 0xe9;
 
 
 /// A simlified CPU level specification.
@@ -178,9 +179,15 @@ pub fn cpu_info() -> CpuInfo {
         CpuLevel::Simd512
     };
 
+    // pre-allocate SP
+    let alloc0 = 1 << RSP.0;
+    let max_regs = [16, 16];
+
     use regs::*;
     CpuInfo {
         cpu_level,
+        alloc: [alloc0, 0],
+        max_regs,
         args: Box::from(&[RDI, RSI, RDX, RCX, R8, R9][..]),
         res: Box::from(&[RAX, RDX][..]),
         save: Box::from(&[RBX, RBP, R12, R13, R14, R15][..]),
@@ -201,16 +208,16 @@ pub fn cpu_info() -> CpuInfo {
 
 impl Executable {
     pub fn from_ir(ins: &[Ins]) -> Result<Executable, Error> {
-        Self::from_ir_and_level(ins, CpuLevel::Simd512)
+        Self::from_ir_and_info(ins, cpu_info())
     }
 
-    pub fn from_ir_and_level(ins: &[Ins], cpu_level: CpuLevel) -> Result<Executable, Error> {
+    pub fn from_ir_and_info(ins: &[Ins], cpu_info: CpuInfo) -> Result<Executable, Error> {
         let mut state = State {
             code: Vec::new(),
             labels: Vec::new(),
             constants: Vec::new(),
             fixups: Vec::new(),
-            cpu_level,
+            cpu_info,
         };
         for i in ins {
             use Ins::*;
@@ -264,8 +271,8 @@ impl Executable {
                     state.code.extend([0; 6]);
                 }
                 Jmp(label) => {
-                    state.fixups.push((state.code.len(), Fixup::J(*label)));
-                    state.code.extend([0; 6]);
+                    state.fixups.push((state.code.len()+1, Fixup::Label(*label, 4)));
+                    state.code.extend([OP_JMP, 0, 0, 0, 0]);
                 }
                 Ret => {
                     state.code.push(0xc3);
@@ -278,13 +285,11 @@ impl Executable {
                         return Err(Error::InvalidSrcArgument(i.clone()));
                     }
                 }
-                Enter(imm) => {
-                    let imm = &(*imm as i64).into();
-                    gen_binary(&mut state, OP_SUB, &regs::RSP, &regs::RSP, imm, i);
+                Enter(info) => {
+                    gen_enter(&mut state, &info, i)?;
                 }
-                Leave(imm) => {
-                    let imm = &(*imm as i64).into();
-                    gen_binary(&mut state, OP_ADD, &regs::RSP, &regs::RSP, imm, i);
+                Leave(info) => {
+                    gen_leave(&mut state, &info, i)?;
                 }
                 Ld(ty, r, ra, imm) => {
                     use Type::*;
@@ -362,6 +367,9 @@ impl Executable {
                 Vrsqrte(ty, vsize, v, v1) => {
                     gen_vop(&mut state, &OP_VRSQRT, ty, *vsize, v, &V(0), v1, i)?;
                 }
+                Call(call_info) => {
+                    gen_call(&mut state, call_info, i)?;
+                }
             }
         }
 
@@ -399,16 +407,24 @@ impl Executable {
                         return Err(Error::MissingLabel(label));
                     }
                 }
-                Fixup::J(label) => {
-                    // e9 80 00 00 00          jmp    246 <label1+0xe5>
-                    if let Some((_, offset)) = state.labels.iter().find(|(n, _)| *n == label) {
-                        let delta = *offset as isize - loc as isize;
-                        let op = 0xe9;
-                        let imm: i32 = (delta - 5)
-                            .try_into()
-                            .map_err(|e| Error::BranchOutOfRange(label))?;
-                        let imm = imm.to_le_bytes();
-                        state.code[loc..loc + 5].copy_from_slice(&[op, imm[0], imm[1], imm[2], imm[3]]);
+                // Fixup::J(label) => {
+                //     // e9 80 00 00 00          jmp    246 <label1+0xe5>
+                //     if let Some((_, offset)) = state.labels.iter().find(|(n, _)| *n == label) {
+                //         let delta = *offset as isize - loc as isize;
+                //         let op = OP_JMP;
+                //         let imm: i32 = (delta - 5)
+                //             .try_into()
+                //             .map_err(|e| Error::BranchOutOfRange(label))?;
+                //         let imm = imm.to_le_bytes();
+                //         state.code[loc..loc + 5].copy_from_slice(&[op, imm[0], imm[1], imm[2], imm[3]]);
+                //     } else {
+                //         return Err(Error::MissingLabel(label));
+                //     }
+                // }
+                Fixup::Label(label, delta) => {
+                    if let Some((_, pos)) = state.labels.iter().find(|(n, _)| *n == label) {
+                        let offset : i32 = (*pos as isize - loc as isize - delta).try_into().map_err(|_| Error::CodeTooBig)?;
+                        state.code[loc..loc+4].copy_from_slice(&offset.to_le_bytes());
                     } else {
                         return Err(Error::MissingLabel(label));
                     }
@@ -421,6 +437,79 @@ impl Executable {
         }
         Ok(Executable::new(&state.code, state.labels))
     }
+}
+
+fn gen_enter(state: &mut State, info: &EntryInfo, i: &Ins) -> Result<(), Error> {
+    if let Some(saves) = &info.saves {
+        for r in saves {
+            if !matches!(r, Src::SR(_) | Src::SV(_)) {
+                return Err(Error::InvalidArgs);
+            }
+            gen_push(state, r, i)?;
+        }
+    }
+    if info.stack_size != 0 {
+        let imm = &info.stack_size.into();
+        gen_binary(state, OP_SUB, &regs::RSP, &regs::RSP, imm, i)?;
+    }
+    Ok(())
+}
+
+fn gen_leave(state: &mut State, info: &EntryInfo, i: &Ins) -> Result<(), Error> {
+    if info.stack_size != 0 {
+        let imm = &info.stack_size.into();
+        gen_binary(state, OP_ADD, &regs::RSP, &regs::RSP, imm, i)?;
+    }
+    if let Some(saves) = &info.saves {
+        for r in saves.iter().rev() {
+            gen_pop(state, r, i)?;
+        }
+    }
+    Ok(())
+}
+
+
+/// Generate a call including register assignments and saves.
+fn gen_call(state: &mut State, call_info: &CallInfo, i: &Ins) -> Result<(), Error> {
+    if let Some(saves) = &call_info.saves {
+        for src in saves {
+            gen_push(state, src, i)?;
+        }
+    }
+
+    let mut num_iargs = 0;
+    let mut num_vargs = 0;
+    let mut bytes_pushed = 0;
+    for arg in &call_info.args {
+        if arg.is_reg() || arg.is_imm64() {
+            if let Some(dest) = state.cpu_info.args.get(num_iargs).cloned() {
+                gen_mov(state, &dest, &arg, i)?;
+                num_iargs += 1;
+            } else {
+                gen_push(state, &arg, i)?;
+                bytes_pushed += 8;
+            }
+        } else { // TODO: vector/fp args
+            return Err(Error::InvalidSrcArgument(i.clone()));
+        }
+    }
+
+    let pos = state.constant(&call_info.ptr.to_le_bytes());
+    state.code.extend([0xff, 0x15]); // ff 15 00 00 00 00       call   *0x0(%rip)
+    let loc = state.code.len();
+    state.code.extend(0_i32.to_le_bytes());
+    state.fixups.push((loc, Fixup::Const(pos, 4)));
+
+    if bytes_pushed != 0 {
+        gen_binary(state, OP_ADD, &regs::RSP, &regs::RSP, &bytes_pushed.into(), i)?;
+    }
+ 
+    if let Some(saves) = &call_info.saves {
+        for src in saves.iter().rev() {
+            gen_pop(state, src, i)?;
+        }
+    }
+    Ok(())
 }
 
 /// Vector immediate instructions use constants.
@@ -799,10 +888,10 @@ fn gen_div(
         gen_binary(state, OP_ADD, &regs::RSP, &regs::RSP, &8.into(), i);
     }
     if save_rdx {
-        gen_pop(state, &regs::RDX);
+        gen_pop(state, &regs::RDX.into(), i)?;
     }
     if save_rax {
-        gen_pop(state, &regs::RAX);
+        gen_pop(state, &regs::RAX.into(), i)?;
     }
     Ok(())
 }
@@ -832,7 +921,7 @@ fn gen_shift(
         state.code.extend([rex, op, modrm]);
 
         if dest != &regs::RCX {
-            gen_pop(state, &regs::RCX);
+            gen_pop(state, &regs::RCX.into(), i)?;
         }
     } else if let Some(imm) = src2.as_imm8() {
         let opcode = opcodes[1];
@@ -874,14 +963,19 @@ fn gen_push(state: &mut State, src: &Src, i: &Ins) -> Result<(), Error> {
     Ok(())
 }
 
-fn gen_pop(state: &mut State, dest: &R) {
-    let op = OP_POP + dest.to_x86_low();
-    if dest.to_x86_high() == 0 {
-        state.code.extend([op]);
+fn gen_pop(state: &mut State, dest: &Src, i: &Ins) -> Result<(), Error> {
+    if let Some(dest) = dest.as_reg() {
+        let op = OP_POP + dest.to_x86_low();
+        if dest.to_x86_high() == 0 {
+            state.code.extend([op]);
+        } else {
+            let rex = 0x40 + dest.to_x86_high();
+            state.code.extend([rex, op]);
+        }
     } else {
-        let rex = 0x40 + dest.to_x86_high();
-        state.code.extend([rex, op]);
+        return Err(Error::InvalidArgs);
     }
+    Ok(())
 }
 
 fn gen_immediate(state: &mut State, opcode: &[u8], dest: &R, src: &R, imm: i64, i: &Ins) {
@@ -894,9 +988,6 @@ fn gen_immediate(state: &mut State, opcode: &[u8], dest: &R, src: &R, imm: i64, 
             state.code.extend(imm.to_le_bytes());
         } else {
             todo!();
-            // gen_push(state, &imm.into(), i);
-            // gen_mem(state, None, None, 0xaf, 1, dest, Some(&regs::SP), 0, i).unwrap();
-            // gen_binary(state, OP_ADD, &regs::RSP, &regs::RSP, &8.into(), i);
         }
     } else if opcode == OP_SHL[1] || opcode == OP_SHR[1] || opcode == OP_SAR[1] {
         // let imm = TryInto::<u8>::try_into(imm & 0x3f).unwrap();
@@ -926,12 +1017,6 @@ fn gen_immediate(state: &mut State, opcode: &[u8], dest: &R, src: &R, imm: i64, 
     }
 }
 
-
-// Graph NN
-// BioBERT LLM
-// GraphSAGE
-// AMP-BERT
-// LLM ProtTrans
 
 #[cfg(test)]
 mod tests;

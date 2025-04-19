@@ -2,6 +2,8 @@
 //! 
 //! TODO: Extend these to cover every instruction and register permutation.
 //! 
+use std::{cell::RefCell, sync::{Arc, Mutex}};
+
 use crate::x86_64::cpu_info;
 
 use super::*;
@@ -126,11 +128,11 @@ fn generic_load_store() {
     let arg1 = cpu_info.args()[1];
     let sp = cpu_info.sp();
     let mut prog = Executable::from_ir(&[
-        Enter(16),
+        Enter(16.into()),
         St(U8, arg0, sp, 6),
         St(U8, arg1, sp, 7),
         Ld(U16, res0, sp, 6),
-        Leave(16),
+        Leave(16.into()),
         Ret,
     ])
     .unwrap();
@@ -314,4 +316,98 @@ fn generic_regimm() {
     let (res, _) = unsafe { prog.call(0, &[a0, a1]).unwrap() };
 
     assert_eq!(a, expected);
+}
+
+#[test]
+fn generic_call0() {
+    use Ins::*;
+    use Type::*;
+    use regs::*;
+
+    fn hello_world() {
+        println!("hello world!");
+    }
+
+    let cpu_info = cpu_info();
+    let mut prog = Executable::from_ir(&[
+        Enter(0.into()),
+        Call((hello_world as fn(), [], [], None).into()),
+        Leave(0.into()),
+        Ret,
+    ])
+    .unwrap();
+    let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
+    // todo!();
+}
+
+#[test]
+fn alloc_save() {
+    use Ins::*;
+    use Type::*;
+    use regs::*;
+
+    fn hello_world(x: u64) {
+        println!("hello world! {x}");
+    }
+
+    let mut cpu_info = cpu_info();
+
+    // allocate a register saved by hello_world()
+    // this means we don't need to save it over the call, but we
+    // do need to save it on entry.
+    // Note: if we change this to alloc_scratch(), we will
+    // save it in the function call instead.
+    while let Ok(arg0) = cpu_info.alloc_save() {
+        println!("using {arg0:?}");
+        let entry : Box<EntryInfo> = (0, [Src::from(arg0)]).into();
+        let mut prog = Executable::from_ir(&[
+            Enter(entry.clone()),
+            Mov(arg0, 123.into()),
+            Call((hello_world as fn(u64), [arg0.into()], [], None).into()),
+            Call((hello_world as fn(u64), [arg0.into()], [], None).into()),
+            Leave(entry),
+            Ret,
+        ])
+        .unwrap();
+
+        let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
+
+    }
+    // println!("{}", prog.fmt_url());
+    // todo!();
+}
+
+#[test]
+fn alloc_scratch() {
+    use Ins::*;
+    use Type::*;
+    use regs::*;
+
+    fn hello_world(x: u64) {
+        println!("hello world! {x}");
+    }
+
+    let mut cpu_info = cpu_info();
+
+    // allocate a register not saved by hello_world()
+    // This time we save the register over the call but don't
+    // need to save on entry.
+    while let Ok(arg0) = cpu_info.alloc_scratch() {
+        println!("using {arg0:?}");
+        let entry : Box<EntryInfo> = (0, []).into();
+        let mut prog = Executable::from_ir(&[
+            Enter(entry.clone()),
+            Mov(arg0, 123.into()),
+            Call((hello_world as fn(u64), [arg0.into()], [], Some(&[Src::from(arg0)][..])).into()),
+            Call((hello_world as fn(u64), [arg0.into()], [], Some(&[Src::from(arg0)][..])).into()),
+            Leave(entry),
+            Ret,
+        ])
+        .unwrap();
+
+        let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
+
+    }
+    // println!("{}", prog.fmt_url());
+    // todo!();
 }
