@@ -473,6 +473,7 @@ impl<T : AsRef<[Src]>> From<(usize, T)> for Box<EntryInfo> {
         })
     }
 }
+
 /// A call to a function including args and scratch registers to be saved.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallInfo {

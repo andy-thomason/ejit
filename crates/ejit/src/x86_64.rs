@@ -190,7 +190,7 @@ pub fn cpu_info() -> CpuInfo {
         max_regs,
         args: Box::from(&[RDI, RSI, RDX, RCX, R8, R9][..]),
         res: Box::from(&[RAX, RDX][..]),
-        // TODO: There is something about r15 that crashes the tests. Investigate.
+        // TODO: LLVM seems to break the system V calling convention by not saving r15.
         save: Box::from(&[RBX, RBP, R12, R13, R14][..]),
         scratch: Box::from(&[RAX, RCX, RDX, R8, R9, R10, R11][..]),
         avail: Box::from(&[
