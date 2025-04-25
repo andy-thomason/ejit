@@ -43,6 +43,12 @@ impl From<V> for Src {
     }
 }
 
+impl From<&[u8]> for Src {
+    fn from(value: &[u8]) -> Self {
+        Self::Bytes(Box::from(value))
+    }
+}
+
 macro_rules! from_t_for_src {
     ($($t : ty),*) => {
         $(
@@ -221,7 +227,7 @@ impl Type {
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 /// Vector size
-enum Vsize {
+pub enum Vsize {
     V8,
     V16,
     V32,
@@ -287,17 +293,19 @@ pub struct CpuInfo {
     alloc: [u128; 2],
     max_regs: [usize; 2],
 
+    // Integer register class
     args: Box<[R]>,
     res: Box<[R]>,
     save: Box<[R]>,
     scratch: Box<[R]>,
-    avail: Box<[R]>,
+    any: Box<[R]>,
 
+    // Vector register class
     vargs: Box<[V]>,
     vres: Box<[V]>,
     vsave: Box<[V]>,
     vscratch: Box<[V]>,
-    vavail: Box<[V]>,
+    vany: Box<[V]>,
 
     sp: R,
 }
@@ -327,10 +335,6 @@ impl CpuInfo {
         &self.scratch
     }
     
-    pub fn avail(&self) -> &[R] {
-        &self.avail
-    }
-    
     pub fn vargs(&self) -> &[V] {
         &self.vargs
     }
@@ -347,15 +351,12 @@ impl CpuInfo {
         &self.vscratch
     }
     
-    pub fn vavail(&self) -> &[V] {
-        &self.vavail
-    }
-    
     pub fn sp(&self) -> R {
         self.sp
     }
 
     /// User integer register allocation.
+    /// Registers allocated will be clobbered by calls.
     pub fn alloc_scratch(&mut self) -> Result<R, Error> {
         for R(i) in &self.scratch {
             let mask = 1 << (*i as u32);
@@ -368,12 +369,52 @@ impl CpuInfo {
     }
 
     /// User integer register allocation.
+    /// Registers allocated will not be clobbered by calls.
     pub fn alloc_save(&mut self) -> Result<R, Error> {
         for R(i) in &self.save {
             let mask = 1 << (*i as u32);
             if self.alloc[0] & mask == 0 {
                 self.alloc[0] |= mask;
                 return Ok(R(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+
+    /// User vector register allocation.
+    /// Registers allocated will be clobbered by calls.
+    pub fn alloc_vscratch(&mut self) -> Result<V, Error> {
+        for V(i) in &self.vscratch {
+            let mask = 1 << (*i as u32);
+            if self.alloc[1] & mask == 0 {
+                self.alloc[1] |= mask;
+                return Ok(V(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+
+    /// User integer register allocation.
+    /// These registers *may* be clobbered by function calls, so save them!
+    pub fn alloc_any(&mut self) -> Result<R, Error> {
+        for R(i) in &self.any {
+            let mask = 1 << (*i as u32);
+            if self.alloc[0] & mask == 0 {
+                self.alloc[0] |= mask;
+                return Ok(R(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+
+    /// User integer register allocation.
+    /// These registers *may* be clobbered by function calls, so save them!
+    pub fn alloc_vany(&mut self) -> Result<V, Error> {
+        for V(i) in &self.vany {
+            let mask = 1 << (*i as u32);
+            if self.alloc[1] & mask == 0 {
+                self.alloc[1] |= mask;
+                return Ok(V(*i));
             }
         }
         return Err(Error::NoAvailableRegisters);
@@ -389,6 +430,35 @@ impl CpuInfo {
             }
         }
         return Err(Error::NoAvailableRegisters);
+    }
+    
+    /// User integer register allocation.
+    pub fn alloc_varg(&mut self) -> Result<V, Error> {
+        for V(i) in &self.vargs {
+            let mask = 1 << (*i as u32);
+            if self.alloc[1] & mask == 0 {
+                self.alloc[1] |= mask;
+                return Ok(V(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+    
+    pub fn any(&self) -> &[R] {
+        &self.any
+    }
+
+    pub fn vany(&self) -> &[V] {
+        &self.vany
+    }
+
+    pub fn tmp_reg(&self, exclude: &[R]) -> Result<R, Error> {
+        for r in &self.any {
+            if exclude.contains(r) {
+                return Ok(*r);
+            }
+        }
+        Err(Error::CouldNotFindTempReg)
     }
 }
 
@@ -444,35 +514,73 @@ impl State {
 }
 
 /// A function entry including register saves
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct EntryInfo {
-    saves: Option<Box<[Src]>>,
-    args: Box<[Src]>,
+    saves: Vec<R>,
+    args: Vec<R>,
+    res: Vec<R>,
     stack_size: usize,
+}
+
+impl EntryInfo {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn with_stack_size(self, stack_size: usize) -> Self {
+        Self {
+            stack_size,
+            ..self
+        }
+    }
+
+    pub fn with_saves(self, saves: &[R]) -> Self {
+        Self {
+            saves: saves.to_vec(),
+            ..self
+        }
+    }
+
+    pub fn with_args(self, args: &[R]) -> Self {
+        Self {
+            args: args.to_vec(),
+            ..self
+        }
+    }
+
+    pub fn with_res(self, res: &[R]) -> Self {
+        Self {
+            res: res.to_vec(),
+            ..self
+        }
+    }
+
+    pub fn boxed(self) -> Box<Self> {
+        Box::new(self)
+    }
 }
 
 impl From<usize> for Box<EntryInfo> {
     fn from(stack_size: usize) -> Self {
         Box::new(EntryInfo {
-            saves: None,
-            args: Box::from([]),
             stack_size,
+            ..Default::default()
         })
     }
 }
 
-impl<T : AsRef<[Src]>> From<(usize, T)> for Box<EntryInfo> {
-    fn from(v: (usize, T)) -> Self {
-        let stack_size = v.0;
-        let args = v.1.as_ref();
-        let args = Box::from(args);
-        Box::new(EntryInfo {
-            saves: None,
-            args,
-            stack_size,
-        })
-    }
-}
+// impl<T : AsRef<[Src]>> From<(usize, T)> for Box<EntryInfo> {
+//     fn from(v: (usize, T)) -> Self {
+//         let stack_size = v.0;
+//         let args = v.1.as_ref();
+//         let args = Box::from(args);
+//         Box::new(EntryInfo {
+//             saves: None,
+//             args,
+//             stack_size,
+//         })
+//     }
+// }
 
 /// A call to a function including args and scratch registers to be saved.
 #[derive(Debug, Clone, PartialEq)]
@@ -539,6 +647,8 @@ pub enum Ins {
     // Integer Arithmetic.
     Add(R, R, Src),
     Sub(R, R, Src),
+    Adc(R, R, Src),
+    Sbb(R, R, Src),
     And(R, R, Src),
     Or(R, R, Src),
     Xor(R, R, Src),
@@ -553,8 +663,18 @@ pub enum Ins {
     Cmp(R, Src),
     Not(R, Src),
     Neg(R, Src),
+    Push(Src),
+    Pop(Src),
 
-    /// Vector arithmetic
+    // Memory-based operations
+    // Addx(R, R, R, u32),
+    // Subx(R, R, R, u32),
+    // Mulx(R, R, R, u32),
+    // Udivx(R, R, R, u32),
+    // Sdivx(R, R, R, u32),
+    // Movx(R, R, u32),
+
+    // Vector arithmetic
     Vadd(Type, Vsize, V, V, Src),
     Vsub(Type, Vsize, V, V, Src),
     Vand(Type, Vsize, V, V, Src),
@@ -575,6 +695,7 @@ pub enum Ins {
 
     // Control flow
     Call(Box<CallInfo>),
+    CallLocal(u32),
 
     /// Call indirect using stack or R(30)
     Ci(R),
@@ -623,6 +744,8 @@ pub enum Error {
     CpuLevelTooLow(Ins),
     InvalidSrcArgument(Ins),
     NoAvailableRegisters,
+    CouldNotFindTempReg,
+    BadBytesLength,
 }
 
 pub struct Executable {

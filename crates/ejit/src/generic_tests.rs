@@ -359,16 +359,20 @@ fn alloc_save() {
     // do need to save it on entry.
     // Note: if we change this to alloc_scratch(), we will
     // save it in the function call instead.
-    let arg_in = cpu_info.alloc_arg().unwrap();
+    let arg_in = cpu_info.alloc_any().unwrap();
     while let Ok(arg0) = cpu_info.alloc_save() {
-        println!("using {arg0:?}");
-        let entry : Box<EntryInfo> = (0, [Src::from(arg0)]).into();
+        let entry : Box<EntryInfo> = EntryInfo::new()
+            .with_args(&[arg0])
+            .boxed();
+        let entry_info = EntryInfo::new()
+            .with_args(&[arg_in])
+            .boxed();
         let mut prog = Executable::from_ir(&[
-            Enter(entry.clone()),
+            Enter(entry_info.clone()),
             Mov(arg0, 123.into()),
             Call((hello_world as fn(u64, u64), src2(arg0, arg_in), src0(), src1(arg_in)).into()),
             Call((hello_world as fn(u64, u64), src2(arg0, arg_in), src0(), src1(arg_in)).into()),
-            Leave(entry),
+            Leave(entry_info),
             Ret,
         ])
         .unwrap();
@@ -398,8 +402,7 @@ fn alloc_scratch() {
     // This time we save the register over the call but don't
     // need to save on entry.
     while let Ok(arg0) = cpu_info.alloc_scratch() {
-        println!("using {arg0:?}");
-        let entry : Box<EntryInfo> = (0, []).into();
+        let entry : Box<EntryInfo> = EntryInfo::new().boxed();
         let mut prog = Executable::from_ir(&[
             Enter(entry.clone()),
             Mov(arg0, 123.into()),
