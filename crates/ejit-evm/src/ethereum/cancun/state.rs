@@ -2,29 +2,30 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use crate::{ethereum_types::{bytes::Bytes32, numeric::U256}, fork_types::{Account, Address}};
+use crate::{
+    ethereum::ethereum_types::{bytes::Bytes32, numeric::U256},
+    ethereum::cancun::fork_types::{Account, Address},
+};
+
+use super::trie::Trie;
 
 /// Contains all information that is preserved between transactions.
-    struct State {
-        main_trie: Trie<Address, Option<Account>>,
-        storage_tries: BTreeMap<Address, Trie<Bytes32, U256>>,
-        snapshots: Vec<
-        (
-            Trie<Address, Option<Account>>,
-            BTreeMap<Address, Trie<Bytes32, U256>>,
-        )>,
-        created_accounts: HashSet<Address>,
-    }
-
+pub struct State {
+    main_trie: Trie<Address, Option<Account>>,
+    storage_tries: BTreeMap<Address, Trie<Bytes32, U256>>,
+    snapshots: Vec<(
+        Trie<Address, Option<Account>>,
+        BTreeMap<Address, Trie<Bytes32, U256>>,
+    )>,
+    created_accounts: HashSet<Address>,
+}
 
 // Contains all information that is preserved between message calls
 // within a transaction.
-struct TransientStorage {
+pub struct TransientStorage {
     tries: BTreeMap<Address, Trie<Bytes32, U256>>,
     snapshots: Vec<BTreeMap<Address, Trie<Bytes32, U256>>>,
 }
-
-
 
 // def close_state(state: State) -> None:
 //     """
@@ -35,7 +36,6 @@ struct TransientStorage {
 //     del state._storage_tries
 //     del state._snapshots
 //     del state.created_accounts
-
 
 // def begin_transaction(
 //     state: State, transient_storage: TransientStorage
@@ -63,7 +63,6 @@ struct TransientStorage {
 //         {k: copy_trie(t) for (k, t) in transient_storage._tries.items()}
 //     )
 
-
 // def commit_transaction(
 //     state: State, transient_storage: TransientStorage
 // ) -> None:
@@ -82,7 +81,6 @@ struct TransientStorage {
 //         state.created_accounts.clear()
 
 //     transient_storage._snapshots.pop()
-
 
 // def rollback_transaction(
 //     state: State, transient_storage: TransientStorage
@@ -103,7 +101,6 @@ struct TransientStorage {
 //         state.created_accounts.clear()
 
 //     transient_storage._tries = transient_storage._snapshots.pop()
-
 
 // def get_account(state: State, address: Address) -> Account:
 //     """
@@ -131,7 +128,6 @@ struct TransientStorage {
 //     else:
 //         return EMPTY_ACCOUNT
 
-
 // def get_account_optional(state: State, address: Address) -> Optional[Account]:
 //     """
 //     Get the `Account` object at an address. Returns `None` (rather than
@@ -152,7 +148,6 @@ struct TransientStorage {
 //     account = trie_get(state._main_trie, address)
 //     return account
 
-
 // def set_account(
 //     state: State, address: Address, account: Optional[Account]
 // ) -> None:
@@ -170,7 +165,6 @@ struct TransientStorage {
 //         Account to set at address.
 //     """
 //     trie_set(state._main_trie, address, account)
-
 
 // def destroy_account(state: State, address: Address) -> None:
 //     """
@@ -190,7 +184,6 @@ struct TransientStorage {
 //     destroy_storage(state, address)
 //     set_account(state, address, None)
 
-
 // def destroy_storage(state: State, address: Address) -> None:
 //     """
 //     Completely remove the storage at `address`.
@@ -204,7 +197,6 @@ struct TransientStorage {
 //     """
 //     if address in state._storage_tries:
 //         del state._storage_tries[address]
-
 
 // def mark_account_created(state: State, address: Address) -> None:
 //     """
@@ -224,7 +216,6 @@ struct TransientStorage {
 //         Address of the account that has been created.
 //     """
 //     state.created_accounts.add(address)
-
 
 // def get_storage(state: State, address: Address, key: Bytes32) -> U256:
 //     """
@@ -254,7 +245,6 @@ struct TransientStorage {
 //     assert isinstance(value, U256)
 //     return value
 
-
 // def set_storage(
 //     state: State, address: Address, key: Bytes32, value: U256
 // ) -> None:
@@ -283,7 +273,6 @@ struct TransientStorage {
 //     if trie._data == {}:
 //         del state._storage_tries[address]
 
-
 // def storage_root(state: State, address: Address) -> Root:
 //     """
 //     Calculate the storage root of an account.
@@ -306,7 +295,6 @@ struct TransientStorage {
 //     else:
 //         return EMPTY_TRIE_ROOT
 
-
 // def state_root(state: State) -> Root:
 //     """
 //     Calculate the state root.
@@ -328,7 +316,6 @@ struct TransientStorage {
 
 //     return root(state._main_trie, get_storage_root=get_storage_root)
 
-
 // def account_exists(state: State, address: Address) -> bool:
 //     """
 //     Checks if an account exists in the state trie
@@ -346,7 +333,6 @@ struct TransientStorage {
 //         True if account exists in the state trie, False otherwise
 //     """
 //     return get_account_optional(state, address) is not None
-
 
 // def account_has_code_or_nonce(state: State, address: Address) -> bool:
 //     """
@@ -368,7 +354,6 @@ struct TransientStorage {
 //     account = get_account(state, address)
 //     return account.nonce != Uint(0) or account.code != b""
 
-
 // def account_has_storage(state: State, address: Address) -> bool:
 //     """
 //     Checks if an account has storage.
@@ -386,7 +371,6 @@ struct TransientStorage {
 //         True if the account has storage, False otherwise.
 //     """
 //     return address in state._storage_tries
-
 
 // def is_account_empty(state: State, address: Address) -> bool:
 //     """
@@ -411,7 +395,6 @@ struct TransientStorage {
 //         and account.code == b""
 //         and account.balance == 0
 //     )
-
 
 // def account_exists_and_is_empty(state: State, address: Address) -> bool:
 //     """
@@ -439,7 +422,6 @@ struct TransientStorage {
 //         and account.balance == 0
 //     )
 
-
 // def is_account_alive(state: State, address: Address) -> bool:
 //     """
 //     Check whether is an account is both in the state and non empty.
@@ -466,7 +448,6 @@ struct TransientStorage {
 //             and account.balance == 0
 //         )
 
-
 // def modify_state(
 //     state: State, address: Address, f: Callable[[Account], None]
 // ) -> None:
@@ -474,7 +455,6 @@ struct TransientStorage {
 //     Modify an `Account` in the `State`.
 //     """
 //     set_account(state, address, modify(get_account(state, address), f))
-
 
 // def move_ether(
 //     state: State,
@@ -497,7 +477,6 @@ struct TransientStorage {
 //     modify_state(state, sender_address, reduce_sender_balance)
 //     modify_state(state, recipient_address, increase_recipient_balance)
 
-
 // def process_withdrawal(
 //     state: State,
 //     wd: Withdrawal,
@@ -510,7 +489,6 @@ struct TransientStorage {
 //         recipient.balance += wd.amount * U256(10**9)
 
 //     modify_state(state, wd.address, increase_recipient_balance)
-
 
 // def set_account_balance(state: State, address: Address, amount: U256) -> None:
 //     """
@@ -533,7 +511,6 @@ struct TransientStorage {
 
 //     modify_state(state, address, set_balance)
 
-
 // def touch_account(state: State, address: Address) -> None:
 //     """
 //     Initializes an account to state.
@@ -548,7 +525,6 @@ struct TransientStorage {
 //     """
 //     if not account_exists(state, address):
 //         set_account(state, address, EMPTY_ACCOUNT)
-
 
 // def increment_nonce(state: State, address: Address) -> None:
 //     """
@@ -567,7 +543,6 @@ struct TransientStorage {
 //         sender.nonce += Uint(1)
 
 //     modify_state(state, address, increase_nonce)
-
 
 // def set_code(state: State, address: Address, code: Bytes) -> None:
 //     """
@@ -589,7 +564,6 @@ struct TransientStorage {
 //         sender.code = code
 
 //     modify_state(state, address, write_code)
-
 
 // def get_storage_original(state: State, address: Address, key: Bytes32) -> U256:
 //     """
@@ -623,7 +597,6 @@ struct TransientStorage {
 
 //     return original_value
 
-
 // def get_transient_storage(
 //     transient_storage: TransientStorage, address: Address, key: Bytes32
 // ) -> U256:
@@ -652,7 +625,6 @@ struct TransientStorage {
 //     assert isinstance(value, U256)
 //     return value
 
-
 // def set_transient_storage(
 //     transient_storage: TransientStorage,
 //     address: Address,
@@ -680,7 +652,6 @@ struct TransientStorage {
 //     trie_set(trie, key, value)
 //     if trie._data == {}:
 //         del transient_storage._tries[address]
-
 
 // def destroy_touched_empty_accounts(
 //     state: State, touched_accounts: Set[Address]

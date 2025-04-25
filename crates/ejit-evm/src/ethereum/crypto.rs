@@ -1,6 +1,6 @@
 pub mod hash {
     //! https://github.com/ethereum/execution-specs/blob/master/src/ethereum/crypto/hash.py
-    use crate::ethereum_types::bytes::*;
+    use crate::ethereum::ethereum_types::bytes::*;
 
     pub struct Hash32(pub Bytes32);
     pub struct Hash64(pub Bytes64);

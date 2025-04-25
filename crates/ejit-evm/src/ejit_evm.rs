@@ -425,7 +425,7 @@ impl<'a, EXT, DB: Database> EjitEvm<'a, EXT, DB> {
         let mut compiler = Compiler::new();
         compiler.compile(&tx.data);
 
-        let interpreter = InterpreterState::new(contract, gas_limit, is_static)
+        // let interpreter = InterpreterState::new(contract, gas_limit, is_static);
 
         todo!()
     }

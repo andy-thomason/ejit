@@ -3,11 +3,11 @@
 
 use std::collections::BTreeMap;
 
-use crate::{crypto::hash::Hash32, ethereum_types::{bytes::*, numeric::*}, fork_types::*};
+use crate::{ethereum::{cancun::fork_types::*, crypto::hash::Hash32, ethereum_types::{bytes::*, numeric::*}, exceptions::EthereumException}, Either};
+
+use super::{blocks::Log, state::{State, TransientStorage}};
 
 pub mod gas;
-
-struct Dict(BTreeMap<u64, u64>);
 
 /// Items external to the virtual machine itself, provided by the environment.
 pub struct Environment {
@@ -23,15 +23,10 @@ pub struct Environment {
     prev_randao: Bytes32,
     state: State,
     chain_id: U64,
-    traces: Vec<Dict>,
+    traces: Vec<BTreeMap<String, String>>,
     excess_blob_gas: U64,
     blob_versioned_hashes: Vec<VersionedHash>,
     transient_storage: TransientStorage,
-}
-
-pub enum Either<A, B> {
-    A(A),
-    B(B),
 }
 
 /// Items that are used by contract creation or message call.
@@ -70,7 +65,7 @@ pub struct Evm {
     accounts_to_delete: Vec<Address>,
     touched_accounts: Vec<Address>,
     return_data: Bytes,
-    error: Optional<EthereumException>,
+    error: Option<EthereumException>,
     accessed_addresses: Vec<Address>,
     accessed_storage_keys: Vec<(Address, Bytes32)>,
 }

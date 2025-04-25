@@ -1,8 +1,8 @@
-use crate::crypto::hash::Hash32;
-use crate::ethereum_types::bytes::*;
-use crate::ethereum_types::numeric::*;
+use crate::ethereum::{crypto::hash::Hash32, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}};
 
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Address(pub Bytes20);
+
 pub struct Root(pub Hash32);
 pub struct VersionedHash(pub Hash32);
 
