@@ -10,3 +10,4 @@ pub mod cancun;
 pub mod exceptions;
 pub mod fork_criteria;
 pub mod genesis;
+pub mod utils;

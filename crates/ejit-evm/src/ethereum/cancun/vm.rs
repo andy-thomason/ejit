@@ -1,71 +1,72 @@
 //! https://github.com/ethereum/execution-specs/blob/master/src/ethereum/cancun/vm/__init__.py
 //! 
 
-use std::collections::BTreeMap;
+use std::collections::{BTr, BTreeMap, BTreeSet, BTreeSetBTreeSet};
 
 use crate::{ethereum::{cancun::fork_types::*, crypto::hash::Hash32, ethereum_types::{bytes::*, numeric::*}, exceptions::EthereumException}, Either};
 
 use super::{blocks::Log, state::{State, TransientStorage}};
 
 pub mod gas;
+pub mod interpreter;
 
 /// Items external to the virtual machine itself, provided by the environment.
-pub struct Environment {
-    caller: Address,
-    block_hashes: Vec<Hash32>,
-    origin: Address,
-    coinbase: Address,
-    number: Uint,
-    base_fee_per_gas: Uint,
-    gas_limit: Uint,
-    gas_price: Uint,
-    time: U256,
-    prev_randao: Bytes32,
-    state: State,
-    chain_id: U64,
-    traces: Vec<BTreeMap<String, String>>,
-    excess_blob_gas: U64,
-    blob_versioned_hashes: Vec<VersionedHash>,
-    transient_storage: TransientStorage,
+pub struct Environment<'a> {
+    pub caller: Address,
+    pub block_hashes: Vec<Hash32>,
+    pub origin: Address,
+    pub coinbase: Address,
+    pub number: Uint,
+    pub base_fee_per_gas: Uint,
+    pub gas_limit: Uint,
+    pub gas_price: Uint,
+    pub time: U256,
+    pub prev_randao: Bytes32,
+    pub state: &'a mut State,
+    pub chain_id: U64,
+    pub traces: Vec<BTreeMap<String, String>>,
+    pub excess_blob_gas: U64,
+    pub blob_versioned_hashes: Vec<VersionedHash>,
+    pub transient_storage: TransientStorage,
 }
 
 /// Items that are used by contract creation or message call.
 pub struct Message {
-    caller: Address,
-    target: Either<Bytes0, Address>,
-    current_target: Address,
-    gas: Uint,
-    value: U256,
-    data: Bytes,
-    code_address: Option<Address>,
-    code: Bytes,
-    depth: Uint,
-    should_transfer_value: bool,
-    is_static: bool,
-    accessed_addresses: Vec<Address>,
-    accessed_storage_keys: Vec<(Address, Bytes32)>,
-    parent_evm: Option<Box<Evm>>,
+    pub caller: Address,
+    pub target: Either<Bytes0, Address>,
+    pub current_target: Address,
+    pub gas: Uint,
+    pub value: U256,
+    pub data: Bytes,
+    pub code_address: Option<Address>,
+    pub code: Bytes,
+    pub depth: Uint,
+    pub should_transfer_value: bool,
+    pub is_static: bool,
+    pub accessed_addresses: BTreeSet<Address>,
+    pub accessed_storage_keys: BTreeSet<(Address, Bytes32)>,
+    pub parent_evm: Option<Box<Evm>>,
 }
 
 
 /// The internal state of the virtual machine.
 pub struct Evm {
-    pc: Uint,
-    stack: Vec<U256>,
-    memory: Vec<u8>,
-    code: Bytes,
-    gas_left: Uint,
-    env: Environment,
-    valid_jump_destinations: Vec<Uint>,
-    logs: Vec<Log>,
-    refund_counter: i64,
-    running: bool,
-    message: Message,
-    output: Bytes,
-    accounts_to_delete: Vec<Address>,
-    touched_accounts: Vec<Address>,
-    return_data: Bytes,
-    error: Option<EthereumException>,
-    accessed_addresses: Vec<Address>,
-    accessed_storage_keys: Vec<(Address, Bytes32)>,
+    pub pc: Uint,
+    pub stack: Vec<U256>,
+    pub memory: Vec<u8>,
+    pub code: Bytes,
+    pub gas_left: Uint,
+    pub env: Environment,
+    pub valid_jump_destinations: Vec<Uint>,
+    pub logs: Vec<Log>,
+    pub refund_counter: i64,
+    pub running: bool,
+    pub message: Message,
+    pub output: Bytes,
+    pub accounts_to_delete: Vec<Address>,
+    pub touched_accounts: Vec<Address>,
+    pub return_data: Bytes,
+    pub error: Option<EthereumException>,
+    pub accessed_addresses: Vec<Address>,
+    pub accessed_storage_keys: Vec<(Address, Bytes32)>,
 }

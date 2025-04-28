@@ -28,65 +28,66 @@ const TX_ACCESS_LIST_STORAGE_KEY_COST : u64 = 1900;
 
 /// Atomic operation performed on the block chain.
 pub struct LegacyTransaction {
-    nonce: U256,
-    gas_price: Uint,
-    gas: Uint,
-    to: Either<Bytes0, Address>,
-    value: U256,
-    data: Bytes,
-    v: U256,
-    r: U256,
-    s: U256,
+    pub nonce: U256,
+    pub gas_price: Uint,
+    pub gas: Uint,
+    pub to: Either<Bytes0, Address>,
+    pub value: U256,
+    pub data: Bytes,
+    pub v: U256,
+    pub r: U256,
+    pub s: U256,
 }
-///     The transaction type added in EIP-2930 to support access lists.
+
+/// The transaction type added in EIP-2930 to support access lists.
 pub struct AccessListTransaction {
-    chain_id: U64,
-    nonce: U256,
-    gas_price: Uint,
-    gas: Uint,
-    to: Either<Bytes0, Address>,
-    value: U256,
-    data: Bytes,
-    access_list: Vec<(Address, Vec<Bytes32>)>,
-    y_parity: U256,
-    r: U256,
-    s: U256,
+    pub chain_id: U64,
+    pub nonce: U256,
+    pub gas_price: Uint,
+    pub gas: Uint,
+    pub to: Either<Bytes0, Address>,
+    pub value: U256,
+    pub data: Bytes,
+    pub access_list: Vec<(Address, Vec<Bytes32>)>,
+    pub y_parity: U256,
+    pub r: U256,
+    pub s: U256,
 }
 
 
-///     The transaction type added in EIP-1559.
+/// The transaction type added in EIP-1559.
 pub struct FeeMarketTransaction {
-    chain_id: U64,
-    nonce: U256,
-    max_priority_fee_per_gas: Uint,
-    max_fee_per_gas: Uint,
-    gas: Uint,
-    to: Either<Bytes0, Address>,
-    value: U256,
-    data: Bytes,
-    access_list: Vec<(Address, Vec<Bytes32>)>,
-    y_parity: U256,
-    r: U256,
-    s: U256,
+    pub chain_id: U64,
+    pub nonce: U256,
+    pub max_priority_fee_per_gas: Uint,
+    pub max_fee_per_gas: Uint,
+    pub gas: Uint,
+    pub to: Either<Bytes0, Address>,
+    pub value: U256,
+    pub data: Bytes,
+    pub access_list: Vec<(Address, Vec<Bytes32>)>,
+    pub y_parity: U256,
+    pub r: U256,
+    pub s: U256,
 }
 
 
-///     The transaction type added in EIP-4844.
+/// The transaction type added in EIP-4844.
 pub struct BlobTransaction {
-    chain_id: U64,
-    nonce: U256,
-    max_priority_fee_per_gas: Uint,
-    max_fee_per_gas: Uint,
-    gas: Uint,
-    to: Address,
-    value: U256,
-    data: Bytes,
-    access_list: Vec<(Address, Vec<Bytes32>)>,
-    max_fee_per_blob_gas: U256,
-    blob_versioned_hashes: Vec<VersionedHash>,
-    y_parity: U256,
-    r: U256,
-    s: U256,
+    pub chain_id: U64,
+    pub nonce: U256,
+    pub max_priority_fee_per_gas: Uint,
+    pub max_fee_per_gas: Uint,
+    pub gas: Uint,
+    pub to: Address,
+    pub value: U256,
+    pub data: Bytes,
+    pub access_list: Vec<(Address, Vec<Bytes32>)>,
+    pub max_fee_per_blob_gas: U256,
+    pub blob_versioned_hashes: Vec<VersionedHash>,
+    pub y_parity: U256,
+    pub r: U256,
+    pub s: U256,
 }
 
 pub enum Transaction {

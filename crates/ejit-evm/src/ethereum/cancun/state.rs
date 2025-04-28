@@ -7,7 +7,7 @@ use crate::{
     ethereum::cancun::fork_types::{Account, Address},
 };
 
-use super::trie::Trie;
+use super::{fork_types::EMPTY_ACCOUNT, trie::Trie};
 
 /// Contains all information that is preserved between transactions.
 pub struct State {
@@ -22,9 +22,10 @@ pub struct State {
 
 // Contains all information that is preserved between message calls
 // within a transaction.
+#[derive(Debug, Clone, Default)]
 pub struct TransientStorage {
-    tries: BTreeMap<Address, Trie<Bytes32, U256>>,
-    snapshots: Vec<BTreeMap<Address, Trie<Bytes32, U256>>>,
+    pub tries: BTreeMap<Address, Trie<Bytes32, U256>>,
+    pub snapshots: Vec<BTreeMap<Address, Trie<Bytes32, U256>>>,
 }
 
 // def close_state(state: State) -> None:
@@ -102,51 +103,52 @@ pub struct TransientStorage {
 
 //     transient_storage._tries = transient_storage._snapshots.pop()
 
-// def get_account(state: State, address: Address) -> Account:
-//     """
-//     Get the `Account` object at an address. Returns `EMPTY_ACCOUNT` if there
-//     is no account at the address.
+/// """
+/// Get the `Account` object at an address. Returns `EMPTY_ACCOUNT` if there
+/// is no account at the address.
+/// 
+/// Use `get_account_optional()` if you care about the difference between a
+/// non-existent account and `EMPTY_ACCOUNT`.
+/// 
+/// Parameters
+/// ----------
+/// state: `State`
+///     The state
+/// address : `Address`
+///     Address to lookup.
+/// 
+/// Returns
+/// -------
+/// account : `Account`
+///     Account at address.
+/// """
+pub fn get_account(state: &State, address: &Address) -> Account {
+    if let Some(account) = get_account_optional(state, address) {
+        account
+    } else {
+        EMPTY_ACCOUNT
+    }
+}
 
-//     Use `get_account_optional()` if you care about the difference between a
-//     non-existent account and `EMPTY_ACCOUNT`.
-
-//     Parameters
-//     ----------
-//     state: `State`
-//         The state
-//     address : `Address`
-//         Address to lookup.
-
-//     Returns
-//     -------
-//     account : `Account`
-//         Account at address.
-//     """
-//     account = get_account_optional(state, address)
-//     if isinstance(account, Account):
-//         return account
-//     else:
-//         return EMPTY_ACCOUNT
-
-// def get_account_optional(state: State, address: Address) -> Optional[Account]:
-//     """
-//     Get the `Account` object at an address. Returns `None` (rather than
-//     `EMPTY_ACCOUNT`) if there is no account at the address.
-
-//     Parameters
-//     ----------
-//     state: `State`
-//         The state
-//     address : `Address`
-//         Address to lookup.
-
-//     Returns
-//     -------
-//     account : `Account`
-//         Account at address.
-//     """
-//     account = trie_get(state._main_trie, address)
-//     return account
+/// """
+/// Get the `Account` object at an address. Returns `None` (rather than
+/// `EMPTY_ACCOUNT`) if there is no account at the address.
+/// 
+/// Parameters
+/// ----------
+/// state: `State`
+///     The state
+/// address : `Address`
+///     Address to lookup.
+/// 
+/// Returns
+/// -------
+/// account : `Account`
+///     Account at address.
+/// """
+pub fn get_account_optional(state: &State, address: &Address) -> Option<Account> {
+    trie_get(state.main_trie, address)
+}
 
 // def set_account(
 //     state: State, address: Address, account: Optional[Account]

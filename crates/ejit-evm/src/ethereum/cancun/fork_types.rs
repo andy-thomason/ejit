@@ -1,23 +1,61 @@
+use std::ops::Deref;
+
 use crate::ethereum::{crypto::hash::Hash32, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}};
 
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Address(pub Bytes20);
 
+impl Deref for Address {
+    type Target = [u8; 20];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Root(pub Hash32);
+
+impl Deref for Root {
+    type Target = [u8; 32];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0.0.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct VersionedHash(pub Hash32);
 
+impl Deref for VersionedHash {
+    type Target = [u8; 32];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0.0.0
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Bloom(pub Bytes256);
 
+impl Deref for Bloom {
+    type Target = [u8; 256];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0.0
+    }
+}
 
 /// State associated with an address.
 pub struct Account {
-    nonce: Uint,
-    balance: U256,
-    code: Bytes,
+    pub nonce: Uint,
+    pub balance: U256,
+    pub code: Bytes,
 }
 
 pub const EMPTY_ACCOUNT : Account = Account{
-    nonce: Uint(0),
+    nonce: 0,
     balance: U256([0; 32]),
     code: Bytes(Vec::new()),
 };

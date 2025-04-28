@@ -155,6 +155,10 @@ pub struct Trie<K : Ord, V> {
 }
 
 impl<K : Ord, V> Trie<K, V> {
+    pub fn new(secured: bool, default_value: V) -> Self {
+        Self { secured, default_value, data: Default::default() }
+    }
+    
     pub fn set(&mut self, k: K, v: V) {
         self.data.insert(k, v);
     }
