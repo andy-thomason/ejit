@@ -2,7 +2,7 @@
 
 /// Unknown [EIP-2718] transaction type byte.
 pub struct TransactionTypeError {
-    transaction_type: i64,
+    pub transaction_type: u8,
 }
 
 // class TransactionTypeError(InvalidTransaction):

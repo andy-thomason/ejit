@@ -2,14 +2,26 @@ use std::ops::Deref;
 
 use crate::ethereum::{crypto::hash::Hash32, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}};
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
-pub struct Address(pub Bytes20);
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
+pub struct Address([u8; 20]);
+
+impl Address {
+    pub const fn from_be_bytes(value: [u8; 20]) -> Self {
+        Self(value)
+    }
+}
 
 impl Deref for Address {
     type Target = [u8; 20];
 
     fn deref(&self) -> &Self::Target {
-        &self.0.0
+        &self.0
+    }
+}
+
+impl From<[u8; 20]> for Address {
+    fn from(value: [u8; 20]) -> Self {
+        Self(value)
     }
 }
 
@@ -54,9 +66,9 @@ pub struct Account {
     pub code: Bytes,
 }
 
-pub const EMPTY_ACCOUNT : Account = Account{
+pub static EMPTY_ACCOUNT : Account = Account{
     nonce: 0,
-    balance: U256([0; 32]),
+    balance: U256::ZERO,
     code: Bytes(Vec::new()),
 };
 

@@ -14,13 +14,13 @@
 
 use std::collections::BTreeSet;
 
-use crate::ethereum::exceptions::Exception;
+use crate::ethereum::{cancun::{blocks::Log, fork_types::Address}, ethereum_types::numeric::{Uint, U256}, exceptions::Exception};
 
-use super::{Environment, Message};
+use super::{Environment, Evm, Message};
 
 
-const STACK_DEPTH_LIMIT : Uint = Uint::from(1024_u32);
-const MAX_CODE_SIZE : Uint = 0x6000;
+pub const STACK_DEPTH_LIMIT : usize = 1024;
+pub const MAX_CODE_SIZE : usize = 0x6000;
 
 /// """
 /// Output of a particular message call
@@ -40,7 +40,7 @@ pub struct MessageCallOutput {
     pub logs: Vec<Log>,
     pub accounts_to_delete: BTreeSet<Address>,
     pub touched_accounts: BTreeSet<Address>,
-    pub error: Option<EthereumException>,
+    pub error: Option<Exception>,
 }
 
 /// """
@@ -61,7 +61,7 @@ pub struct MessageCallOutput {
 ///     Output of the message call
 /// """
 pub fn process_message_call(
-    message: &Message, env: &mut Environment
+    message: &Message, env: &Environment
 ) -> Result<MessageCallOutput, Exception> {
     // let evm = if message.target == Bytes0(b"") {
     //     let is_collision = account_has_code_or_nonce(
@@ -130,7 +130,7 @@ pub fn process_message_call(
 /// evm: :py:class:`~ethereum.cancun.vm.Evm`
 ///     Items containing execution specific objects.
 /// """
-pub fn process_create_message(message: &Message, env: &mut Environment) -> Evm {
+pub fn process_create_message<'a>(message: &Message, env: &'a Environment) -> Evm<'a> {
     // # take snapshot of state before processing the message
     // begin_transaction(env.state, env.transient_storage)
 
@@ -191,7 +191,7 @@ pub fn process_create_message(message: &Message, env: &mut Environment) -> Evm {
 /// evm: :py:class:`~ethereum.cancun.vm.Evm`
 ///     Items containing execution specific objects
 /// """
-pub fn process_message(message: &Message, env: &mut Environment) -> Evm {
+pub fn process_message<'a>(message: &Message, env: &'a Environment) -> Evm<'a> {
     // if message.depth > STACK_DEPTH_LIMIT:
     //     raise StackDepthLimitError("Stack depth limit reached")
 
@@ -233,7 +233,7 @@ pub fn process_message(message: &Message, env: &mut Environment) -> Evm {
 /// evm: `ethereum.vm.EVM`
 ///     Items containing execution specific objects
 /// """
-pub fn execute_code(message: &Message, env: &mut Environment) -> Evm {
+pub fn execute_code<'a>(message: &Message, env: &'a Environment) -> Evm<'a> {
     // code = message.code
     // valid_jump_destinations = get_valid_jump_destinations(code)
 

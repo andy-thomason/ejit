@@ -1,14 +1,23 @@
 //! https://github.com/ethereum/execution-specs/blob/master/src/ethereum/cancun/vm/__init__.py
 //! 
 
-use std::collections::{BTr, BTreeMap, BTreeSet, BTreeSetBTreeSet};
+use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{ethereum::{cancun::fork_types::*, crypto::hash::Hash32, ethereum_types::{bytes::*, numeric::*}, exceptions::EthereumException}, Either};
+use exceptions::VmError;
+
+use crate::{ethereum::{cancun::fork_types::*, crypto::hash::Hash32, ethereum_types::{bytes::*, numeric::*}}, Either};
 
 use super::{blocks::Log, state::{State, TransientStorage}};
 
+pub mod exceptions;
 pub mod gas;
+pub mod instructions;
 pub mod interpreter;
+pub mod memory;
+pub mod precompiled_contracts;
+pub mod runtime;
+pub mod stack;
+
 
 /// Items external to the virtual machine itself, provided by the environment.
 pub struct Environment<'a> {
@@ -31,7 +40,7 @@ pub struct Environment<'a> {
 }
 
 /// Items that are used by contract creation or message call.
-pub struct Message {
+pub struct Message<'a> {
     pub caller: Address,
     pub target: Either<Bytes0, Address>,
     pub current_target: Address,
@@ -45,28 +54,28 @@ pub struct Message {
     pub is_static: bool,
     pub accessed_addresses: BTreeSet<Address>,
     pub accessed_storage_keys: BTreeSet<(Address, Bytes32)>,
-    pub parent_evm: Option<Box<Evm>>,
+    pub parent_evm: Option<&'a Evm<'a>>,
 }
 
 
 /// The internal state of the virtual machine.
-pub struct Evm {
+pub struct Evm<'a> {
     pub pc: Uint,
     pub stack: Vec<U256>,
     pub memory: Vec<u8>,
     pub code: Bytes,
     pub gas_left: Uint,
-    pub env: Environment,
+    pub env: &'a Environment<'a>,
     pub valid_jump_destinations: Vec<Uint>,
     pub logs: Vec<Log>,
     pub refund_counter: i64,
     pub running: bool,
-    pub message: Message,
+    pub message: Message<'a>,
     pub output: Bytes,
     pub accounts_to_delete: Vec<Address>,
     pub touched_accounts: Vec<Address>,
     pub return_data: Bytes,
-    pub error: Option<EthereumException>,
+    pub error: Option<VmError>,
     pub accessed_addresses: Vec<Address>,
     pub accessed_storage_keys: Vec<(Address, Bytes32)>,
 }

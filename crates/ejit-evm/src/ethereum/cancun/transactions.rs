@@ -2,36 +2,24 @@
 //! submitted to be executed. If Ethereum is viewed as a state machine,
 //! transactions are the events that move between states.
 
-// from dataclasses import dataclass
-// from typing import Tuple, Union
+use crate::{ethereum::{cancun::{execptions::TransactionTypeError, fork_types::{Address, VersionedHash}}, crypto::{eliptic_curve::{secp256k1_recover, SECP256K1N}, hash::{keccak256, Hash32}}, ethereum_rlp::rlp::{self, Extended}, ethereum_types::{bytes::{Bytes, Bytes0, Bytes32}, numeric::{Uint, U256, U64}}, exceptions::Exception}, Either};
 
-// from ethereum_rlp import rlp
-// from ethereum_types.bytes import Bytes, Bytes0, Bytes32
-// from ethereum_types.frozen import slotted_freezable
-// from ethereum_types.numeric import U64, U256, Uint
+use super::vm::{gas::init_code_cost, interpreter::MAX_CODE_SIZE};
 
-// from ethereum.crypto.elliptic_curve import SECP256K1N, secp256k1_recover
-// from ethereum.crypto.hash import Hash32, keccak256
-// from ethereum.exceptions import InvalidSignatureError
+const TX_BASE_COST : Uint = 21000;
+const TX_DATA_COST_PER_NON_ZERO : Uint = 16;
+const TX_DATA_COST_PER_ZERO : Uint = 4;
+const TX_CREATE_COST : Uint = 32000;
+const TX_ACCESS_LIST_ADDRESS_COST : Uint = 2400;
+const TX_ACCESS_LIST_STORAGE_KEY_COST : Uint = 1900;
 
-// from .exceptions import TransactionTypeError
-// from .fork_types import Address, VersionedHash
-
-use crate::{ethereum::ethereum_types::{bytes::{Bytes, Bytes0, Bytes32}, numeric::{Uint, U256, U64}}, ethereum::cancun::fork_types::{Address, VersionedHash}, Either};
-
-const TX_BASE_COST : u64 = 21000;
-const TX_DATA_COST_PER_NON_ZERO : u64 = 16;
-const TX_DATA_COST_PER_ZERO : u64 = 4;
-const TX_CREATE_COST : u64 = 32000;
-const TX_ACCESS_LIST_ADDRESS_COST : u64 = 2400;
-const TX_ACCESS_LIST_STORAGE_KEY_COST : u64 = 1900;
-
+#[derive(Debug, Clone)]
 /// Atomic operation performed on the block chain.
 pub struct LegacyTransaction {
     pub nonce: U256,
     pub gas_price: Uint,
     pub gas: Uint,
-    pub to: Either<Bytes0, Address>,
+    pub to: Option<Address>,
     pub value: U256,
     pub data: Bytes,
     pub v: U256,
@@ -40,12 +28,13 @@ pub struct LegacyTransaction {
 }
 
 /// The transaction type added in EIP-2930 to support access lists.
+#[derive(Debug, Clone, Default)]
 pub struct AccessListTransaction {
     pub chain_id: U64,
     pub nonce: U256,
     pub gas_price: Uint,
     pub gas: Uint,
-    pub to: Either<Bytes0, Address>,
+    pub to: Option<Address>,
     pub value: U256,
     pub data: Bytes,
     pub access_list: Vec<(Address, Vec<Bytes32>)>,
@@ -54,15 +43,26 @@ pub struct AccessListTransaction {
     pub s: U256,
 }
 
+impl Extended for AccessListTransaction {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        todo!()
+    }
+
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        todo!()
+    }
+}
+
 
 /// The transaction type added in EIP-1559.
+#[derive(Debug, Clone, Default)]
 pub struct FeeMarketTransaction {
     pub chain_id: U64,
     pub nonce: U256,
     pub max_priority_fee_per_gas: Uint,
     pub max_fee_per_gas: Uint,
     pub gas: Uint,
-    pub to: Either<Bytes0, Address>,
+    pub to: Option<Address>,
     pub value: U256,
     pub data: Bytes,
     pub access_list: Vec<(Address, Vec<Bytes32>)>,
@@ -72,7 +72,17 @@ pub struct FeeMarketTransaction {
 }
 
 
+impl Extended for FeeMarketTransaction {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        todo!()
+    }
+
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        todo!()
+    }
+}
 /// The transaction type added in EIP-4844.
+#[derive(Debug, Clone, Default)]
 pub struct BlobTransaction {
     pub chain_id: U64,
     pub nonce: U256,
@@ -97,352 +107,448 @@ pub enum Transaction {
     BlobTransaction(BlobTransaction),
 }
 
-// Transaction = Union[
-//     LegacyTransaction,
-//     AccessListTransaction,
-//     FeeMarketTransaction,
-//     BlobTransaction,
-// ]
+impl Extended for BlobTransaction {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        todo!()
+    }
+
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        todo!()
+    }
+}
+
+macro_rules! extract {
+    ($field: ident, $self : expr) => {
+        {
+            use Transaction::*;
+            match $self {
+                LegacyTransaction(tx) => &tx.$field,
+                AccessListTransaction(tx) => &tx.$field,
+                FeeMarketTransaction(tx) => &tx.$field,
+                BlobTransaction(tx) => &tx.$field,
+            }
+        }
+    }
+}
+
+impl Transaction {
+    pub fn nonce(&self) -> &U256 {
+        extract!(nonce, &self)
+    }
+
+    pub fn gas_price(&self) -> Option<Uint> {
+        use Transaction::*;
+        match self {
+            LegacyTransaction(tx) => Some(tx.gas_price),
+            AccessListTransaction(tx) => Some(tx.gas_price),
+            FeeMarketTransaction(tx) => None,
+            BlobTransaction(tx) => None,
+        }
+    }
+
+    pub fn gas(&self) -> &Uint {
+        extract!(gas, &self)
+    }
+
+    pub fn to(&self) -> Option<Address> {
+        use Transaction::*;
+        match self {
+            LegacyTransaction(tx) => tx.to.clone(),
+            AccessListTransaction(tx) => tx.to.clone(),
+            FeeMarketTransaction(tx) => tx.to.clone(),
+            BlobTransaction(tx) => Some(tx.to.clone()),
+        }
+    }
+
+    pub fn value(&self) -> &U256 {
+        extract!(value, &self)
+    }
+
+    pub fn data(&self) -> &[u8] {
+        extract!(data, &self)
+    }
+
+    pub fn v(&self) -> Option<&U256> {
+        use Transaction::*;
+        match self {
+            LegacyTransaction(tx) => Some(&tx.v),
+            AccessListTransaction(tx) => None,
+            FeeMarketTransaction(tx) => None,
+            BlobTransaction(tx) => None,
+        }
+    }
+
+    pub fn r(&self) -> &U256 {
+        extract!(r, &self)
+    }
+
+    pub fn s(&self) -> &U256 {
+        extract!(s, &self)
+    }
+
+    pub fn access_list(&self) -> Option<&[(Address, Vec<Bytes32>)]> {
+        use Transaction::*;
+        match self {
+            LegacyTransaction(tx) => None,
+            AccessListTransaction(tx) => Some(&tx.access_list),
+            FeeMarketTransaction(tx) => Some(&tx.access_list),
+            BlobTransaction(tx) => Some(&tx.access_list),
+        }
+    }
+}
 
 
-// def encode_transaction(tx: Transaction) -> Union[LegacyTransaction, Bytes]:
-//     """
-//     Encode a transaction. Needed because non-legacy transactions aren't RLP.
-//     """
-//     if isinstance(tx, LegacyTransaction):
-//         return tx
-//     elif isinstance(tx, AccessListTransaction):
-//         return b"\x01" + rlp.encode(tx)
-//     elif isinstance(tx, FeeMarketTransaction):
-//         return b"\x02" + rlp.encode(tx)
-//     elif isinstance(tx, BlobTransaction):
-//         return b"\x03" + rlp.encode(tx)
-//     else:
-//         raise Exception(f"Unable to encode transaction of type {type(tx)}")
+
+/// Encode a transaction. Needed because non-legacy transactions aren't RLP.
+pub fn encode_transaction(tx: &Transaction) -> Result<Either<LegacyTransaction, Bytes>, Exception> {
+    use Transaction::*;
+    match tx {
+        LegacyTransaction(tx) => Ok(Either::A(tx.clone())),
+        AccessListTransaction(tx) => Ok(Either::B(Bytes([&b"\x01"[..], &rlp::encode(tx)?].concat()))),
+        FeeMarketTransaction(tx) => Ok(Either::B(Bytes([&b"\x02"[..], &rlp::encode(tx)?].concat()))),
+        BlobTransaction(tx) => Ok(Either::B(Bytes([&b"\x03"[..], &rlp::encode(tx)?].concat()))),
+    }
+}
 
 
-// def decode_transaction(tx: Union[LegacyTransaction, Bytes]) -> Transaction:
-//     """
-//     Decode a transaction. Needed because non-legacy transactions aren't RLP.
-//     """
-//     if isinstance(tx, Bytes):
-//         if tx[0] == 1:
-//             return rlp.decode_to(AccessListTransaction, tx[1:])
-//         elif tx[0] == 2:
-//             return rlp.decode_to(FeeMarketTransaction, tx[1:])
-//         elif tx[0] == 3:
-//             return rlp.decode_to(BlobTransaction, tx[1:])
-//         else:
-//             raise TransactionTypeError(tx[0])
-//     else:
-//         return tx
+/// Decode a transaction. Needed because non-legacy transactions aren't RLP.
+pub fn decode_transaction(tx: Either<LegacyTransaction, Bytes>) -> Result<Transaction, Exception> {
+    match tx {
+        Either::A(tx) => Ok(Transaction::LegacyTransaction(tx)),
+        Either::B(tx) => {
+            let tx = &*tx;
+            if tx[0] == 1 {
+                Ok(Transaction::AccessListTransaction(rlp::decode_to::<AccessListTransaction>(&tx[1..])?))
+            } else if tx[0] == 2 {
+                Ok(Transaction::FeeMarketTransaction(rlp::decode_to::<FeeMarketTransaction>(&tx[1..])?))
+            } else if tx[0] == 3 {
+                Ok(Transaction::BlobTransaction(rlp::decode_to::<BlobTransaction>(&tx[1..])?))
+            } else {
+                Err(Exception::TransactionTypeError{ transaction_type: tx[0] })
+            }
+        }
+    }
+}
 
 
-// def validate_transaction(tx: Transaction) -> bool:
-//     """
-//     Verifies a transaction.
+/// """
+/// Verifies a transaction.
+/// 
+/// The gas in a transaction gets used to pay for the intrinsic cost of
+/// operations, therefore if there is insufficient gas then it would not
+/// be possible to execute a transaction and it will be declared invalid.
+/// 
+/// Additionally, the nonce of a transaction must not equal or exceed the
+/// limit defined in `EIP-2681 <https://eips.ethereum.org/EIPS/eip-2681>`_.
+/// In practice, defining the limit as ``2**64-1`` has no impact because
+/// sending ``2**64-1`` transactions is improbable. It's not strictly
+/// impossible though, ``2**64-1`` transactions is the entire capacity of the
+/// Ethereum blockchain at 2022 gas limits for a little over 22 years.
+/// 
+/// Parameters
+/// ----------
+/// tx :
+///     Transaction to validate.
+/// 
+/// Returns
+/// -------
+/// verified : `bool`
+///     True if the transaction can be executed, or false otherwise.
+/// """
+pub fn validate_transaction(tx: &Transaction) -> bool {
+    if calculate_intrinsic_cost(tx) > *tx.gas() {
+        return false;
+    }
 
-//     The gas in a transaction gets used to pay for the intrinsic cost of
-//     operations, therefore if there is insufficient gas then it would not
-//     be possible to execute a transaction and it will be declared invalid.
+    if tx.nonce() >= &U256::from(u64::MAX) {
+        return false;
+    }
 
-//     Additionally, the nonce of a transaction must not equal or exceed the
-//     limit defined in `EIP-2681 <https://eips.ethereum.org/EIPS/eip-2681>`_.
-//     In practice, defining the limit as ``2**64-1`` has no impact because
-//     sending ``2**64-1`` transactions is improbable. It's not strictly
-//     impossible though, ``2**64-1`` transactions is the entire capacity of the
-//     Ethereum blockchain at 2022 gas limits for a little over 22 years.
+    if tx.to().is_none() && tx.data().len() > 2 * MAX_CODE_SIZE {
+        return false;
+    }
 
-//     Parameters
-//     ----------
-//     tx :
-//         Transaction to validate.
-
-//     Returns
-//     -------
-//     verified : `bool`
-//         True if the transaction can be executed, or False otherwise.
-//     """
-//     from .vm.interpreter import MAX_CODE_SIZE
-
-//     if calculate_intrinsic_cost(tx) > tx.gas:
-//         return False
-//     if tx.nonce >= U256(U64.MAX_VALUE):
-//         return False
-//     if tx.to == Bytes0(b"") and len(tx.data) > 2 * MAX_CODE_SIZE:
-//         return False
-
-//     return True
-
-
-// def calculate_intrinsic_cost(tx: Transaction) -> Uint:
-//     """
-//     Calculates the gas that is charged before execution is started.
-
-//     The intrinsic cost of the transaction is charged before execution has
-//     begun. Functions/operations in the EVM cost money to execute so this
-//     intrinsic cost is for the operations that need to be paid for as part of
-//     the transaction. Data transfer, for example, is part of this intrinsic
-//     cost. It costs ether to send data over the wire and that ether is
-//     accounted for in the intrinsic cost calculated in this function. This
-//     intrinsic cost must be calculated and paid for before execution in order
-//     for all operations to be implemented.
-
-//     Parameters
-//     ----------
-//     tx :
-//         Transaction to compute the intrinsic cost of.
-
-//     Returns
-//     -------
-//     verified : `ethereum.base_types.Uint`
-//         The intrinsic cost of the transaction.
-//     """
-//     from .vm.gas import init_code_cost
-
-//     data_cost = 0
-
-//     for byte in tx.data:
-//         if byte == 0:
-//             data_cost += TX_DATA_COST_PER_ZERO
-//         else:
-//             data_cost += TX_DATA_COST_PER_NON_ZERO
-
-//     if tx.to == Bytes0(b""):
-//         create_cost = TX_CREATE_COST + int(init_code_cost(Uint(len(tx.data))))
-//     else:
-//         create_cost = 0
-
-//     access_list_cost = 0
-//     if isinstance(
-//         tx, (AccessListTransaction, FeeMarketTransaction, BlobTransaction)
-//     ):
-//         for _address, keys in tx.access_list:
-//             access_list_cost += TX_ACCESS_LIST_ADDRESS_COST
-//             access_list_cost += len(keys) * TX_ACCESS_LIST_STORAGE_KEY_COST
-
-//     return Uint(TX_BASE_COST + data_cost + create_cost + access_list_cost)
+    true
+}
 
 
-// def recover_sender(chain_id: U64, tx: Transaction) -> Address:
-//     """
-//     Extracts the sender address from a transaction.
+/// """
+/// Calculates the gas that is charged before execution is started.
+/// 
+/// The intrinsic cost of the transaction is charged before execution has
+/// begun. Functions/operations in the EVM cost money to execute so this
+/// intrinsic cost is for the operations that need to be paid for as part of
+/// the transaction. Data transfer, for example, is part of this intrinsic
+/// cost. It costs ether to send data over the wire and that ether is
+/// accounted for in the intrinsic cost calculated in this function. This
+/// intrinsic cost must be calculated and paid for before execution in order
+/// for all operations to be implemented.
+/// 
+/// Parameters
+/// ----------
+/// tx :
+///     Transaction to compute the intrinsic cost of.
+/// 
+/// Returns
+/// -------
+/// verified : `ethereum.base_types.Uint`
+///     The intrinsic cost of the transaction.
+/// """
+pub fn calculate_intrinsic_cost(tx: &Transaction) -> Uint {
+    let mut data_cost = 0;
 
-//     The v, r, and s values are the three parts that make up the signature
-//     of a transaction. In order to recover the sender of a transaction the two
-//     components needed are the signature (``v``, ``r``, and ``s``) and the
-//     signing hash of the transaction. The sender's public key can be obtained
-//     with these two values and therefore the sender address can be retrieved.
+    for byte in tx.data() {
+        if *byte == 0 {
+            data_cost += TX_DATA_COST_PER_ZERO;
+        } else {
+            data_cost += TX_DATA_COST_PER_NON_ZERO;
+        }
+    }
 
-//     Parameters
-//     ----------
-//     tx :
-//         Transaction of interest.
-//     chain_id :
-//         ID of the executing chain.
+    let create_cost = if tx.to().is_none() {
+        TX_CREATE_COST + init_code_cost(tx.data().len() as Uint)
+    } else {
+        0
+    };
 
-//     Returns
-//     -------
-//     sender : `ethereum.fork_types.Address`
-//         The address of the account that signed the transaction.
-//     """
-//     r, s = tx.r, tx.s
-//     if U256(0) >= r or r >= SECP256K1N:
-//         raise InvalidSignatureError("bad r")
-//     if U256(0) >= s or s > SECP256K1N // U256(2):
-//         raise InvalidSignatureError("bad s")
+    let mut access_list_cost = 0;
+    if let Some(access_list) = tx.access_list() {
+        for (_address, keys) in access_list {
+            access_list_cost += TX_ACCESS_LIST_ADDRESS_COST;
+            access_list_cost += keys.len() as Uint * TX_ACCESS_LIST_STORAGE_KEY_COST;
+        }
+    }
 
-//     if isinstance(tx, LegacyTransaction):
-//         v = tx.v
-//         if v == 27 or v == 28:
-//             public_key = secp256k1_recover(
-//                 r, s, v - U256(27), signing_hash_pre155(tx)
-//             )
-//         else:
-//             chain_id_x2 = U256(chain_id) * U256(2)
-//             if v != U256(35) + chain_id_x2 and v != U256(36) + chain_id_x2:
-//                 raise InvalidSignatureError("bad v")
-//             public_key = secp256k1_recover(
-//                 r,
-//                 s,
-//                 v - U256(35) - chain_id_x2,
-//                 signing_hash_155(tx, chain_id),
-//             )
-//     elif isinstance(tx, AccessListTransaction):
-//         if tx.y_parity not in (U256(0), U256(1)):
-//             raise InvalidSignatureError("bad y_parity")
-//         public_key = secp256k1_recover(
-//             r, s, tx.y_parity, signing_hash_2930(tx)
-//         )
-//     elif isinstance(tx, FeeMarketTransaction):
-//         if tx.y_parity not in (U256(0), U256(1)):
-//             raise InvalidSignatureError("bad y_parity")
-//         public_key = secp256k1_recover(
-//             r, s, tx.y_parity, signing_hash_1559(tx)
-//         )
-//     elif isinstance(tx, BlobTransaction):
-//         if tx.y_parity not in (U256(0), U256(1)):
-//             raise InvalidSignatureError("bad y_parity")
-//         public_key = secp256k1_recover(
-//             r, s, tx.y_parity, signing_hash_4844(tx)
-//         )
-
-//     return Address(keccak256(public_key)[12:32])
+    return Uint::from(TX_BASE_COST + data_cost + create_cost + access_list_cost)
+}
 
 
-// def signing_hash_pre155(tx: LegacyTransaction) -> Hash32:
-//     """
-//     Compute the hash of a transaction used in a legacy (pre EIP 155) signature.
+/// Extracts the sender address from a transaction.
+/// 
+/// The v, r, and s values are the three parts that make up the signature
+/// of a transaction. In order to recover the sender of a transaction the two
+/// components needed are the signature (``v``, ``r``, and ``s``) and the
+/// signing hash of the transaction. The sender's public key can be obtained
+/// with these two values and therefore the sender address can be retrieved.
+/// 
+/// Parameters
+/// ----------
+/// tx :
+///     Transaction of interest.
+/// chain_id :
+///     ID of the executing chain.
+/// 
+/// Returns
+/// -------
+/// sender : `ethereum.fork_types.Address`
+///     The address of the account that signed the transaction.
+pub fn recover_sender(chain_id: U64, tx: &Transaction) -> Result<Address, Exception> {
+    let (&r, &s) = (tx.r(), tx.s());
+    if U256::from(0_u32) >= r || r >= SECP256K1N {
+        return Err(Exception::InvalidSignatureError("bad r"));
+    }
+    if U256::from(0_u32) >= s || s > SECP256K1N / U256::from(2_u32) {
+        return Err(Exception::InvalidSignatureError("bad s"));
+    }
 
-//     Parameters
-//     ----------
-//     tx :
-//         Transaction of interest.
+    use Transaction::*;
+    let public_key = match tx {
+        LegacyTransaction(tx) => {
+            let v = tx.v;
+            if v == U256::from(27_u32) || v == U256::from(28_u32) {
+                secp256k1_recover(
+                    r, s, v - U256::from(27_u32), signing_hash_pre155(tx)?
+                )
+            } else {
+                let chain_id_x2 = U256::from(chain_id * 2);
+                if v != U256::from(35_u32) + chain_id_x2 && v != U256::from(36_u32) + chain_id_x2 {
+                    return Err(Exception::InvalidSignatureError("bad v"));
+                }
+                secp256k1_recover(
+                    r,
+                    s,
+                    v - U256::from(35) - chain_id_x2,
+                    signing_hash_155(tx, chain_id)?,
+                )
+            }
+        }
+        AccessListTransaction(tx) => {
+            if tx.y_parity != U256::from(0_u32) && tx.y_parity != U256::from(1_u32) {
+                return Err(Exception::InvalidSignatureError("bad y_parity"));
+            }
+            secp256k1_recover(
+                r, s, tx.y_parity, signing_hash_2930(tx)?
+            )
+        }
+        FeeMarketTransaction(tx) => {
+            if tx.y_parity != U256::from(0_u32) && tx.y_parity != U256::from(1_u32) {
+                return Err(Exception::InvalidSignatureError("bad y_parity"));
+            }
+            secp256k1_recover(
+                r, s, tx.y_parity, signing_hash_1559(tx)?
+            )
+        }
+        BlobTransaction(tx) => {
+            if tx.y_parity != U256::from(0_u32) && tx.y_parity != U256::from(1_u32) {
+                return Err(Exception::InvalidSignatureError("bad y_parity"));
+            }
+            secp256k1_recover(
+                r, s, tx.y_parity, signing_hash_4844(tx)?
+            )
+        }
+    };
 
-//     Returns
-//     -------
-//     hash : `ethereum.crypto.hash.Hash32`
-//         Hash of the transaction.
-//     """
-//     return keccak256(
-//         rlp.encode(
-//             (
-//                 tx.nonce,
-//                 tx.gas_price,
-//                 tx.gas,
-//                 tx.to,
-//                 tx.value,
-//                 tx.data,
-//             )
-//         )
-//     )
-
-
-// def signing_hash_155(tx: LegacyTransaction, chain_id: U64) -> Hash32:
-//     """
-//     Compute the hash of a transaction used in a EIP 155 signature.
-
-//     Parameters
-//     ----------
-//     tx :
-//         Transaction of interest.
-//     chain_id :
-//         The id of the current chain.
-
-//     Returns
-//     -------
-//     hash : `ethereum.crypto.hash.Hash32`
-//         Hash of the transaction.
-//     """
-//     return keccak256(
-//         rlp.encode(
-//             (
-//                 tx.nonce,
-//                 tx.gas_price,
-//                 tx.gas,
-//                 tx.to,
-//                 tx.value,
-//                 tx.data,
-//                 chain_id,
-//                 Uint(0),
-//                 Uint(0),
-//             )
-//         )
-//     )
-
-
-// def signing_hash_2930(tx: AccessListTransaction) -> Hash32:
-//     """
-//     Compute the hash of a transaction used in a EIP 2930 signature.
-
-//     Parameters
-//     ----------
-//     tx :
-//         Transaction of interest.
-
-//     Returns
-//     -------
-//     hash : `ethereum.crypto.hash.Hash32`
-//         Hash of the transaction.
-//     """
-//     return keccak256(
-//         b"\x01"
-//         + rlp.encode(
-//             (
-//                 tx.chain_id,
-//                 tx.nonce,
-//                 tx.gas_price,
-//                 tx.gas,
-//                 tx.to,
-//                 tx.value,
-//                 tx.data,
-//                 tx.access_list,
-//             )
-//         )
-//     )
+    Ok(Address::from_be_bytes(keccak256(&public_key)[12..32].try_into().unwrap()))
+}
 
 
-// def signing_hash_1559(tx: FeeMarketTransaction) -> Hash32:
-//     """
-//     Compute the hash of a transaction used in a EIP 1559 signature.
 
-//     Parameters
-//     ----------
-//     tx :
-//         Transaction of interest.
-
-//     Returns
-//     -------
-//     hash : `ethereum.crypto.hash.Hash32`
-//         Hash of the transaction.
-//     """
-//     return keccak256(
-//         b"\x02"
-//         + rlp.encode(
-//             (
-//                 tx.chain_id,
-//                 tx.nonce,
-//                 tx.max_priority_fee_per_gas,
-//                 tx.max_fee_per_gas,
-//                 tx.gas,
-//                 tx.to,
-//                 tx.value,
-//                 tx.data,
-//                 tx.access_list,
-//             )
-//         )
-//     )
+/// """
+/// Compute the hash of a transaction used in a legacy (pre EIP 155) signature.
+/// 
+/// Parameters
+/// ----------
+/// tx :
+///     Transaction of interest.
+/// 
+/// Returns
+/// -------
+/// hash : `ethereum.crypto.hash.Hash32`
+///     Hash of the transaction.
+/// """
+pub fn signing_hash_pre155(tx: &LegacyTransaction) -> Result<Hash32, Exception> {
+    let mut dest = Bytes::default();
+    rlp::encode_sequence(&mut dest, &[
+        &tx.nonce,
+        &tx.gas_price,
+        &tx.gas,
+        &tx.to,
+        &tx.value,
+        &tx.data,
+    ])?;
+    Ok(keccak256(&dest))
+}
 
 
-// def signing_hash_4844(tx: BlobTransaction) -> Hash32:
-//     """
-//     Compute the hash of a transaction used in a EIP-4844 signature.
+/// """
+/// Compute the hash of a transaction used in a EIP 155 signature.
+/// 
+/// Parameters
+/// ----------
+/// tx :
+///     Transaction of interest.
+/// chain_id :
+///     The id of the current chain.
+/// 
+/// Returns
+/// -------
+/// hash : `ethereum.crypto.hash.Hash32`
+///     Hash of the transaction.
+/// """
+pub fn signing_hash_155(tx: &LegacyTransaction, chain_id: U64) -> Result<Hash32, Exception> {
+    let mut dest = Bytes::default();
+    rlp::encode_sequence(&mut dest, &[
+        &tx.nonce,
+        &tx.gas_price,
+        &tx.gas,
+        &tx.to,
+        &tx.value,
+        &tx.data,
+        &chain_id,
+        &Uint::from(0_u32),
+        &Uint::from(0_u32),
+    ])?;
+    Ok(keccak256(&dest))
+}
 
-//     Parameters
-//     ----------
-//     tx :
-//         Transaction of interest.
 
-//     Returns
-//     -------
-//     hash : `ethereum.crypto.hash.Hash32`
-//         Hash of the transaction.
-//     """
-//     return keccak256(
-//         b"\x03"
-//         + rlp.encode(
-//             (
-//                 tx.chain_id,
-//                 tx.nonce,
-//                 tx.max_priority_fee_per_gas,
-//                 tx.max_fee_per_gas,
-//                 tx.gas,
-//                 tx.to,
-//                 tx.value,
-//                 tx.data,
-//                 tx.access_list,
-//                 tx.max_fee_per_blob_gas,
-//                 tx.blob_versioned_hashes,
-//             )
-//         )
-//     )
+/// """
+/// Compute the hash of a transaction used in a EIP 2930 signature.
+/// 
+/// Parameters
+/// ----------
+/// tx :
+///     Transaction of interest.
+/// 
+/// Returns
+/// -------
+/// hash : `ethereum.crypto.hash.Hash32`
+///     Hash of the transaction.
+/// """
+pub fn signing_hash_2930(tx: &AccessListTransaction) -> Result<Hash32, Exception> {
+    let mut dest = Bytes::default();
+    dest.push(0x01);
+    rlp::encode_sequence(&mut dest, &[
+        &tx.chain_id,
+        &tx.nonce,
+        &tx.gas_price,
+        &tx.gas,
+        &tx.to,
+        &tx.value,
+        &tx.data,
+        &tx.access_list,
+    ])?;
+    Ok(keccak256(&dest))
+}
+
+
+/// """
+/// Compute the hash of a transaction used in a EIP 1559 signature.
+/// 
+/// Parameters
+/// ----------
+/// tx :
+///     Transaction of interest.
+/// 
+/// Returns
+/// -------
+/// hash : `ethereum.crypto.hash.Hash32`
+///     Hash of the transaction.
+/// """
+pub fn signing_hash_1559(tx: &FeeMarketTransaction) -> Result<Hash32, Exception> {
+    let mut res = Bytes::default();
+    res.push(0x02);
+    rlp::encode_sequence(&mut res, &[
+        &tx.chain_id,
+        &tx.nonce,
+        &tx.max_priority_fee_per_gas,
+        &tx.max_fee_per_gas,
+        &tx.gas,
+        &tx.to,
+        &tx.value,
+        &tx.data,
+        &tx.access_list,
+    ]);
+    Ok(keccak256(&res))
+}
+
+
+/// Compute the hash of a transaction used in a EIP-4844 signature.
+/// 
+/// Parameters
+/// ----------
+/// tx :
+///     Transaction of interest.
+/// 
+/// Returns
+/// -------
+/// hash : `ethereum.crypto.hash.Hash32`
+///     Hash of the transaction.
+pub fn signing_hash_4844(tx: &BlobTransaction) -> Result<Hash32, Exception> {
+    let mut res = Bytes::default();
+    res.push(3);
+    rlp::encode_sequence(&mut res, &[
+        &tx.chain_id,
+        &tx.nonce,
+        &tx.max_priority_fee_per_gas,
+        &tx.max_fee_per_gas,
+        &tx.gas,
+        &tx.to,
+        &tx.value,
+        &tx.data,
+        &tx.access_list,
+        &tx.max_fee_per_blob_gas,
+        &tx.blob_versioned_hashes,
+    ]);
+    Ok(keccak256(&res))
+}

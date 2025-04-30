@@ -10,7 +10,9 @@
 //! 
 //! EVM gas constants and calculators.
 
-use crate::ethereum::{cancun::transactions::Transaction, ethereum_types::numeric::{Uint, U256, U64}, exceptions::Exception, utils::numeric::{ceil32, taylor_exponential}};
+use crate::ethereum::{cancun::{blocks::Header, transactions::Transaction}, ethereum_types::numeric::{Uint, U256, U64}, exceptions::Exception, utils::numeric::{ceil32, taylor_exponential}};
+
+use super::{exceptions::VmError, Evm};
 
 // https://github.com/ethereum/execution-specs/blob/master/src/ethereum/cancun/vm/gas.py
 const GAS_JUMPDEST : Uint = 1_u128;
@@ -56,7 +58,7 @@ const GAS_WARM_ACCESS : Uint = 100_u128;
 const GAS_INIT_CODE_WORD_COST : Uint = 2_u128;
 const GAS_BLOBHASH_OPCODE : Uint = 3_u128;
 const GAS_POINT_EVALUATION : Uint = 50000_u128;
-const TARGET_BLOB_GAS_PER_BLOCK : Uint = 393216_u128;
+const TARGET_BLOB_GAS_PER_BLOCK : U64 = 393216;
 const GAS_PER_BLOB : Uint = 1_u128<<17;
 const MIN_BLOB_GASPRICE : Uint = 1_u128;
 const BLOB_GASPRICE_UPDATE_FRACTION : Uint = 3338477_u128;
@@ -102,11 +104,11 @@ struct MessageCallGas {
 ///     The amount of gas the current operation requires.
 /// 
 /// """
-fn charge_gas(evm: &Evm, amount: Uint) -> Result<(), Exception> {
-    evm_trace(evm, GasAndRefund(int(amount)));
+fn charge_gas(evm: &mut Evm, amount: Uint) -> Result<(), VmError> {
+    // evm_trace(evm, GasAndRefund(int(amount)));
 
     if evm.gas_left < amount {
-        return Err(Exception::OutOfGasError);
+        return Err(VmError::OutOfGasError);
     } else {
         evm.gas_left -= amount;
     }
@@ -163,20 +165,20 @@ fn calculate_gas_extend_memory(
 ) -> Result<ExtendMemory, Exception> {
     let mut size_to_extend = Uint::from(0_u32);
     let mut to_be_paid = Uint::from(0_u32);
-    let mut current_size = Uint::from(memory.len());
+    let mut current_size = Uint::from(memory.len() as u128);
     for (start_position, size) in extensions {
-        if size == 0 {
+        if size.is_zero() {
             continue;
         }
         let before_size = ceil32(current_size);
-        let after_size = ceil32(Uint::try_from(start_position)? + Uint::try_from(size)?);
+        let after_size = ceil32(start_position.to_uint()? + size.to_uint()?);
         if after_size <= before_size {
             continue;
         }
 
         size_to_extend += after_size - before_size;
-        let already_paid = calculate_memory_gas_cost(before_size);
-        let total_cost = calculate_memory_gas_cost(after_size);
+        let already_paid = calculate_memory_gas_cost(before_size)?;
+        let total_cost = calculate_memory_gas_cost(after_size)?;
         to_be_paid += total_cost - already_paid;
 
         current_size = after_size;
@@ -219,12 +221,12 @@ pub fn calculate_message_call_gas(
     extra_gas: Uint,
     call_stipend: Uint, //  = GAS_CALL_STIPEND
 ) -> MessageCallGas {
-    let call_stipend = if value == 0 { Uint::from(0_u32) } else { call_stipend };
+    let call_stipend = if value.is_zero() { Uint::from(0_u32) } else { call_stipend };
     if gas_left < extra_gas + memory_cost {
         return MessageCallGas { cost: gas + extra_gas, stipend: gas + call_stipend };
     }
 
-    let gas = min(gas, max_message_call_gas(gas_left - memory_cost - extra_gas));
+    let gas = Uint::min(gas, max_message_call_gas(gas_left - memory_cost - extra_gas));
 
     MessageCallGas { cost: gas + extra_gas, stipend: gas + call_stipend }
 }
@@ -267,7 +269,6 @@ pub fn init_code_cost(init_code_length: Uint) -> Uint {
 }
 
 
-/// """
 /// Calculated the excess blob gas for the current block based
 /// on the gas used in the parent block.
 /// 
@@ -280,11 +281,10 @@ pub fn init_code_cost(init_code_length: Uint) -> Uint {
 /// -------
 /// excess_blob_gas: `ethereum.base_types.U64`
 ///     The excess blob gas for the current block.
-/// """
 pub fn calculate_excess_blob_gas(parent_header: &Header) -> U64 {
     // At the fork block, these are defined as zero.
-    let mut excess_blob_gas = U64::from(0_64);
-    let mut blob_gas_used = U64::from(0_64);
+    let mut excess_blob_gas = U64::from(0_u64);
+    let mut blob_gas_used = U64::from(0_u64);
 
     // todo: How do we determine if the header is from a previous fork?
     // if let Some(parent_header) = parent_header {
@@ -316,7 +316,7 @@ pub fn calculate_excess_blob_gas(parent_header: &Header) -> U64 {
 /// """
 pub fn calculate_total_blob_gas(tx: &Transaction) -> Uint {
     if let Transaction::BlobTransaction(tx) = tx {
-        GAS_PER_BLOB * Uint::from(tx.blob_versioned_hashes.len())
+        GAS_PER_BLOB * Uint::from(tx.blob_versioned_hashes.len() as u64)
     } else {
         Uint::from(0_u32)
     }

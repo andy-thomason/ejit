@@ -151,7 +151,7 @@ pub fn le_bytes_to_uint32_sequence(data: &[u8]) -> Vec<U32> {
 ///     The byte stream obtained from the little endian U32 stream.
 /// """
 pub fn le_uint32_sequence_to_bytes(sequence: &[U32]) -> Bytes {
-    let mut result_bytes = Vce::new();
+    let mut result_bytes = Vec::new();
     for item in sequence {
         result_bytes.extend(item.to_le_bytes());
     }
@@ -215,7 +215,7 @@ pub fn taylor_exponential(
         numerator_accumulated = (numerator_accumulated * numerator) / (
             denominator * i
         );
-        i += Uint(1);
+        i += Uint::from(1_u32);
     }
     output / denominator
 }

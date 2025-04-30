@@ -26,12 +26,12 @@ use crate::{
 };
 
 use super::{
-    blocks::{Block, Header, Receipt, Withdrawal},
+    blocks::{Block, Header, Log, Receipt, Withdrawal},
     fork_types::{Address, Bloom, Root},
     state::{get_account, State, TransientStorage},
     transactions::{AccessListTransaction, BlobTransaction, FeeMarketTransaction, LegacyTransaction, Transaction},
     trie::Trie,
-    vm::{self, gas::calculate_excess_blob_gas, interpreter::process_message_call},
+    vm::{self, exceptions::VmError, gas::calculate_excess_blob_gas, interpreter::process_message_call},
 };
 
 const BASE_FEE_MAX_CHANGE_DENOMINATOR: Uint = 8;
@@ -39,14 +39,14 @@ const ELASTICITY_MULTIPLIER: Uint = 2;
 const GAS_LIMIT_ADJUSTMENT_FACTOR: Uint = 1024;
 const GAS_LIMIT_MINIMUM: Uint = 5000;
 const EMPTY_OMMER_HASH: Hash32 = Hash32(Bytes32([0; 32])); //keccak256(rlp.encode([]));
-const SYSTEM_ADDRESS: Address = Address(Bytes20([
+const SYSTEM_ADDRESS: Address = Address::from_be_bytes([
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xfe,
-]));
-const BEACON_ROOTS_ADDRESS: Address = Address(Bytes20([
+]);
+const BEACON_ROOTS_ADDRESS: Address = Address::from_be_bytes([
     0x00, 0x0F, 0x3d, 0xf6, 0xD7, 0x32, 0x80, 0x7E, 0xf1, 0x31, 0x9f, 0xB7, 0xB8, 0xbB, 0x85, 0x22,
     0xd0, 0xBe, 0xac, 0x02,
-]));
+]);
 const SYSTEM_TRANSACTION_GAS: Uint = 30000000;
 const MAX_BLOB_GAS_PER_BLOCK: Uint = 786432;
 const VERSIONED_HASH_VERSION_KZG: &'static [u8] = b"\x01";
@@ -133,65 +133,66 @@ fn state_transition(chain: &mut BlockChain, block: Block) -> Result<(), Exceptio
         .unwrap();
     let excess_blob_gas = calculate_excess_blob_gas(parent_header);
     if block.header.excess_blob_gas != excess_blob_gas {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "block.header.excess_blob_gas != excess_blob_gas"
-        )));
+        ));
     }
 
     validate_header(&block.header, parent_header);
     if !block.ommers.is_empty() {
-        return Err(Exception::InvalidBlock(format!("!block.ommers.is_empty()")));
+        return Err(Exception::InvalidBlock("!block.ommers.is_empty()"));
     }
 
+    let last_256_block_hashes = get_last_256_block_hashes(chain);
     let apply_body_output = apply_body(
         &mut chain.state,
-        &get_last_256_block_hashes(chain),
-        block.header.coinbase,
-        block.header.number,
-        block.header.base_fee_per_gas,
-        block.header.gas_limit,
-        block.header.timestamp,
-        block.header.prev_randao,
+        &last_256_block_hashes,
+        &block.header.coinbase,
+        &block.header.number,
+        &block.header.base_fee_per_gas,
+        &block.header.gas_limit,
+        &block.header.timestamp,
+        &block.header.prev_randao,
         &block.transactions,
         chain.chain_id,
         &block.withdrawals,
-        block.header.parent_beacon_block_root,
+        &block.header.parent_beacon_block_root,
         excess_blob_gas,
     )?;
     if apply_body_output.block_gas_used != block.header.gas_used {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "apply_body_output.block_gas_used != block.header.gas_used"
-        )));
+        ));
     }
     if apply_body_output.transactions_root != block.header.transactions_root {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "apply_body_output.transactions_root != block.header.transactions_root"
-        )));
+        ));
     }
     if apply_body_output.state_root != block.header.state_root {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "apply_body_output.state_root != block.header.state_root"
-        )));
+        ));
     }
     if apply_body_output.receipt_root != block.header.receipt_root {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "apply_body_output.receipt_root != block.header.receipt_root"
-        )));
+        ));
     }
     if apply_body_output.block_logs_bloom != block.header.bloom {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "apply_body_output.block_logs_bloom != block.header.bloom"
-        )));
+        ));
     }
     if apply_body_output.withdrawals_root != block.header.withdrawals_root {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "apply_body_output.withdrawals_root != block.header.withdrawals_root"
-        )));
+        ));
     }
-    if apply_body_output.blob_gas_used.into() != block.header.blob_gas_used {
-        return Err(Exception::InvalidBlock(format!(
+    if apply_body_output.blob_gas_used != Uint::from(block.header.blob_gas_used) {
+        return Err(Exception::InvalidBlock(
             "apply_body_output.blob_gas_used != block.header.blob_gas_used"
-        )));
+        ));
     }
 
     chain.blocks.push(block);
@@ -228,9 +229,9 @@ fn calculate_base_fee_per_gas(
 ) -> Result<Uint, Exception> {
     let parent_gas_target = parent_gas_limit / ELASTICITY_MULTIPLIER;
     if !check_gas_limit(block_gas_limit, parent_gas_limit) {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "!check_gas_limit(block_gas_limit, parent_gas_limit)"
-        )));
+        ));
     }
 
     if parent_gas_used == parent_gas_target {
@@ -274,9 +275,9 @@ fn calculate_base_fee_per_gas(
 ///     Parent Header of the header to check for correctness
 fn validate_header(header: &Header, parent_header: &Header) -> Result<(), Exception> {
     if header.gas_used > header.gas_limit {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "header.gas_used > header.gas_limit"
-        )));
+        ));
     }
 
     let expected_base_fee_per_gas = calculate_base_fee_per_gas(
@@ -286,44 +287,44 @@ fn validate_header(header: &Header, parent_header: &Header) -> Result<(), Except
         parent_header.base_fee_per_gas,
     )?;
     if expected_base_fee_per_gas != header.base_fee_per_gas {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "expected_base_fee_per_gas != header.base_fee_per_gas"
-        )));
+        ));
     }
     if header.timestamp <= parent_header.timestamp {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "header.timestamp <= parent_header.timestamp"
-        )));
+        ));
     }
     if header.number != parent_header.number + 1 {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "header.number != parent_header.number + Uint(1)"
-        )));
+        ));
     }
     if header.extra_data.len() > 32 {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "header.extra_data.len() > 32"
-        )));
+        ));
     }
     if header.difficulty != 0 {
-        return Err(Exception::InvalidBlock(format!("header.difficulty != 0")));
+        return Err(Exception::InvalidBlock("header.difficulty != 0"));
     }
     if header.nonce != Bytes8(*b"\x00\x00\x00\x00\x00\x00\x00\x00") {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "header.nonce != Bytes8(*b\"\x00\x00\x00\x00\x00\x00\x00\x00\")"
-        )));
+        ));
     }
     if header.ommers_hash != EMPTY_OMMER_HASH {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "header.ommers_hash != EMPTY_OMMER_HASH"
-        )));
+        ));
     }
 
-    let block_parent_hash = keccak256(parent_header.encode());
+    let block_parent_hash = keccak256(&rlp::encode(parent_header)?);
     if header.parent_hash != block_parent_hash {
-        return Err(Exception::InvalidBlock(format!(
+        return Err(Exception::InvalidBlock(
             "header.parent_hash != block_parent_hash"
-        )));
+        ));
     }
 
     Ok(())
@@ -540,143 +541,145 @@ pub struct ApplyBodyOutput {
 pub fn apply_body(
     state: &mut State,
     block_hashes: &[Hash32],
-    coinbase: Address,
-    block_number: Uint,
-    base_fee_per_gas: Uint,
-    block_gas_limit: Uint,
-    block_time: U256,
-    prev_randao: Bytes32,
+    coinbase: &Address,
+    block_number: &Uint,
+    base_fee_per_gas: &Uint,
+    block_gas_limit: &Uint,
+    block_time: &U256,
+    prev_randao: &Bytes32,
     transactions: &[Either<LegacyTransaction, Bytes>],
     chain_id: U64,
     withdrawals: &[Withdrawal],
-    parent_beacon_block_root: Root,
+    parent_beacon_block_root: &Root,
     excess_blob_gas: U64,
 ) -> Result<ApplyBodyOutput, Exception> {
-    let blob_gas_used = 0;
-    let mut gas_available = block_gas_limit;
-    let transactions_trie: Trie<Bytes, Option<Either<LegacyTransaction, Bytes>>> =
-        Trie::new(false, None);
-    let receipts_trie: Trie<Bytes, Option<Either<Receipt, Bytes>>> = Trie::new(false, None);
-    let withdrawals_trie: Trie<Bytes, Option<Either<Withdrawal, Bytes>>> = Trie::new(false, None);
+    // let blob_gas_used = 0;
+    // let mut gas_available = block_gas_limit;
+    // let transactions_trie: Trie<Bytes, Option<Either<LegacyTransaction, Bytes>>> =
+    //     Trie::new(false, None);
+    // let receipts_trie: Trie<Bytes, Option<Either<Receipt, Bytes>>> = Trie::new(false, None);
+    // let withdrawals_trie: Trie<Bytes, Option<Either<Withdrawal, Bytes>>> = Trie::new(false, None);
 
-    let mut block_logs = Vec::new();
+    // let mut block_logs = Vec::new();
 
-    let beacon_block_roots_contract_code = get_account(state, &BEACON_ROOTS_ADDRESS).code;
+    // let beacon_block_roots_contract_code = get_account(state, &BEACON_ROOTS_ADDRESS).code;
 
-    let system_tx_message = vm::Message {
-        caller: SYSTEM_ADDRESS,
-        target: Either::B(BEACON_ROOTS_ADDRESS),
-        gas: SYSTEM_TRANSACTION_GAS,
-        value: U256::from(0_u32),
-        data: Bytes::from(parent_beacon_block_root.as_ref()),
-        code: beacon_block_roots_contract_code,
-        depth: Uint::from(0_u32),
-        current_target: BEACON_ROOTS_ADDRESS,
-        code_address: Some(BEACON_ROOTS_ADDRESS),
-        should_transfer_value: false,
-        is_static: false,
-        accessed_addresses: BTreeSet::new(),
-        accessed_storage_keys: BTreeSet::new(),
-        parent_evm: None,
-    };
+    // let system_tx_message = vm::Message {
+    //     caller: SYSTEM_ADDRESS,
+    //     target: Either::B(BEACON_ROOTS_ADDRESS),
+    //     gas: SYSTEM_TRANSACTION_GAS,
+    //     value: U256::from(0_u32),
+    //     data: Bytes::from(parent_beacon_block_root.as_ref()),
+    //     code: beacon_block_roots_contract_code,
+    //     depth: Uint::from(0_u32),
+    //     current_target: BEACON_ROOTS_ADDRESS,
+    //     code_address: Some(BEACON_ROOTS_ADDRESS),
+    //     should_transfer_value: false,
+    //     is_static: false,
+    //     accessed_addresses: BTreeSet::new(),
+    //     accessed_storage_keys: BTreeSet::new(),
+    //     parent_evm: None,
+    // };
 
-    let mut system_tx_env = vm::Environment {
-        caller: SYSTEM_ADDRESS,
-        origin: SYSTEM_ADDRESS,
-        block_hashes: block_hashes.to_vec(),
-        coinbase: coinbase,
-        number: block_number,
-        gas_limit: block_gas_limit,
-        base_fee_per_gas: base_fee_per_gas,
-        gas_price: base_fee_per_gas,
-        time: block_time,
-        prev_randao: prev_randao,
-        state: state,
-        chain_id: chain_id,
-        traces: Vec::new(),
-        excess_blob_gas: excess_blob_gas,
-        blob_versioned_hashes: Vec::new(),
-        transient_storage: TransientStorage::default(),
-    };
+    // let mut system_tx_env = vm::Environment {
+    //     caller: SYSTEM_ADDRESS,
+    //     origin: SYSTEM_ADDRESS,
+    //     block_hashes: block_hashes.to_vec(),
+    //     coinbase: coinbase,
+    //     number: block_number,
+    //     gas_limit: block_gas_limit,
+    //     base_fee_per_gas: base_fee_per_gas,
+    //     gas_price: base_fee_per_gas,
+    //     time: block_time,
+    //     prev_randao: prev_randao,
+    //     state: state,
+    //     chain_id: chain_id,
+    //     traces: Vec::new(),
+    //     excess_blob_gas: excess_blob_gas,
+    //     blob_versioned_hashes: Vec::new(),
+    //     transient_storage: TransientStorage::default(),
+    // };
 
-    let system_tx_output = process_message_call(&system_tx_message, &mut system_tx_env)?;
+    // let system_tx_output = process_message_call(&system_tx_message, &mut system_tx_env)?;
 
-    destroy_touched_empty_accounts(system_tx_env.state, system_tx_output.touched_accounts);
+    // destroy_touched_empty_accounts(system_tx_env.state, system_tx_output.touched_accounts);
 
-    for (i, tx) in transactions.iter().map(decode_transaction).enumerate() {
-        trie_set(
-            transactions_trie,
-            rlp.encode(Uint::from(i)),
-            encode_transaction(tx),
-        );
+    // for (i, tx) in transactions.iter().map(decode_transaction).enumerate() {
+    //     trie_set(
+    //         transactions_trie,
+    //         rlp.encode(Uint::from(i)),
+    //         encode_transaction(tx),
+    //     );
 
-        (sender_address, effective_gas_price, blob_versioned_hashes) = check_transaction(
-            state,
-            tx,
-            gas_available,
-            chain_id,
-            base_fee_per_gas,
-            excess_blob_gas,
-        );
+    //     let (sender_address, effective_gas_price, blob_versioned_hashes) = check_transaction(
+    //         state,
+    //         tx,
+    //         gas_available,
+    //         chain_id,
+    //         base_fee_per_gas,
+    //         excess_blob_gas,
+    //     );
 
-        let env = vm.Environment(
-            caller = sender_address,
-            origin = sender_address,
-            block_hashes = block_hashes,
-            coinbase = coinbase,
-            number = block_number,
-            gas_limit = block_gas_limit,
-            base_fee_per_gas = base_fee_per_gas,
-            gas_price = effective_gas_price,
-            time = block_time,
-            prev_randao = prev_randao,
-            state = state,
-            chain_id = chain_id,
-            traces = [],
-            excess_blob_gas = excess_blob_gas,
-            blob_versioned_hashes = blob_versioned_hashes,
-            transient_storage = TransientStorage(),
-        );
+    //     let env = vm::Environment {
+    //         caller: sender_address,
+    //         origin: sender_address,
+    //         block_hashes: block_hashes,
+    //         coinbase: coinbase,
+    //         number: block_number,
+    //         gas_limit: block_gas_limit,
+    //         base_fee_per_gas: base_fee_per_gas,
+    //         gas_price: effective_gas_price,
+    //         time: block_time,
+    //         prev_randao: prev_randao,
+    //         state: state,
+    //         chain_id: chain_id,
+    //         traces: Vec::new(),
+    //         excess_blob_gas: excess_blob_gas,
+    //         blob_versioned_hashes: blob_versioned_hashes,
+    //         transient_storage: TransientStorage::default(),
+    //     };
 
-        let (gas_used, logs, error) = process_transaction(env, tx)?;
-        gas_available -= gas_used;
+    //     let (gas_used, logs, error) = process_transaction(&env, tx)?;
+    //     gas_available -= gas_used;
 
-        receipt = make_receipt(tx, error, (block_gas_limit - gas_available), logs);
+    //     let receipt = make_receipt(tx, error, (block_gas_limit - gas_available), logs);
 
-        trie_set(receipts_trie, rlp.encode(Uint::from(i)), receipt);
+    //     trie_set(receipts_trie, rlp::encode(&Uint::from(i)), receipt);
 
-        block_logs += logs;
-        blob_gas_used += calculate_total_blob_gas(tx);
-    }
+    //     block_logs += logs;
+    //     blob_gas_used += calculate_total_blob_gas(tx);
+    // }
 
-    if blob_gas_used > MAX_BLOB_GAS_PER_BLOCK {
-        return Err(Exception::InvalidBlock(format!(
-            "blob_gas_used > MAX_BLOB_GAS_PER_BLOCK"
-        )));
-    }
-    let block_gas_used = block_gas_limit - gas_available;
+    // if blob_gas_used > MAX_BLOB_GAS_PER_BLOCK {
+    //     return Err(Exception::InvalidBlock(
+    //         "blob_gas_used > MAX_BLOB_GAS_PER_BLOCK"
+    //     ));
+    // }
+    // let block_gas_used = block_gas_limit - gas_available;
 
-    let block_logs_bloom = logs_bloom(block_logs);
+    // let block_logs_bloom = logs_bloom(block_logs);
 
-    for (i, wd) in withdrawals.iter().enumerate() {
-        trie_set(withdrawals_trie, rlp.encode(Uint(i)), rlp.encode(wd));
+    // for (i, wd) in withdrawals.iter().enumerate() {
+    //     trie_set(withdrawals_trie, rlp.encode(Uint(i)), rlp.encode(wd));
 
-        process_withdrawal(state, wd);
+    //     process_withdrawal(state, wd);
 
-        if account_exists_and_is_empty(state, wd.address) {
-            destroy_account(state, wd.address);
-        }
-    }
+    //     if account_exists_and_is_empty(state, wd.address) {
+    //         destroy_account(state, wd.address);
+    //     }
+    // }
 
-    return Ok(ApplyBodyOutput {
-        block_gas_used,
-        transactions_root: transactions_trie.root(),
-        receipt_root: receipts_trie.root(),
-        block_logs_bloom,
-        state_root: state.state_root(),
-        withdrawals_root: withdrawals_trie.root(),
-        blob_gas_used,
-    });
+    // return Ok(ApplyBodyOutput {
+    //     block_gas_used,
+    //     transactions_root: transactions_trie.root(),
+    //     receipt_root: receipts_trie.root(),
+    //     block_logs_bloom,
+    //     state_root: state.state_root(),
+    //     withdrawals_root: withdrawals_trie.root(),
+    //     blob_gas_used,
+    // });
+
+    todo!()
 }
 
 
@@ -708,103 +711,101 @@ pub fn apply_body(
 /// """
 pub fn process_transaction(
     env: &vm::Environment, tx: &Transaction
-) -> (Uint, Vec<Log>, Option<EthereumException>) {
-    if !validate_transaction(tx) {
-        return Err(Exception::InvalidBlock(format!(
-            "!validate_transaction(tx)"
-        )));
-    }
+) -> (Uint, Vec<Log>, Option<VmError>) {
+    // if !validate_transaction(tx) {
+    //     return Err(Exception::InvalidBlock(
+    //         "!validate_transaction(tx)"
+    //     ));
+    // }
 
-    let sender = env.origin;
-    sender_account = get_account(env.state, sender);
+    // let sender = env.origin;
+    // let sender_account = get_account(env.state, &sender);
 
-    if matches!(tx, Trasaction::BlobTransaction(_)) {
+    // let blob_gas_fee = if let Transaction::BlobTransaction(tx) = tx {
+    //     calculate_data_fee(env.excess_blob_gas, tx)
+    // } else {
+    //     Uint::from(0_u32)
+    // };
 
-    }
-    let blob_gas_fee = if isinstance(tx, BlobTransaction) {
-        calculate_data_fee(env.excess_blob_gas, tx);
-    } else {
-        Uint::from(0_u32)
-    };
+    // let effective_gas_fee = tx.gas * env.gas_price;
 
-    let effective_gas_fee = tx.gas * env.gas_price;
+    // let gas = tx.gas - calculate_intrinsic_cost(tx);
+    // increment_nonce(env.state, sender);
 
-    let gas = tx.gas - calculate_intrinsic_cost(tx);
-    increment_nonce(env.state, sender);
+    // let sender_balance_after_gas_fee = (
+    //     Uint(sender_account.balance) - effective_gas_fee - blob_gas_fee
+    // );
+    // set_account_balance(env.state, sender, U256(sender_balance_after_gas_fee));
 
-    let sender_balance_after_gas_fee = (
-        Uint(sender_account.balance) - effective_gas_fee - blob_gas_fee
-    );
-    set_account_balance(env.state, sender, U256(sender_balance_after_gas_fee));
+    // let mut preaccessed_addresses = HashSet::new();
+    // let mut preaccessed_storage_keys = HashSet::new();
+    // preaccessed_addresses.insert(env.coinbase);
 
-    let mut preaccessed_addresses = HashSet::new();
-    let mut preaccessed_storage_keys = HashSet::new();
-    preaccessed_addresses.insert(env.coinbase);
+    // match tx {
+    //     Transaction::AccessListTransaction(AccessListTransaction{access_list, ..}) |
+    //     Transaction::FeeMarketTransaction(FeeMarketTransaction{access_list, ..}) |
+    //     Transaction::BlobTransaction(BlobTransaction{access_list, ..}) => {
+    //         for (address, keys) in access_list {
+    //             preaccessed_addresses.insert(address.clone());
+    //             for key in keys {
+    //                 preaccessed_storage_keys.insert((address, key));
+    //             }
+    //         }
+    //     }
+    //     _ => (),
+    // }
 
-    match tx {
-        Transaction::AccessListTransaction(AccessListTransaction{access_list, ..}) |
-        Transaction::FeeMarketTransaction(FeeMarketTransaction{access_list, ..}) |
-        Transaction::BlobTransaction(BlobTransaction{access_list, ..}) => {
-            for (address, keys) in access_list {
-                preaccessed_addresses.insert(address.clone());
-                for key in keys {
-                    preaccessed_storage_keys.insert((address, key));
-                }
-            }
-        }
-        _ => (),
-    }
+    // let message = prepare_message(
+    //     sender,
+    //     tx.to,
+    //     tx.value,
+    //     tx.data,
+    //     gas,
+    //     env,
+    //     preaccessed_addresses=frozenset(preaccessed_addresses),
+    //     preaccessed_storage_keys=frozenset(preaccessed_storage_keys),
+    // );
 
-    let message = prepare_message(
-        sender,
-        tx.to,
-        tx.value,
-        tx.data,
-        gas,
-        env,
-        preaccessed_addresses=frozenset(preaccessed_addresses),
-        preaccessed_storage_keys=frozenset(preaccessed_storage_keys),
-    );
+    // let output = process_message_call(message, env);
 
-    let output = process_message_call(message, env);
+    // let gas_used = tx.gas - output.gas_left;
+    // let gas_refund = min(gas_used / Uint::from(5_u32), Uint::from(output.refund_counter));
+    // let gas_refund_amount = (output.gas_left + gas_refund) * env.gas_price;
 
-    let gas_used = tx.gas - output.gas_left;
-    let gas_refund = min(gas_used / Uint::from(5_u32), Uint::from(output.refund_counter));
-    let gas_refund_amount = (output.gas_left + gas_refund) * env.gas_price;
+    // //  For non-1559 transactions env.gas_price == tx.gas_price
+    // let priority_fee_per_gas = env.gas_price - env.base_fee_per_gas;
+    // transaction_fee = (
+    //     tx.gas - output.gas_left - gas_refund
+    // ) * priority_fee_per_gas;
 
-    //  For non-1559 transactions env.gas_price == tx.gas_price
-    let priority_fee_per_gas = env.gas_price - env.base_fee_per_gas;
-    transaction_fee = (
-        tx.gas - output.gas_left - gas_refund
-    ) * priority_fee_per_gas;
+    // let total_gas_used = gas_used - gas_refund;
 
-    total_gas_used = gas_used - gas_refund
+    // // refund gas
+    // let sender_balance_after_refund = get_account(
+    //     env.state, &sender
+    // ).balance + U256::from(gas_refund_amount);
+    // set_account_balance(env.state, sender, sender_balance_after_refund);
 
-    // refund gas
-    let sender_balance_after_refund = get_account(
-        env.state, sender
-    ).balance + U256::from(gas_refund_amount);
-    set_account_balance(env.state, sender, sender_balance_after_refund);
+    // // transfer miner fees
+    // coinbase_balance_after_mining_fee = get_account(
+    //     env.state, &env.coinbase
+    // ).balance + U256::from(transaction_fee);
+    // if coinbase_balance_after_mining_fee != 0 {
+    //     set_account_balance(
+    //         env.state, env.coinbase, coinbase_balance_after_mining_fee
+    //     )
+    // } else if account_exists_and_is_empty(env.state, env.coinbase) {
+    //     destroy_account(env.state, env.coinbase);
+    // }
 
-    // transfer miner fees
-    coinbase_balance_after_mining_fee = get_account(
-        env.state, env.coinbase
-    ).balance + U256::from(transaction_fee);
-    if coinbase_balance_after_mining_fee != 0 {
-        set_account_balance(
-            env.state, env.coinbase, coinbase_balance_after_mining_fee
-        )
-    } else if account_exists_and_is_empty(env.state, env.coinbase) {
-        destroy_account(env.state, env.coinbase);
-    }
+    // for address in output.accounts_to_delete {
+    //     destroy_account(env.state, address);
+    // }
 
-    for address in output.accounts_to_delete {
-        destroy_account(env.state, address);
-    }
+    // destroy_touched_empty_accounts(env.state, output.touched_accounts);
 
-    destroy_touched_empty_accounts(env.state, output.touched_accounts);
-
-    (total_gas_used, output.logs, output.error)
+    // (total_gas_used, output.logs, output.error)
+    todo!()
 }
 
 /// """
@@ -838,11 +839,10 @@ pub fn process_transaction(
 /// hash : `ethereum.crypto.hash.Hash32`
 ///     Hash of the header.
 /// """
-fn compute_header_hash(header: &Header) -> Hash32 {
-    return keccak256(rlp::encode(header))
+fn compute_header_hash(header: &Header) -> Result<Hash32, Exception> {
+    Ok(keccak256(&rlp::encode(header)?))
 }
 
-/// """
 /// Validates the gas limit for a block.
 /// 
 /// The bounds of the gas limit, ``max_adjustment_delta``, is set as the
@@ -868,7 +868,6 @@ fn compute_header_hash(header: &Header) -> Hash32 {
 /// -------
 /// check : `bool`
 ///     True if gas limit constraints are satisfied, False otherwise.
-/// """
 pub fn check_gas_limit(gas_limit: Uint, parent_gas_limit: Uint) -> bool {
     let max_adjustment_delta = parent_gas_limit / GAS_LIMIT_ADJUSTMENT_FACTOR;
 

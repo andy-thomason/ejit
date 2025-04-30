@@ -5,7 +5,8 @@ use std::collections::BTreeMap;
 
 pub mod ethereum;
 
-pub enum Either<A, B> {
+#[derive(Debug, Clone, PartialEq)]
+pub enum Either<A : std::fmt::Debug+Clone, B : std::fmt::Debug+Clone> {
     A(A),
     B(B),
 }

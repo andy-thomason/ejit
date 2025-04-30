@@ -122,11 +122,11 @@ pub struct TransientStorage {
 /// account : `Account`
 ///     Account at address.
 /// """
-pub fn get_account(state: &State, address: &Address) -> Account {
+pub fn get_account<'state, 'address>(state: &'state State, address: &'address Address) -> &'state Account {
     if let Some(account) = get_account_optional(state, address) {
         account
     } else {
-        EMPTY_ACCOUNT
+        &EMPTY_ACCOUNT
     }
 }
 
@@ -146,8 +146,9 @@ pub fn get_account(state: &State, address: &Address) -> Account {
 /// account : `Account`
 ///     Account at address.
 /// """
-pub fn get_account_optional(state: &State, address: &Address) -> Option<Account> {
-    trie_get(state.main_trie, address)
+pub fn get_account_optional<'state, 'address>(state: &'state State, address: &'address Address) -> Option<&'state Account> {
+    // trie_get(state.main_trie, address)
+    todo!()
 }
 
 // def set_account(

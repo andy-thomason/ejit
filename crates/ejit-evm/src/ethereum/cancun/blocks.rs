@@ -8,16 +8,15 @@
 //! chain.
 
 use crate::{
-    Either,
     ethereum::{
         cancun::fork_types::{Address, Bloom, Root},
         crypto::hash::Hash32,
-        ethereum_rlp::rlp,
+        ethereum_rlp::{exceptions::RLPException, rlp},
         ethereum_types::{
-            bytes::{Bytes, Bytes8, Bytes32},
-            numeric::{U64, U256, Uint},
+            bytes::{Bytes, Bytes32, Bytes8},
+            numeric::{Uint, U256, U64},
         },
-    },
+    }, Either
 };
 
 use super::transactions::LegacyTransaction;
@@ -55,7 +54,11 @@ pub struct Header {
 }
 
 impl rlp::Extended for Header {
-    fn encode(&self) -> Bytes {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+        todo!()
+    }
+
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
         todo!()
     }
 }
