@@ -8,8 +8,23 @@ pub type U8 = u8;
 pub type U32 = u32;
 pub type U64 = u64;
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Default)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Default)]
 pub struct U256([u64; 4]);
+
+impl std::fmt::Debug for U256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = [0; 32*2+2];
+        let hex = b"0123456789abcdef";
+        let bytes = self.to_be_bytes();
+        buf[0] = b'0';
+        buf[1] = b'x';
+        for i in 0..32 {
+            buf[i*2+2] = hex[(bytes[i] >> 4) as usize];
+            buf[i*2+3] = hex[(bytes[i] & 0x0f) as usize];
+        }
+        f.write_str(std::str::from_utf8(&buf).unwrap())
+    }
+}
 
 impl U256 {
     pub const ZERO : U256 = U256([0; 4]);
@@ -42,9 +57,16 @@ impl U256 {
     }
 
     pub const fn from_int(value: i32) -> Self {
-        let sign = u64::from_be_bytes(((value as i64) << 63 >> 63).to_be_bytes());
-        let val = u64::from_be_bytes(((value as i64) << 32 >> 32).to_be_bytes());
+        let sign = if value < 0 { u64::MAX } else { 0 };
+        let val = u64::from_be_bytes((value as i64).to_be_bytes());
         Self::from_limbs([sign, sign, sign, val])
+    }
+
+    pub const fn from_i128(value: i128) -> Self {
+        let sign = if value < 0 { u64::MAX } else { 0 };
+        let val2 = u64::from_be_bytes(((value>>64) as i64).to_be_bytes());
+        let val3 = u64::from_be_bytes((value as i64).to_be_bytes());
+        Self::from_limbs([sign, sign, val2, val3])
     }
 
     pub fn is_zero(&self) -> bool {
@@ -56,6 +78,111 @@ impl U256 {
             return Err(Exception::NumericOverflow);
         }
         Ok(((self.0[2] as u128) << 64) | self.0[3] as u128)
+    }
+
+    pub fn leading_zeros(&self) -> u32 {
+        let a = self.to_limbs();
+        if a[0] != 0 {
+            return a[0].leading_zeros();
+        }
+        if a[1] != 0 {
+            return a[1].leading_zeros() + 64;
+        }
+        if a[2] != 0 {
+            return a[2].leading_zeros() + 64*2;
+        }
+        return a[3].leading_zeros() + 64*3;
+    }
+
+    pub fn shl(self, shift: u32) -> Self {
+        let a = self.to_limbs();
+        let sh = shift & 63;
+        let nsh = shift.wrapping_neg() & 63;
+        let s = if sh == 0 {
+            a
+        } else {
+            [
+                (a[0] << sh) | (a[1] >> nsh),
+                (a[1] << sh) | (a[2] >> nsh),
+                (a[2] << sh) | (a[3] >> nsh),
+                (a[3] << sh),
+            ]
+        };
+        Self::from_limbs(if shift >= 64*4 {
+            [0, 0, 0, 0]
+        } else if shift >= 64*3 {
+            [s[3], 0, 0, 0]
+        } else if shift >= 64*2 {
+            [s[2], s[3], 0, 0]
+        } else if shift >= 64*1 {
+            [s[1], s[2], s[3], 0]
+        } else {
+            s
+        })
+    }
+
+    pub fn shr(self, shift: u32) -> Self {
+        let a = self.to_limbs();
+        let sh = shift & 63;
+        let nsh = shift.wrapping_neg() & 63;
+        let s = if sh == 0 {
+            a
+        } else {
+            [
+                a[0] >> sh,
+                a[0] << nsh | a[1] >> sh,
+                a[1] << nsh | a[2] >> sh,
+                a[2] << nsh | a[3] >> sh,
+            ]
+        };
+        Self::from_limbs(if shift >= 64*4 {
+            [0, 0, 0, 0]
+        } else if shift >= 64*3 {
+            [0, 0, 0, s[0]]
+        } else if shift >= 64*2 {
+            [0, 0, s[0], s[1]]
+        } else if shift >= 64*1 {
+            [0, s[0], s[1], s[2]]
+        } else {
+            s
+        })
+    }
+
+    pub fn overflowing_div(self, rhs: Self) -> (Self, bool) {
+        // TODO: use the algoritm from the Knuth book
+        // and make an exception for power of two divides.
+        if rhs.is_zero() {
+            return (Self::ZERO, true)
+        }
+
+        let lz = self.leading_zeros();
+        let mut q = Self::ZERO;
+        let mut r = Self::ZERO;
+        for i in (0..256-lz).rev() {
+            r = r.shl(1);
+            if self.bit(i) { r.set_bit(0) }
+            if r >= rhs {
+                r = r - rhs;
+                q.set_bit(i);
+            }
+        }
+        (q, false)
+    }
+
+    pub fn bit(&self, i: u32) -> bool {
+        if i/64 >= 4 {
+            false
+        } else {
+            let mask = 1 << i % 64;
+            (self.0[3-(i/64) as usize] & mask) != 0
+        }
+    }
+
+    pub fn set_bit(&mut self, i: u32) {
+        if i/64 < 4 {
+            let mask = 1 << i % 64;
+            self.0[3-(i/64) as usize] |= mask;
+        }
     }
 }
 
@@ -96,7 +223,7 @@ impl Add<U256> for U256 {
         let (sum3, _cy3a) = ca[0].overflowing_add(cb[0]);
         let (sum3, _cy3b) = sum3.overflowing_add(if cy2a || cy2b { 1 } else {0} );
     
-        Self::from_limbs([sum0, sum1, sum2, sum3])
+        Self::from_limbs([sum3, sum2, sum1, sum0])
     }
 }
 
@@ -152,37 +279,30 @@ impl Mul<U256> for U256 {
             sum2 >> 64
         ;
 
-        fn trunc(x: u128) -> u64 {
+        fn t(x: u128) -> u64 {
             (x & (u64::MAX as u128)) as u64
         }
-        Self::from_limbs([trunc(sum3), trunc(sum2), trunc(sum1), trunc(sum0)])
+        Self::from_limbs([t(sum3), t(sum2), t(sum1), t(sum0)])
     }
 }
-
-impl Div<U256> for U256 {
-    type Output = U256;
-
-    fn div(self, mut rhs: U256) -> Self::Output {
-        // I know faster methods exist, but you probably shouldn't be
-        // using a divide anyway!
-        let mut res = Self::ZERO;
-        for i in 0..256 {
-            res = res.clone() + res;
-            if rhs >= self {
-                res = res + U256::from(1);
-                rhs = rhs - self;
-            }
-            rhs = rhs.clone() + rhs;
-        }
-
-        res
-    }
-}
-
 
 
 #[test]
 fn test_u256() {
+    /// TODO: Test much, much more, especially with edge cases and random numbers.
+    assert_eq!(U256::from_int(-0x80000000).to_limbs(), [!0, !0, !0, !0-0x80000000+1]);
+
     assert_eq!(U256::from_int(-1) + U256::from_int(1), U256::from_int(0));
     assert_eq!(U256::from_int(1) + U256::from_int(-1), U256::from_int(0));
+    assert_eq!(U256::from_int(-0x7fffffff) + U256::from_int(0x7fffffff), U256::from_int(0));
+
+    assert_eq!(U256::from_int(123456) * U256::from_int(7891011), U256::from_i128(123456*7891011));
+
+    for i in 0..128 {
+        // println!("{i} {:?}", U256::from_int(1).shl(i));
+        assert_eq!(U256::from_int(1).shl(i).shr(i), U256::from_i128(1));
+    }
+
+    assert_eq!(U256::from_int(123456).overflowing_div(U256::from_int(100)), (U256::from_i128(1234), false));
+
 }

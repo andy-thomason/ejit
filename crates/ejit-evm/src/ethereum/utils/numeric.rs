@@ -1,4 +1,3 @@
-//! """
 //! Utility Functions For Numeric Operations
 //! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 //! 
@@ -10,15 +9,10 @@
 //! ------------
 //! 
 //! Numeric operations specific utility functions used in this specification.
-//! """
-// from typing import Sequence, SupportsInt, Tuple
-
-// from ethereum_types.numeric import U32, Uint
 
 use crate::ethereum::ethereum_types::{bytes::Bytes, numeric::{Int, Uint, U32}};
 
 
-/// """
 /// Determines the sign of a number.
 /// 
 /// Parameters
@@ -31,7 +25,6 @@ use crate::ethereum::ethereum_types::{bytes::Bytes, numeric::{Int, Uint, U32}};
 /// sign : `int`
 ///     The sign of the number (-1 or 0 or 1).
 ///     The return value is based on math signum function.
-/// """
 pub fn get_sign(value: Int) -> Int {
     if value < 0 {
         -1
@@ -43,7 +36,6 @@ pub fn get_sign(value: Int) -> Int {
 }
 
 
-/// """
 /// Converts a unsigned integer to the next closest multiple of 32.
 /// 
 /// Parameters
@@ -57,7 +49,6 @@ pub fn get_sign(value: Int) -> Int {
 ///     The same value if it's a perfect multiple of 32
 ///     else it returns the smallest multiple of 32
 ///     that is greater than `value`.
-/// """
 pub fn ceil32(value: Uint) -> Uint {
     let ceiling = Uint::from(32_u32);
     let remainder = value % ceiling;

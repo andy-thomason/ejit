@@ -347,7 +347,7 @@ pub fn recover_sender(chain_id: U64, tx: &Transaction) -> Result<Address, Except
     if U256::from(0_u32) >= r || r >= SECP256K1N {
         return Err(Exception::InvalidSignatureError("bad r"));
     }
-    if U256::from(0_u32) >= s || s > SECP256K1N / U256::from(2_u32) {
+    if U256::from(0_u32) >= s || s > SECP256K1N.shr(1) {
         return Err(Exception::InvalidSignatureError("bad s"));
     }
 
