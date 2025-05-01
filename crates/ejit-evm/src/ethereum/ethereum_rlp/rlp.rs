@@ -335,6 +335,9 @@ fn decode_joined_encodings(mut joined_encodings: &[u8], dest: &mut [&mut dyn Ext
     if dest_index > dest.len() {
         return Err(RLPException::DestTooSmall(dest_index));
     }
+    if dest_index < dest.len() {
+        return Err(RLPException::DecodingError("truncated"));
+    }
     Ok(())
 }
 
@@ -397,9 +400,11 @@ fn decode_to_bytes<'d, 'a, 'b>(dest: &'d mut [u8], encoded_bytes: &'a mut &'b [u
     Ok(())
 }
 
+/// Decode a variable length slice to a usize.
 fn decode_length(src: &[u8]) -> usize {
+    assert!(src.len() <= size_of::<usize>());
+
     let mut res = [0; size_of::<usize>()];
     res[size_of::<usize>()-src.len()..].copy_from_slice(src);
     usize::from_be_bytes(res.try_into().unwrap())
 }
-
