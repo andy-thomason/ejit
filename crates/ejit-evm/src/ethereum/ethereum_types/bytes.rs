@@ -68,8 +68,15 @@ impl Default for Bytes96 {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Bytes256(pub [u8; 256]);
+
+impl std::fmt::Debug for Bytes256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = [0; 256*2+2];
+        f.write_str(fmt_hex(&mut buf, &self.0))
+    }
+}
 
 impl Extended for Bytes256 {
     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {

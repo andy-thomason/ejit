@@ -281,14 +281,20 @@ impl Mul<U256> for U256 {
 
 pub fn fmt_hex<'a>(buf: &'a mut [u8], bytes: &[u8]) -> &'a str {
     assert!(buf.len() == bytes.len()*2+2);
-    let hex = b"0123456789abcdef";
-    buf[0] = b'0';
-    buf[1] = b'x';
-    for i in 0..bytes.len() {
-        buf[i*2+2] = hex[(bytes[i] >> 4) as usize];
-        buf[i*2+3] = hex[(bytes[i] & 0x0f) as usize];
+    let lz = bytes.iter().position(|b| *b != 0).unwrap_or(bytes.len());
+    let bytes = &bytes[lz..];
+    if bytes.is_empty() {
+        "0x0"
+    } else {
+        let hex = b"0123456789abcdef";
+        buf[0] = b'0';
+        buf[1] = b'x';
+        for i in 0..bytes.len() {
+            buf[i*2+2] = hex[(bytes[i] >> 4) as usize];
+            buf[i*2+3] = hex[(bytes[i] & 0x0f) as usize];
+        }
+        std::str::from_utf8(&buf[0..bytes.len()*2+2]).unwrap()
     }
-    std::str::from_utf8(buf).unwrap()
 }
 
 

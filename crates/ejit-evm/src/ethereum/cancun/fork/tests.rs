@@ -31,6 +31,8 @@ fn test_against_alchemy() {
         .collect();
 
     // std::fs::write("/tmp/1", format!("{bytes:02x?}"));
-    // let block : Block = rlp::decode_to(&bytes).unwrap();
+    let block : Block = rlp::decode_to(&bytes).unwrap();
+
+    println!("block: {block:?}");
 
 }
