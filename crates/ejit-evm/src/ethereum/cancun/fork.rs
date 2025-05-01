@@ -547,7 +547,7 @@ pub fn apply_body(
     block_gas_limit: &Uint,
     block_time: &U256,
     prev_randao: &Bytes32,
-    transactions: &[Either<LegacyTransaction, Bytes>],
+    transactions: &[Bytes],
     chain_id: U64,
     withdrawals: &[Withdrawal],
     parent_beacon_block_root: &Root,
@@ -885,3 +885,7 @@ pub fn check_gas_limit(gas_limit: Uint, parent_gas_limit: Uint) -> bool {
 
     true
 }
+
+
+#[cfg(test)]
+mod tests;

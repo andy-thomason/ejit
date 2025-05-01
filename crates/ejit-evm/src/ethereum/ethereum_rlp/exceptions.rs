@@ -1,3 +1,5 @@
+
+#[derive(Debug, PartialEq)]
 /// Common base class for all RLP exceptions.
 pub enum RLPException {
     /// Indicates that RLP decoding failed.

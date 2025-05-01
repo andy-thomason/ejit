@@ -1,9 +1,19 @@
 //! https://github.com/ethereum/execution-specs/blob/master/src/ethereum/crypto/hash.py
 
-use crate::ethereum::ethereum_types::bytes::*;
+use crate::ethereum::{ethereum_rlp::rlp::Extended, ethereum_types::bytes::*};
 
 #[derive(Debug, Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Hash32(pub Bytes32);
+
+impl Extended for Hash32 {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        self.0.encode(buffer)
+    }
+
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        self.0.decode(buffer)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Hash64(pub Bytes64);

@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::ethereum::{crypto::hash::Hash32, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}};
+use crate::ethereum::{crypto::hash::Hash32, ethereum_rlp::{exceptions::RLPException, rlp::Extended}, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
 pub struct Address([u8; 20]);
@@ -33,8 +33,18 @@ impl From<[u8; 20]> for Address {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
 pub struct Root(pub Hash32);
+
+impl Extended for Root {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+        self.0.encode(buffer)
+    }
+
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+        self.0.decode(buffer)
+    }
+}
 
 impl Deref for Root {
     type Target = [u8; 32];
@@ -56,8 +66,18 @@ impl Deref for VersionedHash {
 }
 
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Bloom(pub Bytes256);
+
+impl Extended for Bloom {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+        self.0.encode(buffer)
+    }
+
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+        self.0.decode(buffer)
+    }
+}
 
 impl Deref for Bloom {
     type Target = [u8; 256];
