@@ -81,6 +81,7 @@ impl Extended for FeeMarketTransaction {
         todo!()
     }
 }
+
 /// The transaction type added in EIP-4844.
 #[derive(Debug, Clone, Default)]
 pub struct BlobTransaction {

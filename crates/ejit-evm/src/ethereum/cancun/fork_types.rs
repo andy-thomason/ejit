@@ -9,6 +9,14 @@ impl Address {
     pub const fn from_be_bytes(value: [u8; 20]) -> Self {
         Self(value)
     }
+
+    pub fn to_be_bytes(&self) -> [u8; 20] {
+        self.0
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.0.iter().all(|b| *b == 0)
+    }
 }
 
 impl Deref for Address {
@@ -36,7 +44,7 @@ impl Deref for Root {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct VersionedHash(pub Hash32);
 
 impl Deref for VersionedHash {

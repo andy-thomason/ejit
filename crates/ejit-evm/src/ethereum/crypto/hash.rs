@@ -2,10 +2,10 @@
 
 use crate::ethereum::ethereum_types::bytes::*;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Hash32(pub Bytes32);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Hash64(pub Bytes64);
 
 impl std::ops::Deref for Hash32 {

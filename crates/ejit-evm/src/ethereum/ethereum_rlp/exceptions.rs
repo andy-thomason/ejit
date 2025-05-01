@@ -4,4 +4,7 @@ pub enum RLPException {
     DecodingError(&'static str),
     /// Indicates that RLP encoding failed.
     EncodingError(&'static str),
+
+    /// Buffer not big enough
+    DestTooSmall(usize),
 }
