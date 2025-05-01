@@ -30,7 +30,7 @@ fn test_against_alchemy() {
         .map(|c| u8::from_str_radix(std::str::from_utf8(c).unwrap(), 16).unwrap())
         .collect();
 
-    std::fs::write("/tmp/1", format!("{bytes:02x?}"));
-    let block : Block = rlp::decode_to(&bytes).unwrap();
+    // std::fs::write("/tmp/1", format!("{bytes:02x?}"));
+    // let block : Block = rlp::decode_to(&bytes).unwrap();
 
 }

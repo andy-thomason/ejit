@@ -133,7 +133,7 @@ pub struct Block {
     pub header: Header,
     pub transactions: Vec<Bytes>,
     pub ommers: Vec<Header>,
-    pub withdrawals: Vec<Withdrawal>,
+    pub withdrawals: Option<Vec<Withdrawal>>,
 }
 
 impl Extended for Block {

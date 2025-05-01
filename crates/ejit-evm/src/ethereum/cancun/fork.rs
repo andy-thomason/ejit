@@ -155,7 +155,7 @@ fn state_transition(chain: &mut BlockChain, block: Block) -> Result<(), Exceptio
         &block.header.prev_randao,
         &block.transactions,
         chain.chain_id,
-        &block.withdrawals,
+        block.withdrawals.as_deref(),
         &block.header.parent_beacon_block_root,
         &excess_blob_gas,
     )?;
@@ -554,7 +554,7 @@ pub fn apply_body(
     prev_randao: &Bytes32,
     transactions: &[Bytes],
     chain_id: U64,
-    withdrawals: &[Withdrawal],
+    withdrawals: Option<&[Withdrawal]>,
     parent_beacon_block_root: &Option<Root>,
     excess_blob_gas: &Option<U64>,
 ) -> Result<ApplyBodyOutput, Exception> {

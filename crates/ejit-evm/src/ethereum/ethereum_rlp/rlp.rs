@@ -96,32 +96,6 @@ impl Extended for Bytes32 {
     }
 }
 
-// impl Extended for Option<Address> {
-//     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
-//         let bytes = if let Some(address) = self {
-//             address.to_be_bytes()
-//         } else {
-//             [0; 20]
-//         };
-//         let first_nz = bytes.iter().position(|b| *b != 0).unwrap_or(bytes.len());
-//         encode_bytes(buffer, &bytes[first_nz..]);
-//         println!("decoded {self:?}");
-//         Ok(())
-//     }
-    
-//     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
-//         let mut bytes = [0; size_of::<Address>()];
-//         decode_to_bytes(buffer, &mut bytes[..])?;
-//         *self = if bytes.iter().all(|b| *b == 0) {
-//             None
-//         } else {
-//             Some(Address::from_be_bytes(bytes))
-//         };
-//         println!("decoded {self:?}");
-//         Ok(())
-//     }
-// }
-
 impl Extended for Address {
     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
         let bytes = self.to_be_bytes();
@@ -214,7 +188,8 @@ impl<T : Extended + Default> Extended for Option<T> {
     }
 
     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
-        // Optional items may end the decode early.
+        // Optional items take zero bytes if they are None.
+        // But they may only occur at the end of a structure.
         if buffer.is_empty() {
             *self = None;
             Ok(())
@@ -234,20 +209,16 @@ impl<T : Extended + Default + Clone> Extended for Vec<T> {
     }
     
     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
-        match decode_to_sequence(buffer, &mut []) {
-            Ok(()) => {
-                *self = Vec::new();
-                Ok(())
-            }
-            Err(RLPException::DestTooSmall(new_len)) => {
-                println!("decoded Vec length {new_len}");
-
-                self.resize(new_len, T::default());
-                let mut refs : Vec<&mut dyn Extended> = self.iter_mut().map(|e| e as &mut dyn Extended).collect();
-                decode_to_sequence(buffer, &mut refs)
-            },
-            Err(e) => Err(e),
+        println!("decode vector {:02x?}", buffer.first_chunk::<4>());
+    
+        let joined_encodings = find_joined_encodings(buffer)?;
+    
+        while !buffer.is_empty() {
+            let mut t = T::default();
+            t.decode(buffer)?;
+            self.push(t);
         }
+        Ok(())
     }
 }
 
@@ -337,27 +308,35 @@ pub fn decode_to<T : Extended  + Default>(mut encoded_data: &[u8]) -> Result<T, 
 /// Decodes a rlp encoded byte stream assuming that the decoded data
 /// should be of type `Sequence` of objects.
 pub fn decode_to_sequence(encoded_sequence: &mut &[u8], dest: &mut [&mut dyn Extended]) -> Result<(), RLPException> {
-    println!("decode_to_sequence {:02x?}", encoded_sequence.first_chunk::<4>());
+    println!("decode_to_sequence {:02x?} ({} dests)", encoded_sequence.first_chunk::<4>(), dest.len());
     
-    if encoded_sequence.is_empty() || encoded_sequence[0] <= 0xBF {
+    let joined_encodings = find_joined_encodings(encoded_sequence)?;
+
+    decode_joined_encodings(joined_encodings, dest)
+}
+
+fn find_joined_encodings<'a>(buffer: &mut &'a [u8]) -> Result<&'a [u8], RLPException> {
+    if buffer.is_empty() || buffer[0] <= 0xBF {
         return Err(RLPException::DecodingError("expected sequence"));
     }
-    let encoded_sequence_len = encoded_sequence.len();
-    let joined_encodings = if encoded_sequence[0] <= 0xF7 {
-        let len_joined_encodings = (encoded_sequence[0] - 0xC0) as usize;
+    let encoded_sequence_len = buffer.len();
+    let joined_encodings = if buffer[0] <= 0xF7 {
+        let len_joined_encodings = (buffer[0] - 0xC0) as usize;
         if len_joined_encodings >= encoded_sequence_len {
             return Err(RLPException::DecodingError("too long: decode_to_sequence 1"));
         }
-        &encoded_sequence[1..1 + len_joined_encodings]
+        let res = &buffer[1..1 + len_joined_encodings];
+        *buffer = &buffer[1 + len_joined_encodings..];
+        res
     } else {
-        let joined_encodings_start_idx = (1 + encoded_sequence[0] - 0xF7) as usize;
+        let joined_encodings_start_idx = (1 + buffer[0] - 0xF7) as usize;
         if joined_encodings_start_idx - 1 >= encoded_sequence_len {
             return Err(RLPException::DecodingError("too long: decode_to_sequence 2"));
         }
-        if encoded_sequence[1] == 0 {
+        if buffer[1] == 0 {
             return Err(RLPException::DecodingError("incorrect length 1"));
         }
-        let len_joined_encodings = decode_length(&encoded_sequence[1..joined_encodings_start_idx]);
+        let len_joined_encodings = decode_length(&buffer[1..joined_encodings_start_idx]);
         if len_joined_encodings < 0x38 {
             return Err(RLPException::DecodingError("incorrect length 2"));
         }
@@ -367,33 +346,23 @@ pub fn decode_to_sequence(encoded_sequence: &mut &[u8], dest: &mut [&mut dyn Ext
         if joined_encodings_end_idx - 1 >= encoded_sequence_len {
             return Err(RLPException::DecodingError("too long: decode_to_sequence 1"));
         }
-        &encoded_sequence[
+        let res = &buffer[
             joined_encodings_start_idx..joined_encodings_end_idx
-        ]
+        ];
+        *buffer = &buffer[joined_encodings_end_idx..];
+        res
     };
-
-    decode_joined_encodings(joined_encodings, dest)
+    Ok(joined_encodings)
 }
 
 /// Decodes `joined_encodings`, which is a concatenation of RLP encoded
 /// objects.
+/// 
+/// Ths one is use for structs and fixed length 
 fn decode_joined_encodings(mut joined_encodings: &[u8], dest: &mut [&mut dyn Extended]) -> Result<(), RLPException> {
     let mut buffer = &mut joined_encodings;
-    let mut dest_index = 0;
-    while !buffer.is_empty() {
-        if dest_index < dest.len() {
-            dest[dest_index].decode(buffer)?;
-        }
-        dest_index += 1;
-    }
-    println!("dest_index={dest_index} dest.len()={}", dest.len());
-    if dest_index > dest.len() {
-        panic!();
-        return Err(RLPException::DestTooSmall(dest_index));
-    }
-    if dest_index < dest.len() {
-        panic!();
-        return Err(RLPException::DecodingError("decode_joined_encodings: expected more data"));
+    for d in dest {
+        d.decode(buffer)?;
     }
     Ok(())
 }
