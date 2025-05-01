@@ -281,24 +281,28 @@ pub fn init_code_cost(init_code_length: Uint) -> Uint {
 /// -------
 /// excess_blob_gas: `ethereum.base_types.U64`
 ///     The excess blob gas for the current block.
-pub fn calculate_excess_blob_gas(parent_header: &Header) -> U64 {
+pub fn calculate_excess_blob_gas(parent_header: &Header) -> Option<U64> {
     // At the fork block, these are defined as zero.
     let mut excess_blob_gas = U64::from(0_u64);
     let mut blob_gas_used = U64::from(0_u64);
 
     // todo: How do we determine if the header is from a previous fork?
-    // if let Some(parent_header) = parent_header {
-    //     // After the fork block, read them from the parent header.
-    //     excess_blob_gas = parent_header.excess_blob_gas;
-    //     blob_gas_used = parent_header.blob_gas_used;
-    // }
-
-    let parent_blob_gas = excess_blob_gas + blob_gas_used;
-    if parent_blob_gas < TARGET_BLOB_GAS_PER_BLOCK {
-        U64::from(0_u64)
+    // After the fork block, read them from the parent header.
+    if let Header {
+        excess_blob_gas: Some(excess_blob_gas),
+        blob_gas_used: Some(blob_gas_used),
+        ..
+    } = parent_header {
+        let parent_blob_gas = excess_blob_gas + blob_gas_used;
+        if parent_blob_gas < TARGET_BLOB_GAS_PER_BLOCK {
+            Some(U64::from(0_u64))
+        } else {
+            Some(parent_blob_gas - TARGET_BLOB_GAS_PER_BLOCK)
+        }
     } else {
-        parent_blob_gas - TARGET_BLOB_GAS_PER_BLOCK
+        None
     }
+
 }
 
 /// """

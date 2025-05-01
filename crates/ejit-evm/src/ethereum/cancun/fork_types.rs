@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use crate::ethereum::{crypto::hash::Hash32, ethereum_rlp::{exceptions::RLPException, rlp::Extended}, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}};
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
 pub struct Address([u8; 20]);
 
 impl Address {
@@ -18,6 +18,14 @@ impl Address {
         self.0.iter().all(|b| *b == 0)
     }
 }
+
+impl std::fmt::Debug for Address {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = [0; 20*2+2];
+        f.write_str(fmt_hex(&mut buf, &self.0))
+    }
+}
+
 
 impl Deref for Address {
     type Target = [u8; 20];

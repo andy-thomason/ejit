@@ -68,11 +68,11 @@ pub struct Header {
     pub extra_data: Bytes,
     pub prev_randao: Bytes32,
     pub nonce: Bytes8,
-    pub base_fee_per_gas: Uint,
-    pub withdrawals_root: Root,
-    pub blob_gas_used: U64,
-    pub excess_blob_gas: U64,
-    pub parent_beacon_block_root: Root,
+    pub base_fee_per_gas: Option<Uint>,
+    pub withdrawals_root: Option<Root>,
+    pub blob_gas_used: Option<U64>,
+    pub excess_blob_gas: Option<U64>,
+    pub parent_beacon_block_root: Option<Root>,
 }
 
 impl rlp::Extended for Header {

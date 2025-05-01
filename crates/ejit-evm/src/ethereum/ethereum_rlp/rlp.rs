@@ -40,6 +40,7 @@ impl Extended for bool {
             return Err(RLPException::DecodingError("invalid bool"));
         }
         *self = bytes[0] != 0;
+        println!("decoded {self}");
         Ok(())
     }
 }
@@ -56,6 +57,7 @@ impl Extended for Uint {
         let mut bytes = [0; size_of::<Self>()];
         decode_to_bytes(buffer, &mut bytes[..])?;
         *self = Self::from_be_bytes(bytes);
+        println!("decoded {self}");
         Ok(())
     }
 }
@@ -72,6 +74,7 @@ impl Extended for U256 {
         let mut bytes = [0; size_of::<Self>()];
         decode_to_bytes(buffer, &mut bytes[..])?;
         *self = Self::from_be_bytes(bytes);
+        println!("decoded {self:?}");
         Ok(())
     }
 }
@@ -88,33 +91,36 @@ impl Extended for Bytes32 {
         let mut bytes = [0; size_of::<Self>()];
         decode_to_bytes(buffer, &mut bytes[..])?;
         *self = Self(bytes);
+        println!("decoded {self:?}");
         Ok(())
     }
 }
 
-impl Extended for Option<Address> {
-    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
-        let bytes = if let Some(address) = self {
-            address.to_be_bytes()
-        } else {
-            [0; 20]
-        };
-        let first_nz = bytes.iter().position(|b| *b != 0).unwrap_or(bytes.len());
-        encode_bytes(buffer, &bytes[first_nz..]);
-        Ok(())
-    }
+// impl Extended for Option<Address> {
+//     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+//         let bytes = if let Some(address) = self {
+//             address.to_be_bytes()
+//         } else {
+//             [0; 20]
+//         };
+//         let first_nz = bytes.iter().position(|b| *b != 0).unwrap_or(bytes.len());
+//         encode_bytes(buffer, &bytes[first_nz..]);
+//         println!("decoded {self:?}");
+//         Ok(())
+//     }
     
-    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
-        let mut bytes = [0; size_of::<Address>()];
-        decode_to_bytes(buffer, &mut bytes[..])?;
-        *self = if bytes.iter().all(|b| *b == 0) {
-            None
-        } else {
-            Some(Address::from_be_bytes(bytes))
-        };
-        Ok(())
-    }
-}
+//     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+//         let mut bytes = [0; size_of::<Address>()];
+//         decode_to_bytes(buffer, &mut bytes[..])?;
+//         *self = if bytes.iter().all(|b| *b == 0) {
+//             None
+//         } else {
+//             Some(Address::from_be_bytes(bytes))
+//         };
+//         println!("decoded {self:?}");
+//         Ok(())
+//     }
+// }
 
 impl Extended for Address {
     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
@@ -128,6 +134,7 @@ impl Extended for Address {
         let mut bytes = [0; 20];
         decode_to_bytes(buffer, &mut bytes[..])?;
         *self = Self::from_be_bytes(bytes);
+        println!("decoded {self:?}");
         Ok(())
     }
 }
@@ -165,6 +172,7 @@ impl Extended for U64 {
         let mut bytes = [0; size_of::<Self>()];
         decode_to_bytes(buffer, &mut bytes[..])?;
         *self = Self::from_be_bytes(bytes);
+        println!("decoded {self:?}");
         Ok(())
     }
 }
@@ -194,6 +202,31 @@ impl<A : Extended, B: Extended, C: Extended> Extended for (A, B, C) {
     }
 }
 
+impl<T : Extended + Default> Extended for Option<T> {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+        if let Some(t) = self {
+            t.encode(buffer)
+        } else {
+            // TODO: disallow None options before Some.
+            // Maybe return a bool indicating this state.
+            Ok(())
+        }
+    }
+
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+        // Optional items may end the decode early.
+        if buffer.is_empty() {
+            *self = None;
+            Ok(())
+        } else {
+            let mut t = T::default();
+            t.decode(buffer)?;
+            *self = Some(t);
+            Ok(())
+        }
+    }
+}
+
 impl<T : Extended + Default + Clone> Extended for Vec<T> {
     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
         let refs : Vec<&dyn Extended> = self.iter().map(|e| e as &dyn Extended).collect();
@@ -207,6 +240,8 @@ impl<T : Extended + Default + Clone> Extended for Vec<T> {
                 Ok(())
             }
             Err(RLPException::DestTooSmall(new_len)) => {
+                println!("decoded Vec length {new_len}");
+
                 self.resize(new_len, T::default());
                 let mut refs : Vec<&mut dyn Extended> = self.iter_mut().map(|e| e as &mut dyn Extended).collect();
                 decode_to_sequence(buffer, &mut refs)
@@ -302,6 +337,8 @@ pub fn decode_to<T : Extended  + Default>(mut encoded_data: &[u8]) -> Result<T, 
 /// Decodes a rlp encoded byte stream assuming that the decoded data
 /// should be of type `Sequence` of objects.
 pub fn decode_to_sequence(encoded_sequence: &mut &[u8], dest: &mut [&mut dyn Extended]) -> Result<(), RLPException> {
+    println!("decode_to_sequence {:02x?}", encoded_sequence.first_chunk::<4>());
+    
     if encoded_sequence.is_empty() || encoded_sequence[0] <= 0xBF {
         return Err(RLPException::DecodingError("expected sequence"));
     }
@@ -309,26 +346,26 @@ pub fn decode_to_sequence(encoded_sequence: &mut &[u8], dest: &mut [&mut dyn Ext
     let joined_encodings = if encoded_sequence[0] <= 0xF7 {
         let len_joined_encodings = (encoded_sequence[0] - 0xC0) as usize;
         if len_joined_encodings >= encoded_sequence_len {
-            return Err(RLPException::DecodingError("truncated"));
+            return Err(RLPException::DecodingError("too long: decode_to_sequence 1"));
         }
         &encoded_sequence[1..1 + len_joined_encodings]
     } else {
         let joined_encodings_start_idx = (1 + encoded_sequence[0] - 0xF7) as usize;
         if joined_encodings_start_idx - 1 >= encoded_sequence_len {
-            return Err(RLPException::DecodingError("truncated"));
+            return Err(RLPException::DecodingError("too long: decode_to_sequence 2"));
         }
         if encoded_sequence[1] == 0 {
-            return Err(RLPException::DecodingError("incorrect length"));
+            return Err(RLPException::DecodingError("incorrect length 1"));
         }
         let len_joined_encodings = decode_length(&encoded_sequence[1..joined_encodings_start_idx]);
         if len_joined_encodings < 0x38 {
-            return Err(RLPException::DecodingError("incorrect length"));
+            return Err(RLPException::DecodingError("incorrect length 2"));
         }
         let joined_encodings_end_idx = (
             joined_encodings_start_idx + len_joined_encodings
         );
         if joined_encodings_end_idx - 1 >= encoded_sequence_len {
-            return Err(RLPException::DecodingError("truncated"));
+            return Err(RLPException::DecodingError("too long: decode_to_sequence 1"));
         }
         &encoded_sequence[
             joined_encodings_start_idx..joined_encodings_end_idx
@@ -349,11 +386,14 @@ fn decode_joined_encodings(mut joined_encodings: &[u8], dest: &mut [&mut dyn Ext
         }
         dest_index += 1;
     }
+    println!("dest_index={dest_index} dest.len()={}", dest.len());
     if dest_index > dest.len() {
+        panic!();
         return Err(RLPException::DestTooSmall(dest_index));
     }
     if dest_index < dest.len() {
-        return Err(RLPException::DecodingError("truncated"));
+        panic!();
+        return Err(RLPException::DecodingError("decode_joined_encodings: expected more data"));
     }
     Ok(())
 }
@@ -367,6 +407,7 @@ fn decode_joined_encodings(mut joined_encodings: &[u8], dest: &mut [&mut dyn Ext
 /// 
 /// It also screens out sequences.
 pub fn decode_to_bytes<'d, 'a, 'b>(encoded_bytes: &'a mut &'b [u8], dest: &'d mut [u8]) -> Result<(), RLPException> {
+    println!("decode_to_bytes {:02x?}", encoded_bytes.first_chunk::<4>());
     let dest_len = dest.len();
     dest.fill(0);
     if encoded_bytes.is_empty() || encoded_bytes[0] > 0xBF {
@@ -413,6 +454,7 @@ pub fn decode_to_bytes<'d, 'a, 'b>(encoded_bytes: &'a mut &'b [u8], dest: &'d mu
             return Err(RLPException::DestTooSmall(len_decoded_data));
         }
         dest[dest_len-len_decoded_data..].copy_from_slice(&encoded_bytes[decoded_data_start_idx..decoded_data_end_idx]);
+        *encoded_bytes = &encoded_bytes[decoded_data_end_idx..];
     }
     Ok(())
 }

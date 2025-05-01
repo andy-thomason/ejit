@@ -14,15 +14,7 @@ pub struct U256([u64; 4]);
 impl std::fmt::Debug for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut buf = [0; 32*2+2];
-        let hex = b"0123456789abcdef";
-        let bytes = self.to_be_bytes();
-        buf[0] = b'0';
-        buf[1] = b'x';
-        for i in 0..32 {
-            buf[i*2+2] = hex[(bytes[i] >> 4) as usize];
-            buf[i*2+3] = hex[(bytes[i] & 0x0f) as usize];
-        }
-        f.write_str(std::str::from_utf8(&buf).unwrap())
+        f.write_str(fmt_hex(&mut buf, &self.to_be_bytes()))
     }
 }
 
@@ -184,6 +176,7 @@ impl U256 {
             self.0[3-(i/64) as usize] |= mask;
         }
     }
+
 }
 
 impl From<i32> for U256 {
@@ -286,6 +279,18 @@ impl Mul<U256> for U256 {
     }
 }
 
+pub fn fmt_hex<'a>(buf: &'a mut [u8], bytes: &[u8]) -> &'a str {
+    assert!(buf.len() == bytes.len()*2+2);
+    let hex = b"0123456789abcdef";
+    buf[0] = b'0';
+    buf[1] = b'x';
+    for i in 0..bytes.len() {
+        buf[i*2+2] = hex[(bytes[i] >> 4) as usize];
+        buf[i*2+3] = hex[(bytes[i] & 0x0f) as usize];
+    }
+    std::str::from_utf8(buf).unwrap()
+}
+
 
 #[test]
 fn test_u256() {
@@ -306,3 +311,4 @@ fn test_u256() {
     assert_eq!(U256::from_int(123456).overflowing_div(U256::from_int(100)), (U256::from_i128(1234), false));
 
 }
+

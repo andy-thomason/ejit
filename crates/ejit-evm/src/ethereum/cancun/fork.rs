@@ -157,7 +157,7 @@ fn state_transition(chain: &mut BlockChain, block: Block) -> Result<(), Exceptio
         chain.chain_id,
         &block.withdrawals,
         &block.header.parent_beacon_block_root,
-        excess_blob_gas,
+        &excess_blob_gas,
     )?;
     if apply_body_output.block_gas_used != block.header.gas_used {
         return Err(Exception::InvalidBlock(
@@ -189,7 +189,7 @@ fn state_transition(chain: &mut BlockChain, block: Block) -> Result<(), Exceptio
             "apply_body_output.withdrawals_root != block.header.withdrawals_root"
         ));
     }
-    if apply_body_output.blob_gas_used != Uint::from(block.header.blob_gas_used) {
+    if apply_body_output.blob_gas_used != block.header.blob_gas_used {
         return Err(Exception::InvalidBlock(
             "apply_body_output.blob_gas_used != block.header.blob_gas_used"
         ));
@@ -280,17 +280,22 @@ fn validate_header(header: &Header, parent_header: &Header) -> Result<(), Except
         ));
     }
 
-    let expected_base_fee_per_gas = calculate_base_fee_per_gas(
-        header.gas_limit,
-        parent_header.gas_limit,
-        parent_header.gas_used,
-        parent_header.base_fee_per_gas,
-    )?;
-    if expected_base_fee_per_gas != header.base_fee_per_gas {
-        return Err(Exception::InvalidBlock(
-            "expected_base_fee_per_gas != header.base_fee_per_gas"
-        ));
+    if let Some(parent_base_fee_per_gas) = parent_header.base_fee_per_gas {
+        if let Some(base_fee_per_gas) = header.base_fee_per_gas {
+            let expected_base_fee_per_gas = calculate_base_fee_per_gas(
+                header.gas_limit,
+                parent_header.gas_limit,
+                parent_header.gas_used,
+                parent_base_fee_per_gas,
+            )?;
+            if expected_base_fee_per_gas != base_fee_per_gas {
+                return Err(Exception::InvalidBlock(
+                    "expected_base_fee_per_gas != header.base_fee_per_gas"
+                ));
+            }
+        }
     }
+
     if header.timestamp <= parent_header.timestamp {
         return Err(Exception::InvalidBlock(
             "header.timestamp <= parent_header.timestamp"
@@ -488,8 +493,8 @@ pub struct ApplyBodyOutput {
     receipt_root: Root,
     block_logs_bloom: Bloom,
     state_root: Root,
-    withdrawals_root: Root,
-    blob_gas_used: Uint,
+    withdrawals_root: Option<Root>,
+    blob_gas_used: Option<U64>,
 }
 
 /// Executes a block.
@@ -543,15 +548,15 @@ pub fn apply_body(
     block_hashes: &[Hash32],
     coinbase: &Address,
     block_number: &Uint,
-    base_fee_per_gas: &Uint,
+    base_fee_per_gas: &Option<Uint>,
     block_gas_limit: &Uint,
     block_time: &U256,
     prev_randao: &Bytes32,
     transactions: &[Bytes],
     chain_id: U64,
     withdrawals: &[Withdrawal],
-    parent_beacon_block_root: &Root,
-    excess_blob_gas: U64,
+    parent_beacon_block_root: &Option<Root>,
+    excess_blob_gas: &Option<U64>,
 ) -> Result<ApplyBodyOutput, Exception> {
     // let blob_gas_used = 0;
     // let mut gas_available = block_gas_limit;

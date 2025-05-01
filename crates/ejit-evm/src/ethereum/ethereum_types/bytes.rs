@@ -1,4 +1,8 @@
+use std::ops::DerefMut;
+
 use crate::ethereum::ethereum_rlp::{exceptions::RLPException, rlp::{decode_to_bytes, encode_bytes, Extended}};
+
+use super::numeric::fmt_hex;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Bytes0(pub [u8; 0]);
@@ -10,8 +14,15 @@ pub struct Bytes1(pub [u8; 1]);
 pub struct Bytes4(pub [u8; 4]);
 
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Bytes8(pub [u8; 8]);
+
+impl std::fmt::Debug for Bytes8 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = [0; 8*2+2];
+        f.write_str(fmt_hex(&mut buf, &self.0))
+    }
+}
 
 impl Extended for Bytes8 {
     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
@@ -26,8 +37,15 @@ impl Extended for Bytes8 {
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Bytes20(pub [u8; 20]);
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Copy, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Bytes32(pub [u8; 32]);
+
+impl std::fmt::Debug for Bytes32 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = [0; 32*2+2];
+        f.write_str(fmt_hex(&mut buf, &self.0))
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Bytes48(pub [u8; 48]);
@@ -70,8 +88,15 @@ impl Default for Bytes256 {
 }
 
 /// Sequence of bytes (octets) of arbitrary length.
-#[derive(Debug, Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Bytes(pub Vec<u8>);
+
+impl std::fmt::Debug for Bytes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buf = vec![0; self.len()*2+2];
+        f.write_str(fmt_hex(&mut buf, &self.0))
+    }
+}
 
 impl std::ops::Deref for Bytes {
     type Target = [u8];
