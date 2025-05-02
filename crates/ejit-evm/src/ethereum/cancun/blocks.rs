@@ -16,7 +16,7 @@ use crate::{
             bytes::{Bytes, Bytes32, Bytes8},
             numeric::{Uint, U256, U64},
         },
-    }, Either
+    }
 };
 
 use super::transactions::LegacyTransaction;

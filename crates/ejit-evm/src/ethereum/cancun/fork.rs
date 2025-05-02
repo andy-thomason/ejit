@@ -13,7 +13,6 @@
 use std::collections::{BTreeSet, HashSet};
 
 use crate::{
-    Either,
     ethereum::{
         crypto::hash::{Hash32, keccak256},
         ethereum_rlp::rlp::{self, Extended},
@@ -52,10 +51,10 @@ const MAX_BLOB_GAS_PER_BLOCK: Uint = 786432;
 const VERSIONED_HASH_VERSION_KZG: &'static [u8] = b"\x01";
 
 /// History and current state of the block chain.
-struct BlockChain {
-    blocks: Vec<Block>,
-    state: State,
-    chain_id: U64,
+pub struct BlockChain {
+    pub blocks: Vec<Block>,
+    pub state: State,
+    pub chain_id: U64,
 }
 
 /// Transforms the state from the previous hard fork (`old`) into the block

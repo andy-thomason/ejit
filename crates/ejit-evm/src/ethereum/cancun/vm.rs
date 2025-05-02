@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use exceptions::VmError;
 
-use crate::{ethereum::{cancun::fork_types::*, crypto::hash::Hash32, ethereum_types::{bytes::*, numeric::*}}, Either};
+use crate::{ethereum::{cancun::fork_types::*, crypto::hash::Hash32, ethereum_types::{bytes::*, numeric::*}}};
 
 use super::{blocks::Log, state::{State, TransientStorage}};
 
@@ -42,7 +42,7 @@ pub struct Environment<'a> {
 /// Items that are used by contract creation or message call.
 pub struct Message<'a> {
     pub caller: Address,
-    pub target: Either<Bytes0, Address>,
+    pub target: Address,
     pub current_target: Address,
     pub gas: Uint,
     pub value: U256,

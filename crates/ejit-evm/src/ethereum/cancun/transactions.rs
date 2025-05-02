@@ -2,9 +2,16 @@
 //! submitted to be executed. If Ethereum is viewed as a state machine,
 //! transactions are the events that move between states.
 
-use crate::{ethereum::{cancun::{execptions::TransactionTypeError, fork_types::{Address, VersionedHash}}, crypto::{eliptic_curve::{secp256k1_recover, SECP256K1N}, hash::{keccak256, Hash32}}, ethereum_rlp::rlp::{self, Extended}, ethereum_types::{bytes::{Bytes, Bytes0, Bytes32}, numeric::{Uint, U256, U64}}, exceptions::Exception}, Either};
+use crate::{ethereum::{cancun::{execptions::TransactionTypeError, fork_types::{Address, VersionedHash}}, crypto::{eliptic_curve::{secp256k1_recover, SECP256K1N}, hash::{keccak256, Hash32}}, ethereum_rlp::rlp::{self, Extended}, ethereum_types::{bytes::{Bytes, Bytes0, Bytes32}, numeric::{Uint, U256, U64}}, exceptions::Exception}};
 
 use super::vm::{gas::init_code_cost, interpreter::MAX_CODE_SIZE};
+
+// TODO: KILLME
+#[derive(Debug, Clone, PartialEq)]
+pub enum Either<A : std::fmt::Debug+Clone, B : std::fmt::Debug+Clone> {
+    A(A),
+    B(B),
+}
 
 const TX_BASE_COST : Uint = 21000;
 const TX_DATA_COST_PER_NON_ZERO : Uint = 16;

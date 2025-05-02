@@ -72,6 +72,10 @@ impl U256 {
         Ok(((self.0[2] as u128) << 64) | self.0[3] as u128)
     }
 
+    pub fn from_uint(u: Uint) -> Self {
+        Self::from_limbs([0, 0, (u >> 64) as u64, (u & 0xffffffffffffffff) as u64])
+    }
+
     pub fn leading_zeros(&self) -> u32 {
         let a = self.to_limbs();
         if a[0] != 0 {
