@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{ethereum::{crypto::hash::Hash32, ethereum_rlp::{exceptions::RLPException, rlp::Extended}, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}, utils::hexadecimal::hex_to_slice}, json::{JsonDecode, JsonError, ObjectParser}};
+use crate::{ethereum::{crypto::hash::Hash32, ethereum_rlp::{exceptions::RLPException, rlp::Extended}, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}, utils::hexadecimal::hex_to_slice}, json::{Decoder, JsonDecode, JsonError, ObjectParser}};
 
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
 pub struct Address([u8; 20]);
@@ -42,7 +42,7 @@ impl From<[u8; 20]> for Address {
 }
 
 impl<'de> JsonDecode<'de> for Address {
-    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), crate::json::JsonError> {
+    fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), crate::json::JsonError> {
         let mut s = "";
         s.decode_json(buffer)?;
         let mut bytes = [0; 20];
@@ -66,7 +66,7 @@ impl Extended for Root {
 }
 
 impl<'de> JsonDecode<'de> for Root {
-    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), crate::json::JsonError> {
+    fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), crate::json::JsonError> {
         let mut s = "";
         s.decode_json(buffer)?;
         let mut bytes = [0; 32];
@@ -126,7 +126,7 @@ pub struct Account {
 }
 
 impl<'de> JsonDecode<'de> for Account {
-    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), JsonError> {
+    fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), JsonError> {
         let mut p = ObjectParser::new(buffer);
         p.decode_three(&mut self.nonce, "nonce", &mut self.balance, "balance", &mut self.code, "code")
     }

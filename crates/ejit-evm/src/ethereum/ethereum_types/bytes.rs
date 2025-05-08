@@ -1,6 +1,6 @@
 use std::ops::DerefMut;
 
-use crate::{ethereum::{ethereum_rlp::{exceptions::RLPException, rlp::{decode_to_bytes, encode_bytes, Extended}}, utils::hexadecimal::{hex_to_bytes, hex_to_slice}}, json::{JsonDecode, JsonError}};
+use crate::{ethereum::{ethereum_rlp::{exceptions::RLPException, rlp::{decode_to_bytes, encode_bytes, Extended}}, utils::hexadecimal::{hex_to_bytes, hex_to_slice}}, json::{Decoder, JsonDecode, JsonError}};
 
 use super::numeric::fmt_hex;
 
@@ -25,7 +25,7 @@ impl std::fmt::Debug for Bytes8 {
 }
 
 impl<'de> JsonDecode<'de> for Bytes8 {
-    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), crate::json::JsonError> {
+    fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), crate::json::JsonError> {
         let mut s = "";
         s.decode_json(buffer)?;
         let mut bytes = [0; 8];
@@ -60,7 +60,7 @@ impl std::fmt::Debug for Bytes32 {
 }
 
 impl<'de> JsonDecode<'de> for Bytes32 {
-    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), crate::json::JsonError> {
+    fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), crate::json::JsonError> {
         let mut s = "";
         s.decode_json(buffer)?;
         let mut bytes = [0; 32];
@@ -159,7 +159,7 @@ impl Bytes {
 }
 
 impl<'de> JsonDecode<'de> for Bytes {
-    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), crate::json::JsonError> {
+    fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), crate::json::JsonError> {
         let mut s = "";
         s.decode_json(buffer)?;
         *self = hex_to_bytes(s).map_err(|_| JsonError::ExpectedHexString)?;

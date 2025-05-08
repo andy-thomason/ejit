@@ -1,6 +1,6 @@
 use std::{ops::{Add, Div, Mul, Sub}, process::Output};
 
-use crate::{ethereum::{exceptions::Exception, utils::hexadecimal::{self, hex_to_slice}}, json::{skip_whitespace, JsonDecode, JsonError}};
+use crate::{ethereum::{exceptions::Exception, utils::hexadecimal::{self, hex_to_slice}}, json::{skip_whitespace, Decoder, JsonDecode, JsonError}};
 
 pub type Int = i128;
 pub type Uint = u128;
@@ -204,7 +204,7 @@ impl From<u64> for U256 {
 }
 
 impl<'de> JsonDecode<'de> for U256 {
-    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), JsonError> {
+    fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), JsonError> {
         let mut s : &str = "";
         s.decode_json(buffer)?;
         *self = hexadecimal::hex_to_u256(s).map_err(|_| JsonError::ExpectedHexString)?;
@@ -313,7 +313,7 @@ pub fn fmt_hex<'a>(buf: &'a mut [u8], bytes: &[u8]) -> &'a str {
 macro_rules! decode_int {
     ($t: ty) => {
         impl<'de> JsonDecode<'de> for $t {
-            fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), JsonError> {
+            fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), JsonError> {
                 skip_whitespace(buffer);
                 if buffer.first() == Some(&b'"') {
                     let mut s = "";
@@ -326,7 +326,7 @@ macro_rules! decode_int {
                         return Err(JsonError::ExpectedDigit);
                     }
                     let mut value : $t = (buffer[0] - b'0').into();
-                    *buffer = &buffer[1..];
+                    buffer.advance(1);
                     while matches!(buffer.first(), Some(x) if x.is_ascii_digit()) {
                         let (v, e1) = value.overflowing_mul(10);
                         let (v, e2) = v.overflowing_add((buffer[0] - b'0').into());
@@ -334,7 +334,7 @@ macro_rules! decode_int {
                             return Err(JsonError::NumericOverflow);
                         }
                         value = v;
-                        *buffer = &buffer[1..];
+                        buffer.advance(1);
                     }
                     *self = value;
                 }
@@ -371,21 +371,21 @@ fn test_u256() {
 
     let json = r#""0x123""#;
     let mut value = U256::default();
-    value.decode_json(&mut json.as_bytes()).unwrap();
+    value.decode_json(&mut Decoder::new(json.as_bytes())).unwrap();
     assert_eq!(value, U256::from(0x123));
 
     let json = r#""0x1234""#;
     let mut value = U256::default();
-    value.decode_json(&mut json.as_bytes()).unwrap();
+    value.decode_json(&mut Decoder::new(json.as_bytes())).unwrap();
     assert_eq!(value, U256::from(0x1234));
 
     let json = r#""0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff""#;
     let mut value = U256::default();
-    value.decode_json(&mut json.as_bytes()).unwrap();
+    value.decode_json(&mut Decoder::new(json.as_bytes())).unwrap();
     assert_eq!(value, U256::from(-1));
 
     let json = r#""0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0""#;
     let mut value = U256::default();
-    assert!(value.decode_json(&mut json.as_bytes()).is_err());
+    assert!(value.decode_json(&mut Decoder::new(json.as_bytes())).is_err());
 }
 
