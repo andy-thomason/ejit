@@ -8,7 +8,7 @@ fn test_against_alchemy() {
 
     let client = reqwest::blocking::Client::new();
 
-    let block = 0x61A80;
+    let block = 1000000;
     let body = format!(
         r#"{{"id": 1,"jsonrpc": "2.0","method": "debug_getRawBlock","params": ["0x{block:x}"]}}"#
     );

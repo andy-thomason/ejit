@@ -10,6 +10,5 @@ pub mod cancun;
 pub mod exceptions;
 pub mod fork_criteria;
 
-#[cfg(test)]
 pub mod genesis;
 pub mod utils;

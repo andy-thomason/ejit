@@ -2,8 +2,11 @@
 //! 
 //! 
 
+use crate::json::JsonError;
+
 use super::ethereum_rlp::exceptions::RLPException;
 
+#[derive(Debug)]
 pub enum Exception {
     /// Base class for all exceptions _expected_ to be thrown during normal
     /// operation.
@@ -20,6 +23,9 @@ pub enum Exception {
 
     /// Rlp
     RLPException(RLPException),
+
+    /// Rlp
+    JsonError(JsonError),
 
     TransactionTypeError{ transaction_type: u8 },
     NumericOverflow,

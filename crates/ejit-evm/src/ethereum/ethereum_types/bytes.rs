@@ -1,6 +1,6 @@
 use std::ops::DerefMut;
 
-use crate::ethereum::ethereum_rlp::{exceptions::RLPException, rlp::{decode_to_bytes, encode_bytes, Extended}};
+use crate::{ethereum::{ethereum_rlp::{exceptions::RLPException, rlp::{decode_to_bytes, encode_bytes, Extended}}, utils::hexadecimal::{hex_to_bytes, hex_to_slice}}, json::{JsonDecode, JsonError}};
 
 use super::numeric::fmt_hex;
 
@@ -24,6 +24,18 @@ impl std::fmt::Debug for Bytes8 {
     }
 }
 
+impl<'de> JsonDecode<'de> for Bytes8 {
+    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), crate::json::JsonError> {
+        let mut s = "";
+        s.decode_json(buffer)?;
+        let mut bytes = [0; 8];
+        hex_to_slice(&mut bytes, s).map_err(|_| JsonError::ExpectedHexString)?;
+        *self = Self(bytes);
+        Ok(())
+    }
+}
+
+
 impl Extended for Bytes8 {
     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
         Ok(encode_bytes(buffer, &self.0))
@@ -44,6 +56,17 @@ impl std::fmt::Debug for Bytes32 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut buf = [0; 32*2+2];
         f.write_str(fmt_hex(&mut buf, &self.0))
+    }
+}
+
+impl<'de> JsonDecode<'de> for Bytes32 {
+    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), crate::json::JsonError> {
+        let mut s = "";
+        s.decode_json(buffer)?;
+        let mut bytes = [0; 32];
+        hex_to_slice(&mut bytes, s).map_err(|_| JsonError::ExpectedHexString)?;
+        *self = Self(bytes);
+        Ok(())
     }
 }
 
@@ -134,3 +157,13 @@ impl Bytes {
         self.0.extend(value);
     }
 }
+
+impl<'de> JsonDecode<'de> for Bytes {
+    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), crate::json::JsonError> {
+        let mut s = "";
+        s.decode_json(buffer)?;
+        *self = hex_to_bytes(s).map_err(|_| JsonError::ExpectedHexString)?;
+        Ok(())
+    }
+}
+

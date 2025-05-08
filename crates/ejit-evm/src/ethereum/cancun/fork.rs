@@ -12,17 +12,15 @@
 
 use std::collections::{BTreeSet, HashSet};
 
-use crate::{
-    ethereum::{
-        crypto::hash::{Hash32, keccak256},
+use crate::ethereum::{
+        crypto::hash::{keccak256, Hash32},
         ethereum_rlp::rlp::{self, Extended},
         ethereum_types::{
-            bytes::{Bytes, Bytes8, Bytes20, Bytes32},
-            numeric::{U64, U256, Uint},
+            bytes::{Bytes, Bytes20, Bytes32, Bytes8},
+            numeric::{Uint, U256, U64},
         },
-        exceptions::Exception,
-    },
-};
+        exceptions::Exception, genesis::Genesis,
+    };
 
 use super::{
     blocks::{Block, Header, Log, Receipt, Withdrawal},
@@ -50,11 +48,29 @@ const SYSTEM_TRANSACTION_GAS: Uint = 30000000;
 const MAX_BLOB_GAS_PER_BLOCK: Uint = 786432;
 const VERSIONED_HASH_VERSION_KZG: &'static [u8] = b"\x01";
 
+#[derive(Debug)]
 /// History and current state of the block chain.
 pub struct BlockChain {
     pub blocks: Vec<Block>,
     pub state: State,
     pub chain_id: U64,
+}
+
+impl BlockChain {
+    pub fn from_genesis(genesis: Genesis) -> Self {
+        let block = Block {
+            header: genesis.header,
+            transactions: Default::default(),
+            ommers: Default::default(),
+            withdrawals: Default::default(),
+        };
+        let state = State::from_alloc(genesis.alloc);
+        Self {
+            blocks: vec![block],
+            state,
+            chain_id: genesis.chain_id,
+        }
+    }
 }
 
 /// Transforms the state from the previous hard fork (`old`) into the block

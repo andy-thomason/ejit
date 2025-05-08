@@ -147,11 +147,17 @@ enum InternalNode {
 //         return previous_trie.encode_node(node, storage_root)
 
 /// The Merkle Trie.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Trie<K : Ord, V> {
     secured: bool,
     default_value: V,
     data: BTreeMap<K, V>,
+}
+
+impl<K: Ord, V> Trie<K, V> {
+    pub fn insert(&mut self, key: K, value: V) {
+        self.data.insert(key, value);
+    }
 }
 
 impl<K : Ord, V> Trie<K, V> {

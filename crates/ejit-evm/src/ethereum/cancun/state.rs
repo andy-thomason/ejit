@@ -9,6 +9,7 @@ use crate::{
 
 use super::{fork_types::EMPTY_ACCOUNT, trie::Trie};
 
+#[derive(Default, Debug)]
 /// Contains all information that is preserved between transactions.
 pub struct State {
     main_trie: Trie<Address, Option<Account>>,
@@ -18,6 +19,16 @@ pub struct State {
         BTreeMap<Address, Trie<Bytes32, U256>>,
     )>,
     created_accounts: HashSet<Address>,
+}
+
+impl State {
+    pub fn from_alloc(alloc: BTreeMap<Address, Account>) -> Self {
+        let mut state = State::default();
+        for (addr, acc) in alloc {
+            state.main_trie.insert(addr, Some(acc));
+        }
+        state
+    }
 }
 
 // Contains all information that is preserved between message calls

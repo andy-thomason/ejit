@@ -9,4 +9,3 @@ ejit = { path = "../ejit" }
 
 [dev-dependencies]
 reqwest = { version = "0.12.15", features = ["blocking"] }
-serde_json = "1.0.140"

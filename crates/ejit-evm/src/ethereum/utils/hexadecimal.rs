@@ -2,14 +2,17 @@ use core::num;
 
 use crate::ethereum::{ethereum_types::{bytes::{Bytes, Bytes32, Bytes8}, numeric::{Uint, U256}}, exceptions::Exception};
 
-fn hex_to_slice(d: &mut [u8], s: &str) -> Result<(), Exception> {
-    let s = s.as_bytes();
-    if s.len() < 2 || &s[0..2] != b"0x" {
-        return Err(Exception::EthereumException("expected 0x"));
-    }
+pub fn hex_to_slice(d: &mut [u8], s: &str) -> Result<(), Exception> {
+    let mut s = s.as_bytes();
     if s == b"0x0" {
         return Ok(())
     }
+    if s.len() >= 2 && &s[0..2] != b"0x" {
+        s = &s[2..];
+    }
+    // if s.len() < 2 || &s[0..2] != b"0x" {
+    //     return Err(Exception::EthereumException("expected 0x"));
+    // }
 
     fn nib(c: u8) -> Result<u8, Exception> {
         if c.is_ascii_digit() {

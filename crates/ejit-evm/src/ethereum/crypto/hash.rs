@@ -1,6 +1,6 @@
 //! https://github.com/ethereum/execution-specs/blob/master/src/ethereum/crypto/hash.py
 
-use crate::ethereum::{ethereum_rlp::rlp::Extended, ethereum_types::bytes::*};
+use crate::{ethereum::{ethereum_rlp::rlp::Extended, ethereum_types::bytes::*, utils::hexadecimal::hex_to_bytes32}, json::{JsonDecode, JsonError}};
 
 #[derive(Debug, Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Hash32(pub Bytes32);
@@ -12,6 +12,15 @@ impl Extended for Hash32 {
 
     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
         self.0.decode(buffer)
+    }
+}
+
+impl<'de> JsonDecode<'de> for Hash32 {
+    fn decode_json(&mut self, buffer: & mut &'de [u8]) -> Result<(), crate::json::JsonError> {
+        let mut s = "";
+        s.decode_json(buffer)?;
+        *self = Self(hex_to_bytes32(s).map_err(|_| JsonError::ExpectedHexString)?);
+        Ok(())
     }
 }
 
