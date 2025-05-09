@@ -16,10 +16,10 @@ use crate::{
             bytes::{Bytes, Bytes32, Bytes8},
             numeric::{Uint, U256, U64},
         },
-    }
+    }, impl_extended
 };
 
-use super::transactions::LegacyTransaction;
+use super::transactions::{LegacyTransaction, Transaction};
 
 #[derive(Debug, Clone, Default)]
 /// Withdrawals that have been validated on the consensus layer.
@@ -30,25 +30,27 @@ pub struct Withdrawal {
     pub amount: U256,
 }
 
-impl Extended for Withdrawal {
-    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
-        encode_sequence(buffer, &[
-            &self.index,
-            &self.validator_index,
-            &self.address,
-            &self.amount,
-        ])
-    }
+impl_extended!(Withdrawal: index, validator_index, address, amount);
 
-    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
-        decode_to_sequence(buffer, &mut [
-            &mut self.index,
-            &mut self.validator_index,
-            &mut self.address,
-            &mut self.amount,
-        ])
-    }
-}
+// impl Extended for Withdrawal {
+//     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+//         encode_sequence(buffer, &[
+//             &self.index,
+//             &self.validator_index,
+//             &self.address,
+//             &self.amount,
+//         ])
+//     }
+
+//     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+//         decode_to_sequence(buffer, &mut [
+//             &mut self.index,
+//             &mut self.validator_index,
+//             &mut self.address,
+//             &mut self.amount,
+//         ])
+//     }
+// }
 
 #[derive(Debug, Clone, Default)]
 /// Header portion of a block on the chain.
@@ -75,86 +77,90 @@ pub struct Header {
     pub parent_beacon_block_root: Option<Root>,
 }
 
-impl rlp::Extended for Header {
-    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
-        encode_sequence(buffer, &[
-            &self.parent_hash,
-            &self.ommers_hash,
-            &self.coinbase,
-            &self.state_root,
-            &self.transactions_root,
-            &self.receipt_root,
-            &self.bloom,
-            &self.difficulty,
-            &self.number,
-            &self.gas_limit,
-            &self.gas_used,
-            &self.timestamp,
-            &self.extra_data,
-            &self.prev_randao,
-            &self.nonce,
-            &self.base_fee_per_gas,
-            &self.withdrawals_root,
-            &self.blob_gas_used,
-            &self.excess_blob_gas,
-            &self.parent_beacon_block_root,
-        ])
-    }
+impl_extended!(Header: parent_hash, ommers_hash, coinbase, state_root, transactions_root, receipt_root, bloom, difficulty, number, gas_limit, gas_used, timestamp, extra_data, prev_randao, nonce, base_fee_per_gas, withdrawals_root, blob_gas_used, excess_blob_gas, parent_beacon_block_root);
 
-    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
-        decode_to_sequence(buffer, &mut [
-            &mut self.parent_hash,
-            &mut self.ommers_hash,
-            &mut self.coinbase,
-            &mut self.state_root,
-            &mut self.transactions_root,
-            &mut self.receipt_root,
-            &mut self.bloom,
-            &mut self.difficulty,
-            &mut self.number,
-            &mut self.gas_limit,
-            &mut self.gas_used,
-            &mut self.timestamp,
-            &mut self.extra_data,
-            &mut self.prev_randao,
-            &mut self.nonce,
-            &mut self.base_fee_per_gas,
-            &mut self.withdrawals_root,
-            &mut self.blob_gas_used,
-            &mut self.excess_blob_gas,
-            &mut self.parent_beacon_block_root,
-        ])
-    }
-}
+// impl rlp::Extended for Header {
+//     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+//         encode_sequence(buffer, &[
+//             &self.parent_hash,
+//             &self.ommers_hash,
+//             &self.coinbase,
+//             &self.state_root,
+//             &self.transactions_root,
+//             &self.receipt_root,
+//             &self.bloom,
+//             &self.difficulty,
+//             &self.number,
+//             &self.gas_limit,
+//             &self.gas_used,
+//             &self.timestamp,
+//             &self.extra_data,
+//             &self.prev_randao,
+//             &self.nonce,
+//             &self.base_fee_per_gas,
+//             &self.withdrawals_root,
+//             &self.blob_gas_used,
+//             &self.excess_blob_gas,
+//             &self.parent_beacon_block_root,
+//         ])
+//     }
+
+//     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+//         decode_to_sequence(buffer, &mut [
+//             &mut self.parent_hash,
+//             &mut self.ommers_hash,
+//             &mut self.coinbase,
+//             &mut self.state_root,
+//             &mut self.transactions_root,
+//             &mut self.receipt_root,
+//             &mut self.bloom,
+//             &mut self.difficulty,
+//             &mut self.number,
+//             &mut self.gas_limit,
+//             &mut self.gas_used,
+//             &mut self.timestamp,
+//             &mut self.extra_data,
+//             &mut self.prev_randao,
+//             &mut self.nonce,
+//             &mut self.base_fee_per_gas,
+//             &mut self.withdrawals_root,
+//             &mut self.blob_gas_used,
+//             &mut self.excess_blob_gas,
+//             &mut self.parent_beacon_block_root,
+//         ])
+//     }
+// }
 
 #[derive(Debug, Clone, Default)]
 /// A complete block.
 pub struct Block {
     pub header: Header,
-    pub transactions: Vec<Bytes>,
+    pub transactions: Vec<Transaction>,
     pub ommers: Vec<Header>,
     pub withdrawals: Option<Vec<Withdrawal>>,
 }
 
-impl Extended for Block {
-    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
-        encode_sequence(buffer, &[
-            &self.header,
-            &self.transactions,
-            &self.ommers,
-            &self.withdrawals,
-        ])
-    }
+// impl Extended for Block {
+//     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+//         encode_sequence(buffer, &[
+//             &self.header,
+//             &self.transactions,
+//             &self.ommers,
+//             &self.withdrawals,
+//         ])
+//     }
 
-    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
-        decode_to_sequence(buffer, &mut [
-            &mut self.header,
-            &mut self.transactions,
-            &mut self.ommers,
-            &mut self.withdrawals,
-        ])
-    }
-}
+//     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+//         decode_to_sequence(buffer, &mut [
+//             &mut self.header,
+//             &mut self.transactions,
+//             &mut self.ommers,
+//             &mut self.withdrawals,
+//         ])
+//     }
+// }
+
+impl_extended!(Block: header,transactions,ommers,withdrawals);
 
 #[derive(Debug, Clone, Default)]
 /// Data record produced during the execution of a transaction.
@@ -164,23 +170,25 @@ pub struct Log {
     pub data: Bytes,
 }
 
-impl Extended for Log {
-    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
-        encode_sequence(buffer, &[
-            &self.address,
-            &self.topics,
-            &self.data,
-        ])
-    }
+impl_extended!(Log: address, topics, data);
 
-    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
-        decode_to_sequence(buffer, &mut [
-            &mut self.address,
-            &mut self.topics,
-            &mut self.data,
-        ])
-    }
-}
+// impl Extended for Log {
+//     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+//         encode_sequence(buffer, &[
+//             &self.address,
+//             &self.topics,
+//             &self.data,
+//         ])
+//     }
+
+//     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+//         decode_to_sequence(buffer, &mut [
+//             &mut self.address,
+//             &mut self.topics,
+//             &mut self.data,
+//         ])
+//     }
+// }
 
 #[derive(Debug, Clone, Default)]
 /// Result of a transaction.
@@ -191,23 +199,25 @@ pub struct Receipt {
     pub logs: Vec<Log>,
 }
 
-impl Extended for Receipt {
-    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
-        encode_sequence(buffer, &[
-            &self.succeeded,
-            &self.cumulative_gas_used,
-            &self.bloom,
-            &self.logs,
-        ])
-    }
+impl_extended!(Receipt: succeeded, cumulative_gas_used, bloom, logs);
 
-    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
-        decode_to_sequence(buffer, &mut [
-            &mut self.succeeded,
-            &mut self.cumulative_gas_used,
-            &mut self.bloom,
-            &mut self.logs,
-        ])
-    }
-}
+// impl Extended for Receipt {
+//     fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+//         encode_sequence(buffer, &[
+//             &self.succeeded,
+//             &self.cumulative_gas_used,
+//             &self.bloom,
+//             &self.logs,
+//         ])
+//     }
+
+//     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+//         decode_to_sequence(buffer, &mut [
+//             &mut self.succeeded,
+//             &mut self.cumulative_gas_used,
+//             &mut self.bloom,
+//             &mut self.logs,
+//         ])
+//     }
+// }
 

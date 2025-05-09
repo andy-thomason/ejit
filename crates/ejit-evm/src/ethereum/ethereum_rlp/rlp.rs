@@ -12,6 +12,26 @@ pub trait Extended {
     fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException>;
 }
 
+#[macro_export]
+macro_rules! impl_extended {
+    ($t : ty : $($field : ident),*) => {
+        impl Extended for $t {
+            fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
+                encode_sequence(buffer, &[
+                    $(&self.$field),*
+                ])
+            }
+        
+            fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+                decode_to_sequence(buffer, &mut [
+                    $(&mut self.$field),*
+                ])
+            }
+        }
+                
+    }
+}
+
 //
 // RLP Encode
 //

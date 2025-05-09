@@ -26,11 +26,30 @@ pub enum JsonError {
 pub struct Decoder<'de> {
     buffer: &'de [u8],
     start: * const u8,
+    len: usize,
 }
+
+pub struct Context {
+    text: String,
+}
+
+impl<'de> From<&Decoder<'de>> for Context {
+    fn from(d: &Decoder<'de>) -> Self {
+        unsafe {
+            let pos = d.buffer.as_ptr().byte_offset_from(d.start);
+            let pos = (pos.max(0) as usize).min(d.len);
+            let all = std::slice::from_raw_parts(d.start, d.len);
+            let range = &all[pos.saturating_sub(10)..(pos+10).min(d.len)];
+            let text = std::str::from_utf8_unchecked(range).to_string();
+            Context { text }
+        }
+    }
+}
+
 
 impl<'de> Decoder<'de> {
     pub fn new(buffer: &'de [u8]) -> Self {
-        Self { buffer, start: buffer.as_ptr() }
+        Self { buffer, start: buffer.as_ptr(), len: buffer.len() }
     }
     
     pub fn advance(&mut self, n: usize) -> &'de [u8] {
@@ -39,7 +58,7 @@ impl<'de> Decoder<'de> {
         bytes
     }
     
-    fn cur(&self) -> &'de [u8] {
+    pub fn cur(&self) -> &'de [u8] {
         self.buffer
     }
 }
@@ -54,6 +73,48 @@ impl<'de> std::ops::Deref for Decoder<'de> {
 
 pub trait JsonDecode<'de> : where Self : 'de {
     fn decode_json(&mut self, decoder: &mut Decoder<'de>) -> Result<(), JsonError>;
+}
+
+#[macro_export]
+macro_rules! impl_json {
+    ($t : ty : $f1 : ident $n1 : expr) => {
+        impl<'de> JsonDecode<'de> for $t {
+            fn decode_json(&mut self, decoder: &mut Decoder<'de>) -> Result<(), JsonError> {
+                let mut p = ObjectParser::new(decoder);
+                p.decode_one(&mut self.$f1, $n1)
+            }
+        }
+    };
+    ($t : ty : $f1 : ident $n1 : expr, $f2 : ident $n2 : expr) => {
+        impl<'de> JsonDecode<'de> for $t {
+            fn decode_json(&mut self, decoder: &mut Decoder<'de>) -> Result<(), JsonError> {
+                let mut p = ObjectParser::new(decoder);
+                p.decode_two(&mut self.$f1, $n1, &mut self.$f2, $n2)
+            }
+        }
+    };
+    ($t : ty : $f1 : ident $n1 : expr, $f2 : ident $n2 : expr, $f3 : ident $n3 : expr) => {
+        impl<'de> JsonDecode<'de> for $t {
+            fn decode_json(&mut self, decoder: &mut Decoder<'de>) -> Result<(), JsonError> {
+                let mut p = ObjectParser::new(decoder);
+                p.decode_three(&mut self.$f1, $n1, &mut self.$f2, $n2, &mut self.$f3, $n3)
+            }
+        }
+    };
+    ($t : ty : $($field : ident $name : expr),*) => {
+        impl<'de> JsonDecode<'de> for $t {
+            fn decode_json(&mut self, decoder: &mut Decoder<'de>) -> Result<(), JsonError> {
+                let mut p = ObjectParser::new(decoder);
+                loop {
+                    match p.next_key()? {
+                        $(Some(k) if k == $name => self.$field.decode_json(p.decoder)?,)*
+                        None => return Ok(()),
+                        _ => return Err(crate::json::JsonError::MissingKey),
+                    };
+                }
+            }
+        }
+    };
 }
 
 impl<'de> JsonDecode<'de> for &'de str {
@@ -330,7 +391,7 @@ impl<'b, 'de> ObjectParser<'b, 'de> {
 mod tests {
     use crate::json::{decode_object, expect, skip_whitespace, Decoder, ObjectParser};
 
-    use super::JsonDecode;
+    use super::{JsonDecode, JsonError};
 
     #[test]
     fn test_bool() {
@@ -379,12 +440,15 @@ mod tests {
             c: u128,
         }
 
-        impl<'de> JsonDecode<'de> for ABC {
-            fn decode_json(&mut self, decoder: &mut Decoder<'de>) -> Result<(), super::JsonError> {
-                let mut p = ObjectParser::new(decoder);
-                p.decode_three(&mut self.a, "a", &mut self.b, "b", &mut self.c, "c")
-            }
-        }
+        // impl_json!(ABC : a "a", b "b", c "c");
+        impl_json!(ABC : a "a");
+
+        // impl<'de> JsonDecode<'de> for ABC {
+        //     fn decode_json(&mut self, decoder: &mut Decoder<'de>) -> Result<(), super::JsonError> {
+        //         let mut p = ObjectParser::new(decoder);
+        //         p.decode_three(&mut self.a, "a", &mut self.b, "b", &mut self.c, "c")
+        //     }
+        // }
 
         let mut cursor = b"{}".as_slice();
         let mut b : ABC = Default::default();

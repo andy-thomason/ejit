@@ -2,7 +2,7 @@
 //! submitted to be executed. If Ethereum is viewed as a state machine,
 //! transactions are the events that move between states.
 
-use crate::{ethereum::{cancun::{execptions::TransactionTypeError, fork_types::{Address, VersionedHash}}, crypto::{eliptic_curve::{secp256k1_recover, SECP256K1N}, hash::{keccak256, Hash32}}, ethereum_rlp::rlp::{self, Extended}, ethereum_types::{bytes::{Bytes, Bytes0, Bytes32}, numeric::{Uint, U256, U64}}, exceptions::Exception}};
+use crate::{ethereum::{cancun::{execptions::TransactionTypeError, fork_types::{Address, VersionedHash}}, crypto::{eliptic_curve::{secp256k1_recover, SECP256K1N}, hash::{keccak256, Hash32}}, ethereum_rlp::{exceptions::RLPException, rlp::{self, decode_to_sequence, encode_sequence, Extended}}, ethereum_types::{bytes::{Bytes, Bytes0, Bytes32}, numeric::{Uint, U256, U64}}, exceptions::Exception}, impl_extended};
 
 use super::vm::{gas::init_code_cost, interpreter::MAX_CODE_SIZE};
 
@@ -20,7 +20,7 @@ const TX_CREATE_COST : Uint = 32000;
 const TX_ACCESS_LIST_ADDRESS_COST : Uint = 2400;
 const TX_ACCESS_LIST_STORAGE_KEY_COST : Uint = 1900;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 /// Atomic operation performed on the block chain.
 pub struct LegacyTransaction {
     pub nonce: U256,
@@ -33,6 +33,8 @@ pub struct LegacyTransaction {
     pub r: U256,
     pub s: U256,
 }
+
+impl_extended!(LegacyTransaction : nonce, gas_price, gas, to, value, data, v, r, s);
 
 /// The transaction type added in EIP-2930 to support access lists.
 #[derive(Debug, Clone, Default)]
@@ -50,15 +52,8 @@ pub struct AccessListTransaction {
     pub s: U256,
 }
 
-impl Extended for AccessListTransaction {
-    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
-        todo!()
-    }
+impl_extended!(AccessListTransaction : chain_id, nonce, gas_price, gas, to, value, data, access_list, y_parity, r, s);
 
-    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
-        todo!()
-    }
-}
 
 
 /// The transaction type added in EIP-1559.
@@ -78,16 +73,7 @@ pub struct FeeMarketTransaction {
     pub s: U256,
 }
 
-
-impl Extended for FeeMarketTransaction {
-    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
-        todo!()
-    }
-
-    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
-        todo!()
-    }
-}
+impl_extended!(FeeMarketTransaction : chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas, to, value, data, access_list, y_parity, r, s);
 
 /// The transaction type added in EIP-4844.
 #[derive(Debug, Clone, Default)]
@@ -108,6 +94,9 @@ pub struct BlobTransaction {
     pub s: U256,
 }
 
+impl_extended!(BlobTransaction : chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas, to, value, data, access_list, max_fee_per_blob_gas, blob_versioned_hashes, y_parity, r, s);
+
+#[derive(Debug, Clone)]
 pub enum Transaction {
     LegacyTransaction(LegacyTransaction),
     AccessListTransaction(AccessListTransaction),
@@ -115,15 +104,40 @@ pub enum Transaction {
     BlobTransaction(BlobTransaction),
 }
 
-impl Extended for BlobTransaction {
-    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+impl Default for Transaction {
+    fn default() -> Self {
+        Self::LegacyTransaction(Default::default())
+    }
+}
+
+impl Extended for Transaction {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), RLPException> {
         todo!()
     }
 
-    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
-        todo!()
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), RLPException> {
+        if buffer.len() > 0 && buffer[0] >= 0xc0 {
+            let mut t = LegacyTransaction::default();
+            t.decode(buffer)?;
+            *self = Self::LegacyTransaction(t);
+        } else {
+            let mut bytes = Bytes::default();
+            bytes.decode(buffer)?;
+            if bytes.is_empty() {
+                return Err(RLPException::DecodingError("empty transaction"));
+            }
+            match bytes[0] {
+                0x01 => *self = Transaction::AccessListTransaction(rlp::decode_to::<AccessListTransaction>(&bytes[1..])?),
+                0x02 => *self = Transaction::FeeMarketTransaction(rlp::decode_to::<FeeMarketTransaction>(&bytes[1..])?),
+                0x03 => *self = Transaction::BlobTransaction(rlp::decode_to::<BlobTransaction>(&bytes[1..])?),
+                _ => return Err(RLPException::DecodingError("Bad transaction type")),
+            }
+        }
+        Ok(())
     }
 }
+
+
 
 macro_rules! extract {
     ($field: ident, $self : expr) => {

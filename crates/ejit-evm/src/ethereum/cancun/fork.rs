@@ -567,7 +567,7 @@ pub fn apply_body(
     block_gas_limit: &Uint,
     block_time: &U256,
     prev_randao: &Bytes32,
-    transactions: &[Bytes],
+    transactions: &[Transaction],
     chain_id: U64,
     withdrawals: Option<&[Withdrawal]>,
     parent_beacon_block_root: &Option<Root>,
