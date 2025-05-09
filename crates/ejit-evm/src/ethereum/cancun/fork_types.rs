@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{ethereum::{crypto::hash::Hash32, ethereum_rlp::{exceptions::RLPException, rlp::Extended}, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}, utils::hexadecimal::hex_to_slice}, json::{Decoder, JsonDecode, JsonError, ObjectParser}};
+use crate::{ethereum::{crypto::hash::Hash32, ethereum_rlp::{exceptions::RLPException, rlp::Extended}, ethereum_types::{bytes::{Bytes20, Bytes256, *}, numeric::*}, utils::hexadecimal::hex_to_slice}, impl_json, json::{Decoder, JsonDecode, JsonError, ObjectParser}};
 
 #[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
 pub struct Address([u8; 20]);
@@ -125,14 +125,7 @@ pub struct Account {
     pub code: Bytes,
 }
 
-impl<'de> JsonDecode<'de> for Account {
-    fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), JsonError> {
-        let mut p = ObjectParser::new(buffer);
-        p.decode_three(&mut self.nonce, "nonce", &mut self.balance, "balance", &mut self.code, "code")
-    }
-}
-
-
+impl_json!(Account : nonce "nonce", balance "balance", code "code");
 
 pub static EMPTY_ACCOUNT : Account = Account{
     nonce: 0,
