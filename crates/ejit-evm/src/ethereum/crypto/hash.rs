@@ -1,0 +1,78 @@
+//! https://github.com/ethereum/execution-specs/blob/master/src/ethereum/crypto/hash.py
+
+use crate::{ethereum::{ethereum_rlp::rlp::Extended, ethereum_types::bytes::*, utils::hexadecimal::hex_to_bytes32}, json::{Decoder, JsonDecode, JsonError}};
+
+#[derive(Debug, Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
+pub struct Hash32(pub Bytes32);
+
+impl Extended for Hash32 {
+    fn encode<'a, 'b>(&self, buffer: &'a mut Bytes) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        self.0.encode(buffer)
+    }
+
+    fn decode<'a, 'b>(&mut self, buffer: &'a mut &'b [u8]) -> Result<(), crate::ethereum::ethereum_rlp::exceptions::RLPException> {
+        self.0.decode(buffer)
+    }
+}
+
+impl<'de> JsonDecode<'de> for Hash32 {
+    fn decode_json(&mut self, buffer: &mut Decoder<'de>) -> Result<(), crate::json::JsonError> {
+        let mut s = "";
+        s.decode_json(buffer)?;
+        *self = Self(hex_to_bytes32(s).map_err(|_| JsonError::ExpectedHexString)?);
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+pub struct Hash64(pub Bytes64);
+
+impl std::ops::Deref for Hash32 {
+    type Target = [u8; 32];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0.0
+    }
+}
+
+impl std::ops::Deref for Hash64 {
+    type Target = [u8; 64];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0.0
+    }
+}
+
+/// Computes the keccak256 hash of the input `buffer`.
+///
+/// Parameters
+/// ----------
+/// buffer :
+///     Input for the hashing function.
+///
+/// Returns
+/// -------
+/// hash : `ethereum.base_types.Hash32`
+///     Output of the hash function.
+pub fn keccak256(buffer: &[u8]) -> Hash32 {
+    // k = keccak.new(digest_bits=256)
+    // return Hash32(k.update(buffer).digest())
+    todo!();
+}
+
+/// Computes the keccak512 hash of the input `buffer`.
+///
+/// Parameters
+/// ----------
+/// buffer :
+///     Input for the hashing function.
+///
+/// Returns
+/// -------
+/// hash : `ethereum.base_types.Hash32`
+///     Output of the hash function.
+fn keccak512(buffer: Bytes) -> Hash64 {
+    // k = keccak.new(digest_bits=512)
+    // return Hash64(k.update(buffer).digest())
+    todo!();
+}

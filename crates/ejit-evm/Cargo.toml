@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-revm = "19.6.0"
+#revm = "19.6.0"
 ejit = { path = "../ejit" }
+
+[dev-dependencies]
+reqwest = { version = "0.12.15", features = ["blocking"] }

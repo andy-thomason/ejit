@@ -2,19 +2,162 @@
 #![doc = include_str!("../../../README.md")]
 
 use std::path::Display;
+use std::rc::Rc;
 
 use clear_cache::clear_cache;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// Virtual 64 bit integer register
-pub struct R(pub u8);
+pub struct R(pub (crate) u8);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// Virtual vector register
-pub struct V(pub u8);
+pub struct V(pub (crate) u8);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Imm(pub u64);
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Src {
+    SR(u8),
+    SV(u8),
+    Imm(i64),
+    Bytes(Box<[u8]>),
+}
+
+impl From<R> for Src {
+    fn from(value: R) -> Self {
+        Self::SR(value.0)
+    }
+}
+
+impl From<&R> for Src {
+    fn from(value: &R) -> Self {
+        Self::SR(value.0)
+    }
+}
+
+impl From<V> for Src {
+    fn from(value: V) -> Self {
+        Self::SV(value.0)
+    }
+}
+
+impl From<&[u8]> for Src {
+    fn from(value: &[u8]) -> Self {
+        Self::Bytes(Box::from(value))
+    }
+}
+
+macro_rules! from_t_for_src {
+    ($($t : ty),*) => {
+        $(
+            impl From<$t> for Src {
+                fn from(value: $t) -> Self {
+                    Self::Imm(value.into())
+                }
+            }
+        )*
+    };
+}
+
+from_t_for_src!(u8, i8, u16, i16, u32, i32, i64);
+
+impl From<u64> for Src {
+    fn from(value: u64) -> Self {
+        Self::Imm(i64::from_le_bytes(value.to_le_bytes()))
+    }
+}
+
+impl From<usize> for Src {
+    fn from(value: usize) -> Self {
+        assert!(std::mem::size_of::<usize>() == 8);
+        Self::Imm(i64::from_le_bytes(value.to_le_bytes()))
+    }
+}
+
+impl From<isize> for Src {
+    fn from(value: isize) -> Self {
+        assert!(std::mem::size_of::<isize>() == 8);
+        Self::Imm(i64::from_le_bytes(value.to_le_bytes()))
+    }
+}
+
+impl From<f32> for Src {
+    fn from(value: f32) -> Self {
+        Self::from(value.to_bits())
+    }
+}
+
+impl From<f64> for Src {
+    fn from(value: f64) -> Self {
+        Self::from(value.to_bits())
+    }
+}
+
+impl Src {
+    fn as_reg(&self) -> Option<R> {
+        match self {
+            Src::SR(n) => Some(R(*n)),
+            _ => None,
+        }
+    }
+    fn as_vreg(&self) -> Option<V> {
+        match self {
+            Src::SV(n) => Some(V(*n)),
+            _ => None,
+        }
+    }
+    fn as_imm64(&self) -> Option<i64> {
+        match self {
+            Src::Imm(i) => Some(*i),
+            _ => None,
+        }
+    }
+    fn as_imm32(&self) -> Option<i32> {
+        match self {
+            Src::Imm(i) if TryInto::<i32>::try_into(*i).is_ok() => Some((*i).try_into().unwrap()),
+            _ => None,
+        }
+    }
+    fn as_imm8(&self) -> Option<i8> {
+        match self {
+            Src::Imm(i) if TryInto::<i8>::try_into(*i).is_ok() => Some((*i).try_into().unwrap()),
+            _ => None,
+        }
+    }
+
+    fn is_reg(&self) -> bool {
+        match self {
+            Src::SR(n) => true,
+            _ => false,
+        }
+    }
+    fn is_vreg(&self) -> bool {
+        match self {
+            Src::SV(n) => true,
+            _ => false,
+        }
+    }
+    fn is_imm64(&self) -> bool {
+        match self {
+            Src::Imm(i) => true,
+            _ => false,
+        }
+    }
+    fn is_imm32(&self) -> bool {
+        match self {
+            Src::Imm(i) if TryInto::<i32>::try_into(*i).is_ok() => true,
+            _ => false,
+        }
+    }
+    fn is_imm8(&self) -> bool {
+        match self {
+            Src::Imm(i) if TryInto::<i8>::try_into(*i).is_ok() => true,
+            _ => false,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
@@ -55,10 +198,36 @@ pub enum Type {
     F256,
 }
 
+impl Type {
+    fn bits(&self) -> usize {
+        use Type::*;
+        match self {
+            U8 => 8,
+            U16 => 16,
+            U32 => 32,
+            U64 => 64,
+            U128 => 128,
+            U256 => 256,
+            S8 => 8,
+            S16 => 16,
+            S32 => 32,
+            S64 => 64,
+            S128 => 128,
+            S256 => 256,
+            F8 => 8,
+            F16 => 16,
+            F32 => 32,
+            F64 => 64,
+            F128 => 128,
+            F256 => 256,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 /// Vector size
-enum Vsize {
+pub enum Vsize {
     V8,
     V16,
     V32,
@@ -70,12 +239,391 @@ enum Vsize {
     V2048,
 }
 
+impl Vsize {
+    fn bits(&self) -> usize {
+        use Vsize::*;
+        match self {
+            V8 => 8,
+            V16 => 16,
+            V32 => 32,
+            V64 => 64,
+            V128 => 128,
+            V256 => 256,
+            V512 => 512,
+            V1024 => 1024,
+            V2048 => 2048,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(u8)]
+/// Vector size
+enum Scale {
+    X1,
+    X2,
+    X4,
+    X8,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+/// Cpu level supported.
+/// https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
+pub enum CpuLevel {
+    /// Core features.
+    /// x86-64-v1 mmx, sse, sse2
+    /// Note: we do not support 64 bit SIMD.
+    Scalar = 1,
+    /// 128 bit SIMD. 
+    /// x86-64-v2 popcnt, sse3, sse4.1, sse4.2, ssse3
+    /// aarch64: neon
+    Simd128 = 2,
+    /// 256 bit SIMD. 
+    /// x86-64-v3 avx, avx2, f16c, bmi1, bmi2, lzcnt, movbe
+    /// aarch64: neon
+    Simd256 = 3,
+    /// 512 bit SIMD.
+    /// x86-64-v4
+    Simd512 = 4,
+}
+
+#[derive(Clone, Debug)]
+pub struct CpuInfo {
+    cpu_level: CpuLevel,
+    alloc: [u128; 2],
+    max_regs: [usize; 2],
+
+    // Integer register class
+    args: Box<[R]>,
+    res: Box<[R]>,
+    save: Box<[R]>,
+    scratch: Box<[R]>,
+    any: Box<[R]>,
+
+    // Vector register class
+    vargs: Box<[V]>,
+    vres: Box<[V]>,
+    vsave: Box<[V]>,
+    vscratch: Box<[V]>,
+    vany: Box<[V]>,
+
+    sp: R,
+}
+
+impl CpuInfo {
+    pub fn max_vbits(&self) -> usize {
+        self.cpu_level.max_vbits()
+    }
+    
+    pub fn cpu_level(&self) -> CpuLevel {
+        self.cpu_level
+    }
+    
+    pub fn args(&self) -> &[R] {
+        &self.args
+    }
+    
+    pub fn res(&self) -> &[R] {
+        &self.res
+    }
+    
+    pub fn save(&self) -> &[R] {
+        &self.save
+    }
+    
+    pub fn scratch(&self) -> &[R] {
+        &self.scratch
+    }
+    
+    pub fn vargs(&self) -> &[V] {
+        &self.vargs
+    }
+    
+    pub fn vres(&self) -> &[V] {
+        &self.vres
+    }
+    
+    pub fn vsave(&self) -> &[V] {
+        &self.vsave
+    }
+    
+    pub fn vscratch(&self) -> &[V] {
+        &self.vscratch
+    }
+    
+    pub fn sp(&self) -> R {
+        self.sp
+    }
+
+    /// User integer register allocation.
+    /// Registers allocated will be clobbered by calls.
+    pub fn alloc_scratch(&mut self) -> Result<R, Error> {
+        for R(i) in &self.scratch {
+            let mask = 1 << (*i as u32);
+            if self.alloc[0] & mask == 0 {
+                self.alloc[0] |= mask;
+                return Ok(R(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+
+    /// User integer register allocation.
+    /// Registers allocated will not be clobbered by calls.
+    pub fn alloc_save(&mut self) -> Result<R, Error> {
+        for R(i) in &self.save {
+            let mask = 1 << (*i as u32);
+            if self.alloc[0] & mask == 0 {
+                self.alloc[0] |= mask;
+                return Ok(R(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+
+    /// User vector register allocation.
+    /// Registers allocated will be clobbered by calls.
+    pub fn alloc_vscratch(&mut self) -> Result<V, Error> {
+        for V(i) in &self.vscratch {
+            let mask = 1 << (*i as u32);
+            if self.alloc[1] & mask == 0 {
+                self.alloc[1] |= mask;
+                return Ok(V(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+
+    /// User integer register allocation.
+    /// These registers *may* be clobbered by function calls, so save them!
+    pub fn alloc_any(&mut self) -> Result<R, Error> {
+        for R(i) in &self.any {
+            let mask = 1 << (*i as u32);
+            if self.alloc[0] & mask == 0 {
+                self.alloc[0] |= mask;
+                return Ok(R(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+
+    /// User integer register allocation.
+    /// These registers *may* be clobbered by function calls, so save them!
+    pub fn alloc_vany(&mut self) -> Result<V, Error> {
+        for V(i) in &self.vany {
+            let mask = 1 << (*i as u32);
+            if self.alloc[1] & mask == 0 {
+                self.alloc[1] |= mask;
+                return Ok(V(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+
+    /// User integer register allocation.
+    pub fn alloc_arg(&mut self) -> Result<R, Error> {
+        for R(i) in &self.args {
+            let mask = 1 << (*i as u32);
+            if self.alloc[0] & mask == 0 {
+                self.alloc[0] |= mask;
+                return Ok(R(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+    
+    /// User integer register allocation.
+    pub fn alloc_varg(&mut self) -> Result<V, Error> {
+        for V(i) in &self.vargs {
+            let mask = 1 << (*i as u32);
+            if self.alloc[1] & mask == 0 {
+                self.alloc[1] |= mask;
+                return Ok(V(*i));
+            }
+        }
+        return Err(Error::NoAvailableRegisters);
+    }
+    
+    pub fn any(&self) -> &[R] {
+        &self.any
+    }
+
+    pub fn vany(&self) -> &[V] {
+        &self.vany
+    }
+
+    pub fn tmp_reg(&self, exclude: &[R]) -> Result<R, Error> {
+        for r in &self.any {
+            if exclude.contains(r) {
+                return Ok(*r);
+            }
+        }
+        Err(Error::CouldNotFindTempReg)
+    }
+}
+
+pub fn src0() -> Box<[Src]> {
+    Box::from(&[][..])
+}
+
+pub fn src1<T0 : Into<Src>>(arg0 : T0) -> Box<[Src]> {
+    Box::from(&[arg0.into()][..])
+}
+
+pub fn src2<T0 : Into<Src>, T1 : Into<Src>>(arg0 : T0, arg1: T1) -> Box<[Src]> {
+    Box::from(&[arg0.into(), arg1.into()][..])
+}
+
+impl CpuLevel {
+    fn max_vbits(&self) -> usize {
+        match self {
+            CpuLevel::Scalar => 64,
+            CpuLevel::Simd128 => 128,
+            CpuLevel::Simd256 => 256,
+            CpuLevel::Simd512 => 512,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Fixup {
     Adr(R, u32),
     B(Cond, u32),
-    J(u32),
+    Const(usize, isize),
+    Label(u32, isize),
 }
+
+struct State {
+    code: Vec<u8>,
+    labels: Vec<(u32, usize)>,
+    constants: Vec<u8>,
+    fixups: Vec<(usize, Fixup)>,
+    cpu_info: CpuInfo,
+}
+
+impl State {
+    fn constant(&mut self, c: &[u8]) -> usize {
+        if let Some(pos) = self.constants.windows(c.len()).position(|w| w == c) {
+            pos
+        } else {
+            let pos = self.constants.len();
+            self.constants.extend(c);
+            pos
+        }
+    }
+}
+
+/// A function entry including register saves
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct EntryInfo {
+    saves: Vec<R>,
+    args: Vec<R>,
+    res: Vec<R>,
+    stack_size: usize,
+}
+
+impl EntryInfo {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn with_stack_size(self, stack_size: usize) -> Self {
+        Self {
+            stack_size,
+            ..self
+        }
+    }
+
+    pub fn with_saves(self, saves: &[R]) -> Self {
+        Self {
+            saves: saves.to_vec(),
+            ..self
+        }
+    }
+
+    pub fn with_args(self, args: &[R]) -> Self {
+        Self {
+            args: args.to_vec(),
+            ..self
+        }
+    }
+
+    pub fn with_res(self, res: &[R]) -> Self {
+        Self {
+            res: res.to_vec(),
+            ..self
+        }
+    }
+
+    pub fn boxed(self) -> Box<Self> {
+        Box::new(self)
+    }
+}
+
+impl From<usize> for Box<EntryInfo> {
+    fn from(stack_size: usize) -> Self {
+        Box::new(EntryInfo {
+            stack_size,
+            ..Default::default()
+        })
+    }
+}
+
+// impl<T : AsRef<[Src]>> From<(usize, T)> for Box<EntryInfo> {
+//     fn from(v: (usize, T)) -> Self {
+//         let stack_size = v.0;
+//         let args = v.1.as_ref();
+//         let args = Box::from(args);
+//         Box::new(EntryInfo {
+//             saves: None,
+//             args,
+//             stack_size,
+//         })
+//     }
+// }
+
+/// A call to a function including args and scratch registers to be saved.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallInfo {
+    ptr: u64,
+    args: Box<[Src]>,
+    res: Box<[Src]>,
+    saves: Box<[Src]>,
+}
+
+macro_rules! from_fn {
+    ($($t : ty , $na : expr , $nr : expr);*;) => {
+        $(
+            /// Call a function saving necessary volatile registers.
+            impl From<($t, Box<[Src]>, Box<[Src]>, Box<[Src]>)> for Box<CallInfo> {
+                fn from(value: ($t, Box<[Src]>, Box<[Src]>, Box<[Src]>)) -> Self {
+                    let ptr = value.0 as usize as u64;
+                    let args = value.1;
+                    let res = value.2;
+                    let saves = value.3;
+                    Box::new(CallInfo {
+                        ptr,
+                        args,
+                        res,
+                        saves,
+                    })
+                }
+            }
+
+        )*
+        
+    };
+}
+
+from_fn!(
+    fn() , 0, 0;
+    fn(u64), 1, 0;
+    fn(u64, u64), 1, 0;
+    fn() -> u64 , 0, 1;
+    fn(u64) -> u64, 1, 1;
+    fn(u64, u64) -> u64, 1, 1;
+);
+
 
 
 #[derive(Clone, Debug, PartialEq)]
@@ -83,10 +631,9 @@ pub enum Ins {
     // Remember a PC-rel location.
     Label(u32),
 
-    // Function entry & exit: Adjust sp.
-    // Must be modulo 16 bytes
-    Enter(u32),
-    Leave(u32),
+    // Function entry & exit: Adjust sp by at least n bytes.
+    Enter(Box<EntryInfo>),
+    Leave(Box<EntryInfo>),
 
     // constants
     Addr(R, u32),
@@ -98,54 +645,70 @@ pub enum Ins {
     Vst(Type, Vsize, V, R, i32),
 
     // Integer Arithmetic.
-    Add(R, R, R),
-    Sub(R, R, R),
-    And(R, R, R),
-    Or(R, R, R),
-    Xor(R, R, R),
-    Shl(R, R, R),
-    Shr(R, R, R),
-    Sar(R, R, R),
-    Mul(R, R, R),
-    UDiv(R, R, R),
-    SDiv(R, R, R),
-    Mov(R, R),
-    Movi(R, u64),
-    Cmp(R, R),
-    Cmpi(R, u64),
-    Not(R, R),
-    Neg(R, R),
+    Add(R, R, Src),
+    Sub(R, R, Src),
+    Adc(R, R, Src),
+    Sbb(R, R, Src),
+    And(R, R, Src),
+    Or(R, R, Src),
+    Xor(R, R, Src),
+    Shl(R, R, Src),
+    Shr(R, R, Src),
+    Sar(R, R, Src),
+    Mul(R, R, Src),
+    Udiv(R, R, Src),
+    Sdiv(R, R, Src),
 
-    /// Vector arithmetic
-    Vadd(Type, Vsize, V, V, V),
-    Vsub(Type, Vsize, V, V, V),
-    Vand(Type, Vsize, V, V, V),
-    Vor(Type, Vsize, V, V, V),
-    Vxor(Type, Vsize, V, V, V),
-    Vshl(Type, Vsize, V, V, V),
-    Vshr(Type, Vsize, V, V, V),
-    Vmul(Type, Vsize, V, V, V),
-    Vdiv(Type, Vsize, V, V, V),
-    Vmov(Type, Vsize, V, V),
-    Vmovi(Type, Vsize, V, u64),
-    Vnot(Type, Vsize, V, V),
-    Vneg(Type, Vsize, V, V),
-    Vrecpe(Type, Vsize, V, V),
-    Vrsqrte(Type, Vsize, V, V),
+    Mov(R, Src),
+    Cmp(R, Src),
+    Not(R, Src),
+    Neg(R, Src),
+    Push(Src),
+    Pop(Src),
+
+    // Memory-based operations
+    // Addx(R, R, R, u32),
+    // Subx(R, R, R, u32),
+    // Mulx(R, R, R, u32),
+    // Udivx(R, R, R, u32),
+    // Sdivx(R, R, R, u32),
+    // Movx(R, R, u32),
+
+    // Vector arithmetic
+    Vadd(Type, Vsize, V, V, Src),
+    Vsub(Type, Vsize, V, V, Src),
+    Vand(Type, Vsize, V, V, Src),
+    Vor(Type, Vsize, V, V, Src),
+    Vxor(Type, Vsize, V, V, Src),
+    Vshl(Type, Vsize, V, V, Src), // Note: on x86 src2 is broadcast.
+    Vshr(Type, Vsize, V, V, Src), // Note: on x86 src2 is broadcast.
+    Vmul(Type, Vsize, V, V, Src),
+
+    Vmov(Type, Vsize, V, Src),
+    Vrecpe(Type, Vsize, V, Src),
+    Vrsqrte(Type, Vsize, V, Src),
+
+    // Vcmp(Cond, Type, Vsize, V, Src),
+    // Vsel(Type, Vsize, V, V, Src),
+    // Vany(Type, Vsize, V, Src), // nz if any true
+    // Vall(Type, Vsize, V, Src), // nz if all true
 
     // Control flow
+    Call(Box<CallInfo>),
+    CallLocal(u32),
+
     /// Call indirect using stack or R(30)
-    Call(R),
+    Ci(R),
 
     /// Branch indirect
-    Branch(R),
+    Bi(R),
 
     /// Use the flags to branch conditionally
     /// Only after a Cmp
-    B(Cond, u32),
-    J(u32),
+    Br(Cond, u32),
+    Jmp(u32),
 
-    Sel(Cond, R, R, R),
+    Cmov(Cond, R, Src),
 
     /// Return using stack or R(30)
     Ret,
@@ -174,6 +737,15 @@ pub enum Error {
     UnsupportedBaseOperation(Ins),
     UnsupportedOperation(Ins),
     InvalidDataType(Ins),
+    InvalidRegs(Ins),
+    OffsetToLarge(u32),
+    InvalidAddress(Ins),
+    CodeTooBig,
+    CpuLevelTooLow(Ins),
+    InvalidSrcArgument(Ins),
+    NoAvailableRegisters,
+    CouldNotFindTempReg,
+    BadBytesLength,
 }
 
 pub struct Executable {
@@ -254,8 +826,16 @@ impl Executable {
     }
 
     pub fn fmt_url(&self) -> String {
-        let opcodes = self.to_bytes().chunks_exact(4).map(|c| format!("{:08x}", u32::from_be_bytes(c.try_into().unwrap()))).collect::<Vec<String>>().join("+");
-        format!("https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes={opcodes}&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly")
+        #[cfg(target_arch = "aarch64")]
+        {
+            let opcodes = self.to_bytes().chunks_exact(4).map(|c| format!("{:08x}", u32::from_be_bytes(c.try_into().unwrap()))).collect::<Vec<String>>().join("+");
+            format!("https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes={opcodes}&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly")
+        }
+        #[cfg(target_arch = "x86_64")]
+        {
+            let opcodes = self.to_bytes().iter().map(|c| format!("{c:02x}")).collect::<Vec<String>>().join("+");
+            format!("https://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes={opcodes}&arch=x86-64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly")
+        }
     }
 }
 
@@ -279,6 +859,9 @@ mod x86_64;
 #[cfg(target_arch = "x86_64")]
 pub use x86_64::regs;
 
+#[cfg(target_arch = "x86_64")]
+pub use x86_64::cpu_info;
+
 #[cfg(target_arch = "aarch64")]
 mod aarch64;
 
@@ -286,126 +869,4 @@ mod aarch64;
 pub use aarch64::regs;
 
 #[cfg(test)]
-mod generic_tests {
-    //! Machine independent tests
-    //! 
-    //! TODO: Extend these to cover every instruction and register permutation.
-    //! 
-    use super::*;
-
-    #[test]
-    fn generic_basic() {
-        use Ins::*;
-        use regs::*;
-
-        {
-            let prog = Executable::from_ir(&[Movi(RES[0], 123), Ret]).unwrap();
-            let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
-            assert_eq!(res, 123);
-        }
-        {
-            let prog = Executable::from_ir(&[Add(RES[0], ARG[0], ARG[1]),Ret,]).unwrap();
-            let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
-            assert_eq!(res, 101);
-        }
-        {
-            let prog = Executable::from_ir(&[Sub(RES[0], ARG[0], ARG[1]),Ret,]).unwrap();
-            let (res, _) = unsafe { prog.call(0, &[100, 1]).unwrap() };
-            assert_eq!(res, 99);
-        }
-    }
-
-    #[test]
-    fn generic_branch() {
-        fn test_one_branch(c: Cond, expected: [bool; 5]) {
-            use Ins::*;
-            use regs::*;
-            const IS_FALSE : u32 = 0;
-            const IS_TRUE : u32 = 1;
-            let mut prog = Executable::from_ir(&[
-                Cmp(ARG[0], ARG[1]),
-                B(c, IS_TRUE),
-    
-                Label(IS_FALSE),
-                Movi(RES[0], 0),
-                Ret,
-    
-                Label(IS_TRUE),
-                Movi(RES[0], 1),
-                Ret,
-            ])
-            .unwrap();
-            println!("{}", prog.fmt_url());
-    
-            let tv = [[1, 1], [1, 2], [2, 1], [1, !0], [!0, 1]];
-            let res = tv.iter().map(|args| unsafe { prog.call(0, &args[..]).unwrap().0 != 0 }).collect::<Vec<_>>();
-            // println!("{res:?}");
-            assert_eq!(&expected[..], &res, "{:?}", c);
-        }
-
-        use Cond::*;
-        // test_one_branch(Always, [true, true, true, true, true]);
-        test_one_branch(Eq, [true, false, false, false, false]);
-        test_one_branch(Ne, [false, true, true, true, true]);
-        test_one_branch(Sgt, [false, false, true, true, false]);
-        test_one_branch(Sge, [true, false, true, true, false]);
-        test_one_branch(Slt, [false, true, false, false, true]);
-        test_one_branch(Sle, [true, true, false, false, true]);
-        test_one_branch(Ugt, [false, false, true, false, true]);
-        test_one_branch(Uge, [true, false, true, false, true]);
-        test_one_branch(Ult, [false, true, false, true, false]);
-        test_one_branch(Ule, [true, true, false, true, false]);
-    }
-
-    #[test]
-    fn generic_loop() {
-        for _ in 0..3 {
-            use Ins::*;
-            use regs::*;
-            let t0 = std::time::Instant::now();
-            const COUNT : R = R(0);
-            const TOT : R = R(1);
-            const INC : R = R(2);
-            const LOOP : u32 = 0;
-            let mut prog = Executable::from_ir(&[
-                Movi(COUNT, 10000),
-                Movi(TOT, 0),
-                Movi(INC, 1),
-                Label(LOOP),
-                Add(TOT, TOT, COUNT),
-                Sub(COUNT, COUNT, INC),
-                Cmpi(COUNT, 0),
-                B(Cond::Ne, LOOP),
-                Mov(RES[0], TOT),
-                Ret,
-            ])
-            .unwrap();
-            // Compile time varies from 9μs (hot) to 11.4μs (cold).
-            println!("compile time {}ns", std::time::Instant::elapsed(&t0).as_nanos());
-            println!("{}", prog.fmt_url());
-            let (res, _) = unsafe { prog.call(0, &[]).unwrap() };
-            assert_eq!(res, 50005000);
-        }
-    }
-
-    #[test]
-    fn generic_load_store() {
-        use Ins::*;
-        use Type::*;
-        use regs::*;
-        let mut prog = Executable::from_ir(&[
-            Enter(16),
-            St(U8, ARG[0], SP, 6),
-            St(U8, ARG[1], SP, 7),
-            Ld(U16, RES[0], SP, 6),
-            Leave(16),
-            Ret,
-        ])
-        .unwrap();
-        let (res, _) = unsafe { prog.call(0, &[0x34, 0x12]).unwrap() };
-        #[cfg(target_endian="little")]
-        assert_eq!(res, 0x1234);
-        #[cfg(target_endian="big")]
-        assert_eq!(res, 0x3412);
-    }
-}
+mod generic_tests;
